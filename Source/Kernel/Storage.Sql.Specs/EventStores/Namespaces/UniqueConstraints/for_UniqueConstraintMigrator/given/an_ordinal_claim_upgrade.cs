@@ -33,7 +33,8 @@ public abstract class an_ordinal_claim_upgrade : Specification
         _drop = drop;
         _serverCollation = (await Query("SELECT CONVERT(nvarchar(128), SERVERPROPERTY('Collation'))", string.Empty)).Single();
         var collation = string.Equals(_serverCollation, "Latin1_General_100_CI_AS", StringComparison.OrdinalIgnoreCase)
-            ? "SQL_Latin1_General_CP1_CI_AS" : "Latin1_General_100_CI_AS";
+            ? "SQL_Latin1_General_CP1_CI_AS"
+            : "Latin1_General_100_CI_AS";
         await Execute($"ALTER DATABASE CURRENT COLLATE {collation}");
         _databaseCollation = (await Query("SELECT CONVERT(nvarchar(128), DATABASEPROPERTYEX(DB_NAME(), 'Collation'))", string.Empty)).Single();
         _migrator = new UniqueConstraintMigrator(

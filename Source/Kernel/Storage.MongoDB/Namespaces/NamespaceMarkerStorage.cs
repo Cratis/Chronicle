@@ -22,10 +22,12 @@ public sealed class NamespaceMarkerStorage(IMongoCollection<BsonDocument> collec
     public async Task<NamespaceMarker?> Get()
     {
         var document = await _collection.Find(_id).FirstOrDefaultAsync();
-        return document is null ? null : new(
-            new(document["incarnation"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)),
-            document["isOpen"].AsBoolean,
-            document["revision"].AsInt64);
+        return document is null
+            ? null
+            : new(
+                new(document["incarnation"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)),
+                document["isOpen"].AsBoolean,
+                document["revision"].AsInt64);
     }
 
     /// <inheritdoc/>
@@ -70,10 +72,12 @@ public sealed class NamespaceMarkerStorage(IMongoCollection<BsonDocument> collec
     public async Task<NamespaceCommitRejected> GetRejection(IClientSessionHandle session, NamespaceIncarnationId expected, CancellationToken cancellationToken)
     {
         var document = await _collection.Find(session, _id).FirstOrDefaultAsync(cancellationToken);
-        NamespaceMarker? marker = document is null ? null : new(
-            new(document["incarnation"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)),
-            document["isOpen"].AsBoolean,
-            document["revision"].AsInt64);
+        NamespaceMarker? marker = document is null
+            ? null
+            : new(
+                new(document["incarnation"].AsBsonBinaryData.ToGuid(GuidRepresentation.Standard)),
+                document["isOpen"].AsBoolean,
+                document["revision"].AsInt64);
         return NamespaceCommitRejected.ForMarker(marker, expected);
     }
 

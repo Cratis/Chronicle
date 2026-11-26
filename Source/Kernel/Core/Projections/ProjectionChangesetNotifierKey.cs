@@ -21,13 +21,13 @@ public record ProjectionChangesetNotifierKey(ObserverId ObserverId, EventStoreNa
     /// <param name="key"><see cref="ProjectionChangesetNotifierKey"/> to convert from.</param>
     public static implicit operator string(ProjectionChangesetNotifierKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ProjectionChangesetNotifierKey"/> instance.</returns>
     public static ProjectionChangesetNotifierKey Parse(string key) => KeyHelper.Parse<ProjectionChangesetNotifierKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace);
 }

@@ -171,7 +171,8 @@ public partial class Generator : IGenerator
         var hasCompositeKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Composite}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
         var hasConstantKey = from.Key.IsSet() && from.Key.Value.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && from.Key.Value.EndsWith(')');
         var isDefaultKey = from.Key.IsSet() && from.Key.Value == WellKnownExpressions.EventSourceId;
-        var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !isDefaultKey;
+        var hasFlatCompositeKey = from.Key.IsSet() && FlatCompositeKeyExpression.IsFlatComposite(from.Key.Value);
+        var useInlineKey = from.Key.IsSet() && !hasCompositeKey && !hasFlatCompositeKey && !isDefaultKey;
 
         // Build from statement with optional inline key (skip if it's the default $eventSourceId)
         if (useInlineKey)
@@ -194,6 +195,11 @@ public partial class Generator : IGenerator
             {
                 sb.AppendLine($"{Indent(indent + 2)}{EscapePropertyPath(property)} = {ConvertExpressionForOutput(expression)}");
             }
+        }
+
+        if (hasFlatCompositeKey)
+        {
+            GenerateFlatCompositeKeyParts(sb, from.Key.Value, indent + 1);
         }
 
         // Parent key if present (skip if it's the default $eventSourceId)
@@ -351,9 +357,14 @@ public partial class Generator : IGenerator
     {
         sb.Append($"{Indent(indent)}remove with {eventTypeName}");
 
-        // Inline key if present
-        if (removedWith.Key.IsSet())
+        if (removedWith.Key.IsSet() && FlatCompositeKeyExpression.IsFlatComposite(removedWith.Key.Value))
         {
+            sb.AppendLine();
+            GenerateFlatCompositeKeyParts(sb, removedWith.Key.Value, indent + 1);
+        }
+        else if (removedWith.Key.IsSet())
+        {
+            // Inline key
             var keyOutput = removedWith.Key.Value.StartsWith($"{WellKnownExpressions.Value}(", StringComparison.Ordinal) && removedWith.Key.Value.EndsWith(')')
                 ? ConvertConstantKeyForOutput(removedWith.Key.Value)
                 : removedWith.Key.Value;
@@ -367,6 +378,15 @@ public partial class Generator : IGenerator
         if (removedWith.ParentKey?.IsSet() == true)
         {
             sb.AppendLine($"{Indent(indent + 1)}parent {ConvertExpressionForOutput(removedWith.ParentKey.Value)}");
+        }
+    }
+
+    void GenerateFlatCompositeKeyParts(StringBuilder sb, string expression, int indent)
+    {
+        sb.AppendLine($"{Indent(indent)}key");
+        foreach (var (property, value) in FlatCompositeKeyExpression.Parse(expression).Parts)
+        {
+            sb.AppendLine($"{Indent(indent + 1)}{EscapePropertyPath(property)} = {ConvertExpressionForOutput(value)}");
         }
     }
 

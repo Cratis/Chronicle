@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
 using Cratis.Chronicle.Properties;
+using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage.Diagnostics;
 using Cratis.Chronicle.Storage.MongoDB.Generations.Fencing;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -238,14 +239,20 @@ public partial class Sink(
     public async Task<ExpandoObject?> FindOrDefault(Key key)
     {
         await SettleGuardedBulkReads();
-        if (_isBulkMode && TryAnswerFromBulk(key, out var bulkAnswer))
+        if (_isBulkMode && readModel.GetSchemaForLatestGeneration().HasSchemaMetadata())
+        {
+            // CurrentState is the plaintext projection fold, not the protected document written by the changeset.
+            // Parent notifications must read the stored protection and subject lineage, even inside a bulk window.
+            await DrainBulk();
+        }
+        else if (_isBulkMode && TryAnswerFromBulk(key, out var bulkAnswer))
         {
             return bulkAnswer;
         }
 
         var collection = Collection;
 
-        using var result = await collection.FindAsync(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)));
+        using var result = await collection.FindAsync(FilterForKey(key));
         var instance = result.SingleOrDefault();
         if (instance != default)
         {
@@ -260,7 +267,7 @@ public partial class Sink(
     /// <exception cref="ReadModelPrimaryIsChanging">Promotion prevents a reliable answer; the caller can retry.</exception>
     public Task<ExpandoObject?> FindInPrimaryOrDefault(Key key) => WithPrimaryRetry(async () =>
     {
-        var documents = await ReadPrimary(Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key)), 0);
+        var documents = await ReadPrimary(FilterForKey(key), 0);
         var instance = documents.SingleOrDefault();
         return instance is null ? null : expandoObjectConverter.ToExpandoObject(instance, readModel.GetSchemaForLatestGeneration());
     });
@@ -595,9 +602,9 @@ public partial class Sink(
         // against a Guid-keyed model) cannot be converted to the _id type and throws "Unrecognized Guid
         // format", freezing the partition — even though that value is never used to key a document here.
         var usesJoinTargetsOnlyFilter = (hasJoined && !hasDirectKeyScopedChanges) || onlyPropertyUpdatesAlongsideJoin;
-        var filter = usesJoinTargetsOnlyFilter ?
-            FilterDefinition<BsonDocument>.Empty :
-            Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
+        var filter = usesJoinTargetsOnlyFilter
+            ? FilterDefinition<BsonDocument>.Empty
+            : FilterForKey(key);
 
         // A ROOT-level join (no array indexers) never CONSTRUCTS a root document — it only enriches an
         // existing root matched by the join column; the root's own key is set by its From/[FromEvent] source.
@@ -615,6 +622,10 @@ public partial class Sink(
 
         return new(filter, isUpsert, usesJoinTargetsOnlyFilter, shouldSuppressRootUpdateAfterRootLevelJoin);
     }
+
+    FilterDefinition<BsonDocument> FilterForKey(Key key) => key is FlatCompositeKey flat
+        ? FlatCompositeKeyFilter.Create(flat, converter)
+        : Builders<BsonDocument>.Filter.Eq("_id", converter.ToBsonValue(key));
 
     static bool IsUpsertWrite(bool onlyPropertyUpdatesAlongsideJoin, bool isRootLevelJoin, bool hasKeyedFrom) =>
         !onlyPropertyUpdatesAlongsideJoin && (!isRootLevelJoin || hasKeyedFrom);
@@ -741,6 +752,17 @@ public partial class Sink(
 
     async Task<(IEnumerable<FailedPartition> Failures, UpdateResult? Result)> WriteUpdate(UpdateWrite write, IChangeset<AppendedEvent, ExpandoObject> changeset, SinkWriteOptions options)
     {
+        if (write.Key is FlatCompositeKey && write.IsUpsert)
+        {
+            write = write with
+            {
+                Converted = write.Converted with
+                {
+                    UpdateDefinition = Builders<BsonDocument>.Update.Combine(write.Converted.UpdateDefinition, Builders<BsonDocument>.Update.SetOnInsert("_id", converter.ToBsonValue(write.Key)))
+                }
+            };
+        }
+
         if (await TryBufferUpdate(write, changeset, options) is { } failures)
         {
             return (failures, null);

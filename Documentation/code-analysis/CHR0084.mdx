@@ -1,0 +1,43 @@
+---
+title: "CHR0084: Event type generation is missing a migrator"
+description: Chronicle analyzer rule CHR0084 reports an event type at generation 2 or higher that has no EventTypeMigration for one or more generation steps, and how to fix it.
+---
+## Rule Description
+
+An event type marked `[EventType(generation: N)]` with `N >= 2` needs an `EventTypeMigration<TUpgrade, TPrevious>` for **every** consecutive generation step from 1 up to `N`: `1->2`, `2->3`, and so on. CHR0084 reports the event type when one or more of those steps has no migrator, and the message lists exactly which steps are missing and what to add.
+
+A step `g-1->g` is covered when a non-abstract class derives from `EventTypeMigration<TUpgrade, TPrevious>` (or implements `IEventTypeMigrationFor<TUpgrade, TPrevious>`) where `TUpgrade` is generation `g` and `TPrevious` is generation `g-1` of the same event type id. Generations are recognized for both declaration styles: `[EventTypeGenerationFor<T>(g)]` and the older explicit-id `[EventType("id", g)]` on both records. Migrators in referenced assemblies count.
+
+Event types registered explicitly through `ExplicitArtifacts` carry no attributes and are not checked by this rule.
+
+## Severity
+
+Error
+
+## Example
+
+### Violation
+
+<ChronicleClientTabs snippet="code-analysis/chr0084/violation" variants="csharp" />
+
+### Fix
+
+<ChronicleClientTabs snippet="code-analysis/chr0084/fix" variants="csharp" />
+
+## How To Fix It
+
+For each missing step `g-1->g` listed in the diagnostic:
+
+1. Make sure a record exists for generation `g-1`. If it does not, declare it with the properties generation `g-1` had, marked `[EventTypeGenerationFor<TCurrent>(g-1)]`. Do the same for generation `g` when it is not the current type.
+2. Add a class deriving from `EventTypeMigration<TUpgrade, TPrevious>` (namespace `Cratis.Chronicle.Events.Migrations`) and implement `Upcast` and `Downcast` to map between the two shapes. See [Event type migrations](../migrations/dotnet-client) for the available builders.
+
+Do not silence the error by lowering the generation number: events already stored at earlier generations must be upcast. Lower it only when the new generation has never been deployed anywhere.
+
+## Why This Rule Exists
+
+Chronicle validates the migration chain when event types are registered. A generation that has no migrator for every step makes the kernel reject the event type (`MissingEventTypeMigrators` or `MissingMigrationForEventTypeGeneration`), so the application fails at startup — or, in a development image with validation relaxed, stored events of the older shape are never upcast. This rule moves that failure to build time, where the fix is a few lines in the same project. See [event generation validation](../migrations/validation) for the full chain rules.
+
+## Related Rules
+
+- [CHR0037](CHR0037): Event type migration generations must belong to one event type.
+- [CHR0049](CHR0049): `[EventTypeGenerationFor<T>]` must reference a type marked with `[EventType]`.

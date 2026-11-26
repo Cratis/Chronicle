@@ -152,7 +152,8 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
             _definitions[eventTypeId] = definition with
             {
                 Generations = definition.Generations.Select(item => item.Generation == generation
-                    ? item with { Schema = new JsonSchema((JsonObject)JsonNode.Parse(schema.ToJson())!) } : item).ToList()
+                    ? item with { Schema = new JsonSchema((JsonObject)JsonNode.Parse(schema.ToJson())!) }
+                    : item).ToList()
             };
             PublishIfChanged(true);
         }
@@ -227,9 +228,9 @@ public partial class EventTypesStorage : IEventTypesStorage, IDisposable
                 .Concat(incoming.Generations.Select(generation =>
                 {
                     var stored = existing.Generations.FirstOrDefault(_ => _.Generation == generation.Generation);
-                    return stored is not null &&
-                        JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(stored.Schema.ToJson(), generation.Schema.ToJson())
-                        ? stored : generation;
+                    var isUnchanged = stored is not null &&
+                        JsonSchemaCompatibilityExtensions.EqualsIgnoringAnnotations(stored.Schema.ToJson(), generation.Schema.ToJson());
+                    return isUnchanged ? stored! : generation;
                 }))
                 .ToList(),
             Migrations = MergeMigrations(existing.Migrations, incoming.Migrations)

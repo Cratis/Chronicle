@@ -15,8 +15,9 @@ namespace Cratis.Chronicle.Observation;
 /// <remarks>
 /// <para>
 /// The running jobs are read from the job storage, so the limit holds across the cluster. Between that read and the job
-/// appearing in storage, the observers of this silo that were admitted are remembered, in the order they asked. An
-/// observer is only held back by those that asked before it, so two observers never hold each other back.
+/// appearing in storage, the observers of this silo that were admitted are remembered. An observer is only held back by
+/// those that were admitted before it, and one that is still waiting for the job listing holds nobody back, so observers
+/// that ask at the same time never hold each other back and leave the places unused.
 /// </para>
 /// <para>
 /// An observer that is held back is remembered with how far behind it is. When a place is free it goes to the observers
@@ -56,30 +57,14 @@ public class CatchUpAdmission(IStorage storage, TimeProvider? timeProvider = nul
         }
 
         var scope = (observerKey.EventStore, observerKey.Namespace);
-        var ahead = Reserve(scope, observerKey);
-        var lease = new Lease(this, scope, observerKey);
-        try
+        var running = await CountRunningCatchUps(observerKey);
+        if (running.Own)
         {
-            var running = await CountRunningCatchUps(observerKey);
-            if (running.Own)
-            {
-                Forget(scope, observerKey);
-                return lease;
-            }
-
-            if (HasPlace(scope, observerKey, eventsBehind, limit - running.Others - ahead))
-            {
-                return lease;
-            }
-        }
-        catch
-        {
-            lease.Dispose();
-            throw;
+            Forget(scope, observerKey);
+            return new Lease(this, scope, observerKey);
         }
 
-        lease.Dispose();
-        return null;
+        return TryTakePlace(scope, observerKey, eventsBehind, limit - running.Others) ? new Lease(this, scope, observerKey) : null;
     }
 
     void Forget((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey)
@@ -93,11 +78,16 @@ public class CatchUpAdmission(IStorage storage, TimeProvider? timeProvider = nul
         }
     }
 
-    bool HasPlace((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey, ulong eventsBehind, int freePlaces)
+    bool TryTakePlace((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey, ulong eventsBehind, int placesNotRunning)
     {
         var now = _clock.GetUtcNow();
+
+        // The decision and the reservation are one step: nobody can be admitted in between, and an observer that is
+        // refused never counted against the ones deciding after it.
         lock (_lock)
         {
+            var admittedAhead = _admitted.TryGetValue(scope, out var admitted) ? admitted.Count(_ => _ != observerKey) : 0;
+            var freePlaces = placesNotRunning - admittedAhead;
             if (!_waiting.TryGetValue(scope, out var waiters))
             {
                 _waiting[scope] = waiters = [];
@@ -113,6 +103,7 @@ public class CatchUpAdmission(IStorage storage, TimeProvider? timeProvider = nul
             if (hasPlace)
             {
                 waiters.Remove(observerKey);
+                Reserve(scope, observerKey);
             }
             else
             {
@@ -128,7 +119,7 @@ public class CatchUpAdmission(IStorage storage, TimeProvider? timeProvider = nul
         }
     }
 
-    int Reserve((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey)
+    void Reserve((EventStoreName EventStore, EventStoreNamespaceName Namespace) scope, ObserverKey observerKey)
     {
         lock (_lock)
         {
@@ -137,9 +128,7 @@ public class CatchUpAdmission(IStorage storage, TimeProvider? timeProvider = nul
                 _admitted[scope] = keys = [];
             }
 
-            var ahead = keys.Count(_ => _ != observerKey);
             keys.Add(observerKey);
-            return ahead;
         }
     }
 

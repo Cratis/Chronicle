@@ -61,29 +61,6 @@ public record AppendedEvent(
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IEnumerable<string>? ErasedPropertiesForJson => ErasedProperties.Any() ? ErasedProperties : null;
 
-#pragma warning disable SA1313 // Preserve released deconstruction parameter names for existing named arguments.
-    /// <summary>
-    /// Deconstructs the response using its original seven-member shape.
-    /// </summary>
-    /// <param name="Id">The sequence number.</param>
-    /// <param name="Context">The event context.</param>
-    /// <param name="Content">The current content.</param>
-    /// <param name="OriginalContent">The original content.</param>
-    /// <param name="Revisions">The revisions.</param>
-    /// <param name="GenerationalContent">The content by generation.</param>
-    /// <param name="RevisedGeneration">The latest revision generation.</param>
-    public void Deconstruct(out string Id, out EventContext Context, out string Content, out string OriginalContent, out IEnumerable<EventRevision> Revisions, out IEnumerable<KeyValuePair<int, string>> GenerationalContent, out uint? RevisedGeneration)
-    {
-        Id = this.Id;
-        Context = this.Context;
-        Content = this.Content;
-        OriginalContent = this.OriginalContent;
-        Revisions = this.Revisions;
-        GenerationalContent = this.GenerationalContent;
-        RevisedGeneration = this.RevisedGeneration;
-    }
-#pragma warning restore SA1313
-
     /// <summary>
     /// Query events in an event sequence, narrowed and ordered by the values a saved query carries.
     /// </summary>
@@ -355,4 +332,27 @@ public record AppendedEvent(
             fromEventSequenceNumber,
             eventSourceId?.Value,
             eventTypeIds);
+
+#pragma warning disable SA1313 // Preserve released deconstruction parameter names for existing named arguments.
+    /// <summary>
+    /// Deconstructs the response using its original seven-member shape.
+    /// </summary>
+    /// <param name="Id">The sequence number.</param>
+    /// <param name="Context">The event context.</param>
+    /// <param name="Content">The current content.</param>
+    /// <param name="OriginalContent">The original content.</param>
+    /// <param name="Revisions">The revisions.</param>
+    /// <param name="GenerationalContent">The content by generation.</param>
+    /// <param name="RevisedGeneration">The latest revision generation.</param>
+    public void Deconstruct(out string Id, out EventContext Context, out string Content, out string OriginalContent, out IEnumerable<EventRevision> Revisions, out IEnumerable<KeyValuePair<int, string>> GenerationalContent, out uint? RevisedGeneration)
+    {
+        Id = this.Id;
+        Context = this.Context;
+        Content = this.Content;
+        OriginalContent = this.OriginalContent;
+        Revisions = this.Revisions;
+        GenerationalContent = this.GenerationalContent;
+        RevisedGeneration = this.RevisedGeneration;
+    }
+#pragma warning restore SA1313
 }

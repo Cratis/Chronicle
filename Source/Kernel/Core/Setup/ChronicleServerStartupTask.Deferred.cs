@@ -14,9 +14,9 @@ using Cratis.Chronicle.Registrations;
 
 namespace Orleans.Hosting;
 
-/// <summary>
+/// <content>
 /// The part of <see cref="ChronicleServerStartupTask"/> that runs after the silo is ready.
-/// </summary>
+/// </content>
 /// <remarks>
 /// <para>
 /// Everything here warms grains - rehydrates observers, jobs, event sequences, subscriptions, webhooks, captures and

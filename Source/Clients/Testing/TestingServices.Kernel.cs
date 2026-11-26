@@ -37,9 +37,9 @@ using KernelUsersService = KernelGrpc::Cratis.Chronicle.Services.Security.Users;
 
 namespace Cratis.Chronicle.Testing;
 
-/// <summary>
+/// <content>
 /// Creates the non-observation kernel gRPC services backed by in-memory storage.
-/// </summary>
+/// </content>
 internal sealed partial class TestingServices
 {
     /// <summary>The in-process test kernel enforces no store entitlements, so query collaborators resolve nothing extra.</summary>

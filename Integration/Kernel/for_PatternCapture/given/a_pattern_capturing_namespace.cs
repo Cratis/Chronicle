@@ -21,13 +21,17 @@ public class a_pattern_capturing_namespace(PatternCaptureFixture fixture) : a_do
     /// <param name="grainType">The lower case prefix of the grain type, such as <c language="csharp">observer/</c>.</param>
     /// <param name="containing">Text the identity must also hold.</param>
     /// <returns>The identities holding an activation.</returns>
-    protected async Task<string[]> Resident(string grainType, string containing) =>
-        [.. (await Services.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0).GetDetailedGrainStatistics())
-            .Select(statistics => statistics.GrainId.ToString())
+    protected async Task<string[]> Resident(string grainType, string containing)
+    {
+        var statistics = await Services.GetRequiredService<IGrainFactory>().GetGrain<IManagementGrain>(0).GetDetailedGrainStatistics();
+        var grains = statistics
+            .Select(statistic => statistic.GrainId.ToString())
             .Where(grain =>
                 grain.StartsWith(grainType, StringComparison.OrdinalIgnoreCase) &&
                 grain.Contains(containing, StringComparison.OrdinalIgnoreCase) &&
-                grain.Contains(_store.Name.Value, StringComparison.Ordinal))];
+                grain.Contains(_store.Name.Value, StringComparison.Ordinal));
+        return [.. grains];
+    }
 
     protected Task<string[]> ResidentCaptureObservers() => Resident(ObserverGrainPrefix, PatternCapture.ObserverIdentifier);
 

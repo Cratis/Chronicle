@@ -112,11 +112,6 @@ public record AppendManyForEventSources(
         return WithScopePositions(append.WithUnknownOutcome(correlationId), conjunctions);
     }
 
-    /// <summary>Uses explicit causation when supplied, otherwise the request chain.</summary>
-    /// <param name="causation">The request causation.</param>
-    /// <returns>The causation chain for the batch.</returns>
-    IEnumerable<Concepts.Auditing.Causation> ResolveCausation(RequestCausation causation) => Causation?.ToChronicle() ?? causation.GetCurrentChain();
-
     /// <summary>Pairs each event with its optional named tags in input order.</summary>
     /// <param name="events">The caller's materialized events.</param>
     /// <param name="globalTags">The tags shared by the batch.</param>
@@ -174,4 +169,9 @@ public record AppendManyForEventSources(
             }).ToArray()
         };
     }
+
+    /// <summary>Uses explicit causation when supplied, otherwise the request chain.</summary>
+    /// <param name="causation">The request causation.</param>
+    /// <returns>The causation chain for the batch.</returns>
+    IEnumerable<Concepts.Auditing.Causation> ResolveCausation(RequestCausation causation) => Causation?.ToChronicle() ?? causation.GetCurrentChain();
 }

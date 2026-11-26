@@ -13,12 +13,18 @@ public sealed class NamespaceCommandExceptionMapper : ICommandExceptionMapper
     public bool TryMap(CommandContext context, Exception exception, [NotNullWhen(true)] out CommandResult? result)
     {
         var code = NamespaceExceptionCodes.For(exception);
-        result = code is null ? null : new CommandResult
+        if (code is null)
+        {
+            result = null;
+            return false;
+        }
+
+        result = new CommandResult
         {
             CorrelationId = context.CorrelationId,
             ExceptionMessages = [code],
             ExceptionStackTrace = string.Empty
         };
-        return result is not null;
+        return true;
     }
 }

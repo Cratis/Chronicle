@@ -85,7 +85,8 @@ public class Namespaces(
             .FirstOrDefault(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.OrdinalIgnoreCase));
         if (existing is null) return Task.FromResult<EventStoreNamespaceName?>(null);
         var canonical = existing.Name.Value.Equals(EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase)
-            ? EventStoreNamespaceName.Default : existing.Name;
+            ? EventStoreNamespaceName.Default
+            : existing.Name;
         return Task.FromResult<EventStoreNamespaceName?>(canonical);
     }
 

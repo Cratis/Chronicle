@@ -12,6 +12,7 @@ using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
+using Cratis.Chronicle.Projections.Engine.Expressions.Keys;
 using Cratis.Chronicle.Properties;
 using Cratis.Screenplay.Syntax;
 using Cratis.Screenplay.Syntax.Projections;
@@ -92,7 +93,7 @@ public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IE
                     break;
                 case RemoveWithSyntax removeWith:
                     context.RemovedWith[ResolveEventType(removeWith.Event)] = new RemovedWithDefinition(
-                        removeWith.Key is not null ? ConvertKeyExpression(removeWith.Key) : PropertyExpression.NotSet,
+                        ConvertRemovalKey(removeWith),
                         removeWith.ParentKey is not null ? ConvertKeyExpression(removeWith.ParentKey) : null);
                     break;
                 case RemoveViaJoinSyntax removeViaJoin:
@@ -272,11 +273,26 @@ public partial class ProjectionDefinitionSyntaxVisitor(ProjectionOwner owner, IE
             case ExpressionKeySyntax expressionKey:
                 return ConvertKeyExpression(expressionKey.Expression);
             case CompositeKeySyntax compositeKey:
+                if (compositeKey.Type.Length == 0)
+                {
+                    return new PropertyExpression(FlatCompositeKeyExpression.Format(compositeKey.Parts.Select(part => (part.Property, ConvertKeyExpression(part.Expression).Value))));
+                }
+
                 var parts = string.Join(", ", compositeKey.Parts.Select(part => $"{part.Property}={ConvertKeyExpression(part.Expression).Value}"));
                 return new PropertyExpression($"{WellKnownExpressions.Composite}({compositeKey.Type}, {parts})");
             default:
                 throw new UnsupportedProjectionSyntax(key);
         }
+    }
+
+    PropertyExpression ConvertRemovalKey(RemoveWithSyntax removeWith)
+    {
+        if (removeWith.PartsKey is not null)
+        {
+            return ConvertKey(removeWith.PartsKey);
+        }
+
+        return removeWith.Key is not null ? ConvertKeyExpression(removeWith.Key) : PropertyExpression.NotSet;
     }
 
     PropertyExpression ConvertKeyExpression(ExpressionSyntax expression) =>

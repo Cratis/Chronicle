@@ -82,6 +82,9 @@ public partial class Observer
         var delay = _catchUpDeferralBase + TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * _catchUpDeferralJitter.TotalMilliseconds);
         DeferringCatchUpForCapacity(logger, config.MaxConcurrentCatchUpJobs, delay);
         _catchUpBackoffUntil = DateTimeOffset.UtcNow + delay;
+
+        // The delay is a promise to try again, not a floor under the watchdog's next tick, which is a minute away.
+        ScheduleDeferredCatchUpRetry(delay);
         await EndDeferredCatchUp(CapacityDeferral);
         return null;
     }

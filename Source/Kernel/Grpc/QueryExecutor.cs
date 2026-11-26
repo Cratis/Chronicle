@@ -133,7 +133,12 @@ internal static class QueryExecutor
     {
         onError?.Invoke(exception);
         var code = NamespaceExceptionCodes.For(exception);
-        return code is null ? QueryResult<TData>.Error(correlationId, exception) : new()
+        if (code is null)
+        {
+            return QueryResult<TData>.Error(correlationId, exception);
+        }
+
+        return new()
         {
             CorrelationId = correlationId,
             ExceptionMessages = [code]

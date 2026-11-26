@@ -7,9 +7,10 @@ namespace Cratis.Chronicle.Security;
 /// Marks an operation under the administrator operations policy whose effect discards or rewrites data and cannot be undone by the caller.
 /// </summary>
 /// <remarks>
+/// Apply to a command type, read-model type, or individual query method.
 /// The refusal covers the System store and kernel scope only; the same operation on an ordinary event store is left to that
 /// store's own rules. Non-administrators are refused these operations when <see cref="Configuration.Authentication.EnforceDestructiveOperations"/> is on,
 /// even while the broader administrator policy for operations is still in audit mode.
 /// </remarks>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method, Inherited = false)]
 public sealed class DestructiveOperationAttribute : Attribute;

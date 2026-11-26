@@ -70,6 +70,13 @@ public sealed class ObserverDefinitionRegistry(IObserverDefinitionsStorage inner
     /// <returns>The current <see cref="ObserverDefinitionRegistrySnapshot"/>.</returns>
     public ValueTask<ObserverDefinitionRegistrySnapshot> GetSnapshot() => GetCurrent();
 
+    /// <summary>
+    /// Reads the definition of an observer from storage, past the snapshot, to compare its revision with the one held.
+    /// </summary>
+    /// <param name="id">The <see cref="ObserverId"/> to read.</param>
+    /// <returns>The stored <see cref="ObserverDefinition"/>, or the provider's answer for an unknown observer.</returns>
+    public Task<ObserverDefinition> GetStored(ObserverId id) => inner.Get(id);
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -128,7 +135,7 @@ public sealed class ObserverDefinitionRegistry(IObserverDefinitionsStorage inner
     /// <inheritdoc/>
     public async Task Save(ObserverDefinition definition)
     {
-        await inner.Save(definition).ConfigureAwait(false);
+        await inner.Save(await StampRevision(definition).ConfigureAwait(false)).ConfigureAwait(false);
         Invalidate(definition.Identifier);
     }
 
@@ -146,6 +153,26 @@ public sealed class ObserverDefinitionRegistry(IObserverDefinitionsStorage inner
 
     static ObserverDefinition Share(ObserverDefinitionRegistrySnapshot previous, ObserverDefinition definition) =>
         previous.TryGetDefinition(definition.Identifier, out var existing) && existing.Equals(definition) ? existing : definition;
+
+    /// <summary>
+    /// Gives a definition about to be saved its revision: the stored one when the content is unchanged, the next one otherwise.
+    /// </summary>
+    /// <param name="definition">The <see cref="ObserverDefinition"/> about to be saved.</param>
+    /// <returns>The definition with its <see cref="ObserverDefinition.Revision"/> set.</returns>
+    /// <remarks>
+    /// The revision is read from storage, never from the snapshot, so a change made by another silo whose announcement has
+    /// not arrived yet is never given a revision that is already taken.
+    /// </remarks>
+    async Task<ObserverDefinition> StampRevision(ObserverDefinition definition)
+    {
+        var stored = await inner.Get(definition.Identifier).ConfigureAwait(false);
+        if (!Exists(stored, definition.Identifier))
+        {
+            return definition with { Revision = ObserverDefinitionRevision.None.Next() };
+        }
+
+        return definition with { Revision = stored.HasSameContentAs(definition) ? stored.Revision : stored.Revision.Next() };
+    }
 
     bool IsCurrent(DateTimeOffset now)
     {

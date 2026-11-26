@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.Observation;
 
-/// <summary>
+/// <content>
 /// Reports the observer's current state to the <see cref="IObserverGauges"/>.
-/// </summary>
+/// </content>
 /// <remarks>
 /// Snapshots are published where the observer's state is persisted or transitions, never per delivered event. Only an
 /// activation that owns a live observer reports; any other activation releases what it registered.

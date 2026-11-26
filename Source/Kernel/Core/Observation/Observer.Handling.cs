@@ -672,8 +672,9 @@ public partial class Observer
             return;
         }
 
-        var newLastHandledEvent = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
-                                  State.LastHandledEventSequenceNumber < lastHandledEvent ? lastHandledEvent : State.LastHandledEventSequenceNumber;
+        var advancesLastHandled = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
+                                  State.LastHandledEventSequenceNumber < lastHandledEvent;
+        var newLastHandledEvent = advancesLastHandled ? lastHandledEvent : State.LastHandledEventSequenceNumber;
         var nextEventSequenceNumber = State.NextEventSequenceNumber <= lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
         State = State with
         {

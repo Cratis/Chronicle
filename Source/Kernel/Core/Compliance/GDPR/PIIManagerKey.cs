@@ -29,13 +29,13 @@ public record PIIManagerKey(EventStoreName EventStore, EventStoreNamespaceName N
     /// <param name="key">String to convert from.</param>
     public static implicit operator PIIManagerKey(string key) => Parse(key);
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
-
     /// <summary>
     /// Parse a <see cref="PIIManagerKey"/> from a string.
     /// </summary>
     /// <param name="key">String to parse.</param>
     /// <returns>A parsed <see cref="PIIManagerKey"/>.</returns>
     public static PIIManagerKey Parse(string key) => KeyHelper.Parse<PIIManagerKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(EventStore, Namespace);
 }

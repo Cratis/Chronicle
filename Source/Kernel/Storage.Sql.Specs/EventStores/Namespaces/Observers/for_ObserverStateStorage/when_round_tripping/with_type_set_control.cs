@@ -19,8 +19,10 @@ public class with_type_set_control : given.an_observer_state_storage
             new(7),
             new("reactor-subscriber", new(["important"], new("customer"), new("orders"))),
             new Dictionary<EventTypeId, ObserverTypeSetMember> { [_type] = new(new(3), new(42)) },
-            [new("connection-one", Guid.Parse("11111111-1111-1111-1111-111111111111"), [new(_type, new(1))], EventGenerationDelivery.Compatibility),
-             new("connection-two", null, [new(_type, new(2))], EventGenerationDelivery.Pinned)]);
+            [
+                new("connection-one", Guid.Parse("11111111-1111-1111-1111-111111111111"), [new(_type, new(1))], EventGenerationDelivery.Compatibility),
+                new("connection-two", null, [new(_type, new(2))], EventGenerationDelivery.Pinned)
+            ]);
         await _storage.Save(new() { Identifier = "observer", TypeSetControl = control }, Concepts.EventSequences.EventSequenceId.Log);
         _saved = await _storage.Get("observer");
     }

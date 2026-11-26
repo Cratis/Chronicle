@@ -112,6 +112,15 @@ public class ProjectionFactory(
     {
         var definition = plan.Definition;
         var readModelDefinition = plan.ReadModel;
+        if (FlatCompositeKeyDefinition.HasFlatKey(definition))
+        {
+            var sinkNamespace = definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace;
+            if (!storage.GetEventStore(eventStore).GetNamespace(sinkNamespace).Sinks.SupportsFlatCompositeKeys(readModelDefinition))
+            {
+                throw new FlatCompositeKeyNotSupported("The configured sink does not support flat composite keys.");
+            }
+        }
+
         if (definition.Graph is not null)
         {
             return graphProjectionFactory!.Create(definition, readModelDefinition, plan.Fingerprint, plan.Schemas);
@@ -260,6 +269,10 @@ public class ProjectionFactory(
         }
 
         readModelDefinition.Sink.EnsureReadModelSupported();
+        if (FlatCompositeKeyDefinition.HasFlatKey(definition))
+        {
+            FlatCompositeKeyDefinition.Validate(definition, readModelDefinition);
+        }
     }
 
     static JsonNode? Canonicalize(JsonNode? node) => node switch
@@ -344,9 +357,9 @@ public class ProjectionFactory(
     }
 
     static ExpandoObject GetInitialState(IExpandoObjectConverter expandoObjectConverter, ProjectionDefinition projectionDefinition, JsonSchema readModelSchema) =>
-        projectionDefinition.InitialModelState.ToJsonObject() is { Count: > 0 } initialModelState ?
-            expandoObjectConverter.ToExpandoObject(initialModelState, readModelSchema) :
-            CreateInitialState(readModelSchema);
+        projectionDefinition.InitialModelState.ToJsonObject() is { Count: > 0 } initialModelState
+            ? expandoObjectConverter.ToExpandoObject(initialModelState, readModelSchema)
+            : CreateInitialState(readModelSchema);
 
     static ExpandoObject CreateInitialState(JsonSchema readModelSchema)
     {
@@ -696,9 +709,9 @@ public class ProjectionFactory(
     void SetupChildSubscriptions(ProjectionLevel level, KeyValuePair<PropertyPath, ChildrenDefinition> childEntry, Projection childProjection, SubscriptionContext context)
     {
         var childDefinition = childEntry.Value;
-        var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
-            childProjection.IdentifiedByProperty :
-            childDefinition.IdentifiedBy;
+        var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot
+            ? childProjection.IdentifiedByProperty
+            : childDefinition.IdentifiedBy;
         var childrenProperty = GetChildCollectionProperty(level.Projection.Identifier, context.RootReadModel, level.Schema, childEntry.Key);
         var childSchema = childrenProperty.Item?.ActualSchema ?? level.Schema;
 
@@ -876,9 +889,9 @@ public class ProjectionFactory(
             if (childEntry.child is Projection childProjection)
             {
                 var childDefinition = childEntry.kvp.Value;
-                var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot ?
-                    childProjection.IdentifiedByProperty :
-                    childDefinition.IdentifiedBy;
+                var childIdentifiedBy = childDefinition.IdentifiedBy.IsRoot
+                    ? childProjection.IdentifiedByProperty
+                    : childDefinition.IdentifiedBy;
 
                 ResolveEventsRecursively(
                     childProjection,
@@ -906,7 +919,9 @@ public class ProjectionFactory(
         // projection has none.
         var propertyMappersForEveryEventType = projectionDefinition.FromEvery.Properties.Select(kvp => ResolveEveryEventPropertyMapper(projection, level.AccessorPath + kvp.Key, kvp.Value)).ToList();
         var everyEventMappers = new EveryEventMappers(propertyMappersForEveryEventType);
-        foreach (var (eventType, fromDefinition) in projectionDefinition.From)
+
+        // Older clients also emitted an ordinary From for a value child. Only the value path should handle that event.
+        foreach (var (eventType, fromDefinition) in projectionDefinition.From.Where(_ => _.Key != projectionDefinition.FromEventProperty?.Event))
         {
             SetupFromWithJoins(level, context, new(fromDefinition, eventType), everyEventMappers.ClaimFor(eventType.Id));
         }
@@ -1121,7 +1136,9 @@ public class ProjectionFactory(
         logger.ResolveEventsForProjectionStart(projection.Path, projectionDefinition.From.Count, childProjections.Length);
 
         // Sets up the key resolver used for root resolution - meaning what identifies the object / document we're working on / projecting to.
-        var fromEventTypes = projectionDefinition.From.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
+        var fromEventTypes = projectionDefinition.From
+            .Where(_ => _.Key != projectionDefinition.FromEventProperty?.Event)
+            .Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
         var joinEventTypes = projectionDefinition.Join.Select(kvp => GetEventTypeWithKeyResolverForJoin(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, kvp.Value.On)).ToArray();
         var removedWithEventTypes = projectionDefinition.RemovedWith.Select(kvp => GetEventTypeWithKeyResolver(projection, kvp.Key, kvp.Value.Key, actualIdentifiedByProperty, hasParent, kvp.Value.ParentKey)).ToArray();
         var removedWithJoinEventTypes = hasParent

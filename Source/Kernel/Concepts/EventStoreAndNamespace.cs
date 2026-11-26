@@ -27,9 +27,6 @@ public record EventStoreAndNamespace(EventStoreName EventStore, EventStoreNamesp
     /// <param name="key">Key to convert.</param>
     public static implicit operator string(EventStoreAndNamespace key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => $"{EventStore}+{Namespace}";
-
     /// <summary>
     /// Parse a string representation of <see cref="EventStoreAndNamespace"/>.
     /// </summary>
@@ -40,4 +37,7 @@ public record EventStoreAndNamespace(EventStoreName EventStore, EventStoreNamesp
         var segments = input.Split('+');
         return new(segments[0], segments[1]);
     }
+
+    /// <inheritdoc/>
+    public override string ToString() => $"{EventStore}+{Namespace}";
 }

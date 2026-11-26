@@ -3,9 +3,9 @@
 
 namespace Cratis.Chronicle.Projections;
 
-/// <summary>
+/// <content>
 /// Notices silos leaving the cluster, so subscriptions lost with them are reconciled.
-/// </summary>
+/// </content>
 public partial class ProjectionsManager
 {
     /// <summary>

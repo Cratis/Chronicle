@@ -19,7 +19,10 @@ public class ReactorOptions
     /// <exception cref="InvalidMaxConcurrentPartitions">Thrown when the value is less than one.</exception>
     public int MaxConcurrentPartitions
     {
-        get => _maxConcurrentPartitions;
+        get
+        {
+            return _maxConcurrentPartitions;
+        }
         set
         {
             InvalidMaxConcurrentPartitions.ThrowIfInvalid(value);

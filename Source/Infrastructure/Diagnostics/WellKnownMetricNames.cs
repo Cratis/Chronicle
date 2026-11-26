@@ -260,6 +260,12 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="AppendedEventsQueueDurableSubscriptionDisagreements"/>.</summary>
     public const string AppendedEventsQueueDurableSubscriptionDisagreementsUnit = "{subscription}";
 
+    /// <summary>Number of observers the silo-local routing table and the subscriptions of an appended events queue disagreed on for a dispatched batch.</summary>
+    public const string AppendedEventsQueueShadowRoutingDisagreements = "cratis.chronicle.appended_events_queue.shadow_routing_disagreements";
+
+    /// <summary>Unit of <see cref="AppendedEventsQueueShadowRoutingDisagreements"/>.</summary>
+    public const string AppendedEventsQueueShadowRoutingDisagreementsUnit = "{observer}";
+
     /// <summary>Number of observers held as dormant by the appended events queues of a silo: subscribed, with no activation.</summary>
     public const string ObserverDormant = "cratis.chronicle.observer.dormant";
 

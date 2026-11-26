@@ -108,12 +108,6 @@ public record AppendManyOnce(
         .Select(entry => string.IsNullOrEmpty(entry.IdempotencyKey) ? null : new Concepts.EventSequences.IdempotencyKey(entry.IdempotencyKey))
         .ToArray();
 
-    EventSequences.EventToAppend[] ToEvents(KeyedEventForEventSourceId[] keyed, IReadOnlyList<IReadOnlyCollection<Concepts.Events.NamedTag>>? namedTagsPerEvent)
-    {
-        var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
-        return keyed.Select((entry, index) => ToEventToAppend(entry.Event, globalTags, namedTagsPerEvent is null ? [] : namedTagsPerEvent[index])).ToArray();
-    }
-
     static EventSequences.EventToAppend ToEventToAppend(EventForEventSourceId @event, Tag[] globalTags, IReadOnlyCollection<Concepts.Events.NamedTag> namedTags)
     {
         var route = AppendRoute.Resolve(@event.EventSourceType, @event.EventStreamType, @event.EventStreamId);
@@ -133,5 +127,11 @@ public record AppendManyOnce(
             Causation = @event.Causation?.ToChronicle(),
             EventSource = string.IsNullOrEmpty(@event.EventSource) ? null : new EventSourceName(@event.EventSource)
         };
+    }
+
+    EventSequences.EventToAppend[] ToEvents(KeyedEventForEventSourceId[] keyed, IReadOnlyList<IReadOnlyCollection<Concepts.Events.NamedTag>>? namedTagsPerEvent)
+    {
+        var globalTags = (Tags ?? []).Select(tag => (Tag)tag).ToArray();
+        return keyed.Select((entry, index) => ToEventToAppend(entry.Event, globalTags, namedTagsPerEvent is null ? [] : namedTagsPerEvent[index])).ToArray();
     }
 }

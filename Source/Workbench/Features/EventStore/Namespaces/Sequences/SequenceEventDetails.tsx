@@ -35,7 +35,8 @@ const SequenceEventDetailsView = withViewModel<SequenceEventDetailsViewModel, Se
                 {(viewModel.state === 'failed' || viewModel.state === 'denied') && (
                     <button type='button' onClick={() => viewModel.retry()}>{text.retry}</button>
                 )}
-                {viewModel.event && <EventDetails key={JSON.stringify([props.eventStore, props.namespace, props.eventSequenceId, props.sequenceNumber])} item={viewModel.event} />}
+                {viewModel.event && <EventDetails key={JSON.stringify([props.eventStore, props.namespace, props.eventSequenceId, props.sequenceNumber])} item={viewModel.event}
+                    comparisonScope={props.eventSequenceId ? { eventStore: props.eventStore, namespace: props.namespace, eventSequenceId: props.eventSequenceId } : undefined} />}
             </div>
         </Page>
     );

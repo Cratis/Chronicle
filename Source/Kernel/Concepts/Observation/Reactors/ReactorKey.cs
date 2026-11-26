@@ -20,13 +20,13 @@ public record ReactorKey(ReactorId ReactorId, EventStoreName EventStore, EventSt
     /// <param name="key"><see cref="ReactorKey"/> to convert from.</param>
     public static implicit operator string(ReactorKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ReactorId, EventStore, Namespace, EventSequenceId);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ReactorKey"/> instance.</returns>
     public static ReactorKey Parse(string key) => KeyHelper.Parse<ReactorKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ReactorId, EventStore, Namespace, EventSequenceId);
 }

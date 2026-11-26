@@ -21,7 +21,12 @@ public sealed class NamespaceLifecycleStorage(Func<Task<DbContextScope<EventStor
         var key = Key(name);
         await using var scope = await open();
         var row = await scope.DbContext.Set<NamespaceLifecycleRow>().AsNoTracking().SingleOrDefaultAsync(row => row.NameKey == key);
-        return row is null ? null : JsonSerializer.Deserialize<NamespaceLifecycle>(row.Payload, JsonSerializerOptions.Default)
+        if (row is null)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<NamespaceLifecycle>(row.Payload, JsonSerializerOptions.Default)
             ?? throw new InvalidOperationException("The namespace lifecycle record is invalid.");
     }
 

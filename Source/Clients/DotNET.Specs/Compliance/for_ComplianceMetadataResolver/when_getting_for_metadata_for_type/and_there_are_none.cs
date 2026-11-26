@@ -11,8 +11,7 @@ public class and_there_are_none : Specification
     void Establish() =>
         _resolver = new(
             new KnownInstancesOf<ICanProvideComplianceMetadataForType>([]),
-            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([])
-        );
+            new KnownInstancesOf<ICanProvideComplianceMetadataForProperty>([]));
 
     void Because() => _result = Catch.Exception(() => _resolver.GetMetadataFor(typeof(object)));
 

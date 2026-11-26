@@ -124,23 +124,29 @@ public class ReactorInvoker(
             {
                 await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
-                var arguments = _argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
-                    method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery))
-                    ? await registeredResolver.Resolve(
+                object?[] arguments;
+                if (_argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
+                    method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery)))
+                {
+                    arguments = await registeredResolver.Resolve(
                         method,
                         activatedReactor.Instance,
                         content,
                         eventContext,
                         eventStore,
                         serviceProvider,
-                        ResolveDelivery(reactorId, eventContext))
-                    : await _argumentsResolver.Resolve(
+                        ResolveDelivery(reactorId, eventContext));
+                }
+                else
+                {
+                    arguments = await _argumentsResolver.Resolve(
                         method,
                         activatedReactor.Instance,
                         content,
                         eventContext,
                         eventStore,
                         serviceProvider);
+                }
 
                 var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 

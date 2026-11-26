@@ -80,16 +80,30 @@ public class OccurrenceDelivery(IOccurrencesStorage storage, ITriggerDefinitions
     /// <param name="token">The fencing token.</param>
     /// <param name="leaseSeconds">The duration, zero for the default.</param>
     /// <returns>The fenced result.</returns>
-    public async Task<OccurrenceLeaseResult> Renew(LeaseToken token, int leaseSeconds) => await BelongsToQueue(token)
-        ? await storage.Renew(token, clock.GetUtcNow().Add(Duration(leaseSeconds))) : OccurrenceLeaseResult.OccurrenceLeaseLost;
+    public async Task<OccurrenceLeaseResult> Renew(LeaseToken token, int leaseSeconds)
+    {
+        if (await BelongsToQueue(token))
+        {
+            return await storage.Renew(token, clock.GetUtcNow().Add(Duration(leaseSeconds)));
+        }
+
+        return OccurrenceLeaseResult.OccurrenceLeaseLost;
+    }
 
     /// <summary>
     /// Completes only the current leased epoch, idempotently.
     /// </summary>
     /// <param name="token">The fencing token.</param>
     /// <returns>The fenced result.</returns>
-    public async Task<OccurrenceLeaseResult> Complete(LeaseToken token) => await BelongsToQueue(token)
-        ? await storage.Complete(token) : OccurrenceLeaseResult.OccurrenceLeaseLost;
+    public async Task<OccurrenceLeaseResult> Complete(LeaseToken token)
+    {
+        if (await BelongsToQueue(token))
+        {
+            return await storage.Complete(token);
+        }
+
+        return OccurrenceLeaseResult.OccurrenceLeaseLost;
+    }
 
     /// <summary>
     /// Fails a current epoch with backoff or quarantine.

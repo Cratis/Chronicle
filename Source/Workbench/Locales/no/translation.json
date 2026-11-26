@@ -1,5 +1,21 @@
 {
     "eventStore": {
+        "general": {
+            "eventTypes": {
+                "columns": {
+                    "visibility": "Synlighet",
+                    "origin": "Opprinnelse"
+                },
+                "visibilities": {
+                    "unspecified": "Uspesifisert (eldre)",
+                    "private": "Privat",
+                    "public": "Offentlig"
+                },
+                "origins": {
+                    "notSpecified": "Ikke angitt"
+                }
+            }
+        },
         "dashboard": {
             "unavailable": "Utilgjengelig akkurat nå",
             "stale": "Utdatert — siste oppdatering mislyktes"

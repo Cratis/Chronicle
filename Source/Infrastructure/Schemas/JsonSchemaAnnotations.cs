@@ -17,10 +17,12 @@ public static class JsonSchemaAnnotations
     /// </summary>
     /// <param name="schema">The schema root.</param>
     /// <returns>Keywords and their escaped schema paths.</returns>
-    public static IReadOnlyList<(string Keyword, string Path)> FindAnnotationKeywords(JsonNode schema) =>
-        [.. DefaultOnlyPropertyRefinement.Pairs(schema, schema)
-            .SelectMany(pair => _cleanupKeywords.Where(pair.Stored.ContainsKey)
-                .Select(keyword => (keyword, $"{pair.Path}/{keyword}")))];
+    public static IReadOnlyList<(string Keyword, string Path)> FindAnnotationKeywords(JsonNode schema)
+    {
+        var keywords = DefaultOnlyPropertyRefinement.Pairs(schema, schema)
+            .SelectMany(pair => _cleanupKeywords.Where(pair.Stored.ContainsKey).Select(keyword => (keyword, $"{pair.Path}/{keyword}")));
+        return [.. keywords];
+    }
 
     /// <summary>
     /// Creates a copy without cleanup annotations. Titles and descriptions are retained.

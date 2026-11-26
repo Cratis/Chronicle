@@ -34,7 +34,6 @@ internal static class FromDerivativesConverters
     {
         return new(
             fromAny.EventTypes.Select(_ => _.ToChronicle()),
-            fromAny.From.ToChronicle()
-        );
+            fromAny.From.ToChronicle());
     }
 }

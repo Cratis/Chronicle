@@ -309,9 +309,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
 
     object? ConvertBsonValueFromUnknownFormat(BsonValue value, JsonSchema schemaProperty)
     {
-        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference) ?
-                schemaProperty.Reference!.Type :
-                schemaProperty.Type;
+        var type = (schemaProperty.Type == JsonObjectType.None && schemaProperty.HasReference)
+                ? schemaProperty.Reference!.Type
+                : schemaProperty.Type;
 
         if (type.HasFlag(JsonObjectType.Null))
         {
@@ -321,9 +321,9 @@ public class ExpandoObjectConverter(ITypeFormats typeFormats) : IExpandoObjectCo
         switch (type)
         {
             case JsonObjectType.String:
-                return schemaProperty.Format == "guid" ?
-                        Guid.Parse(value.ToString()!) :
-                        value.ToString();
+                return schemaProperty.Format == "guid"
+                        ? Guid.Parse(value.ToString()!)
+                        : value.ToString();
 
             case JsonObjectType.Boolean:
                 return value.ToBoolean();

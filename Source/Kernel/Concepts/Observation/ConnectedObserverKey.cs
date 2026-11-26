@@ -32,13 +32,13 @@ public record ConnectedObserverKey(
     /// <param name="key"><see cref="ObserverKey"/> to convert from.</param>
     public static implicit operator string(ConnectedObserverKey key) => key.ToString();
 
-    /// <inheritdoc/>
-    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId, ConnectionId);
-
     /// <summary>
     /// Parse a key into its components.
     /// </summary>
     /// <param name="key">Key to parse.</param>
     /// <returns>Parsed <see cref="ObserverKey"/> instance.</returns>
     public static ConnectedObserverKey Parse(string key) => KeyHelper.Parse<ConnectedObserverKey>(key);
+
+    /// <inheritdoc/>
+    public override string ToString() => KeyHelper.Combine(ObserverId, EventStore, Namespace, EventSequenceId, ConnectionId);
 }

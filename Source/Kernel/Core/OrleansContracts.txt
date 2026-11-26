@@ -479,6 +479,11 @@ class [GrainType("observer")] Cratis.Chronicle.Observation.Observer
 
 class [GrainType("observerdefinitionscachegrainservice")] Cratis.Chronicle.Observation.ObserverDefinitionsCacheGrainService
 
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.ObserverRouting.IObserverRoutingGrainService")] Cratis.Chronicle.Observation.ObserverRouting.IObserverRoutingGrainService [Version(0)]
+  CE4314F2: Acknowledge(Cratis.Chronicle.Concepts.EventStoreName, Cratis.Chronicle.Concepts.Observation.ObserverId, Cratis.Chronicle.Storage.Observation.ObserverDefinitionRevision) -> Task<Cratis.Chronicle.Storage.Observation.ObserverDefinitionRevision>
+
+class [GrainType("observerroutinggrainservice")] Cratis.Chronicle.Observation.ObserverRouting.ObserverRoutingGrainService
+
 class [GrainType("observerservice")] Cratis.Chronicle.Observation.ObserverService
 
 class [GrainType("observerserviceclient")] Cratis.Chronicle.Observation.ObserverServiceClient
@@ -507,6 +512,15 @@ class [GrainType("reducersmanager")] Cratis.Chronicle.Observation.Reducers.Clien
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.States.IReplayCandidateRecommendation")] Cratis.Chronicle.Observation.States.IReplayCandidateRecommendation [Version(0)]
 
 class [GrainType("replaycandidaterecommendation")] Cratis.Chronicle.Observation.States.ReplayCandidateRecommendation
+
+interface [GrainInterfaceType("Cratis.Chronicle.Observation.Supervisors.IObserverSupervisor")] Cratis.Chronicle.Observation.Supervisors.IObserverSupervisor [Version(0)]
+  DA72536B: Bind(Cratis.Chronicle.Concepts.EventStoreNamespaceName, Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription) -> Task
+  01D19B3A: FindBehind() -> Task<System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Observation.ObserverKey>>
+  62C1C9F6: GetBinding(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task<Cratis.Chronicle.Storage.Observation.ObserverDurableSubscription>
+  31745D0D: Publish() -> Task<Cratis.Chronicle.Observation.ObserverRouting.ObserverRevisionAcknowledgements>
+  16802526: Unbind(Cratis.Chronicle.Concepts.EventStoreNamespaceName) -> Task
+
+class [GrainType("observersupervisor")] Cratis.Chronicle.Observation.Supervisors.ObserverSupervisor
 
 interface [GrainInterfaceType("Cratis.Chronicle.Observation.Webhooks.INotifyWebhookDefinitionsChanged")] Cratis.Chronicle.Observation.Webhooks.INotifyWebhookDefinitionsChanged [Version(0)]
   E5C6FA0A: OnWebhookDefinitionsChanged() -> Task

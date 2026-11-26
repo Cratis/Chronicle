@@ -91,6 +91,9 @@ Rule IDs are not a continuous sequence. The table includes the retired CHR0047 r
 | [CHR0079](CHR0079) | A relation of a graph view must follow an edge | Error | The type given to `Follows<TEdge>` is not an edge |
 | [CHR0080](CHR0080) | A relation of a graph view must lead to a view | Error | A relation member's type, or the item type of its collection, is not a view |
 | [CHR0081](CHR0081) | A graph view cannot be a node or an edge | Error | A type is both a view and a node or an edge |
+| [CHR0082](CHR0082) | Scenario terminal task is discarded | Warning | A known scenario setup or delivery task is discarded rather than observed |
+| [CHR0083](CHR0083) | Reactor handler must not be async void | Warning | An eligible instance reactor handler is async void, so Chronicle cannot await its work |
+| [CHR0084](CHR0084) | Event type generation is missing a migrator | Error | An event type at generation 2 or higher lacks an `EventTypeMigration<TUpgrade, TPrevious>` for one or more steps `1->2` .. `(N-1)->N`; the message lists the missing steps and what to add |
 
 ## Explicit registration evidence
 
@@ -111,6 +114,7 @@ These rules offer code fixes:
 - [CHR0028](CHR0028) removes the redundant `.AutoMap()` call.
 - [CHR0029](CHR0029) removes the redundant `.Set(...).To(...)` mapping.
 - [CHR0062](CHR0062) adds `EventSourceId` to the concurrency dimensions. Use this fix when the condition should apply to one event source rather than across sources.
+- [CHR0083](CHR0083) changes an async-void reactor handler's return type to `global::System.Threading.Tasks.Task`, preserving its body. Fix All is supported. Overrides and interface implementations are excluded to preserve their signature contracts.
 
 ## Installation
 

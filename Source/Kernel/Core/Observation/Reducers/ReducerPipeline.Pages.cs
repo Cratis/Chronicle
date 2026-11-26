@@ -8,9 +8,9 @@ using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Observation.Reducers;
 
-/// <summary>
+/// <content>
 /// Partial for reducing a page of partitions in one delivery.
-/// </summary>
+/// </content>
 /// <remarks>
 /// The sink is one shared instance per read model and namespace, and its bulk window is shared with everything writing
 /// through it: a write made while a window is open is buffered, and only becomes durable when the window is flushed. A page

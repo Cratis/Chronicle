@@ -43,10 +43,13 @@ public class MethodBodyReader
 
     public IList<ILInstruction> Instructions { get; } = [];
 
-    public static byte[] StringToByteArray(string hex) =>
-        [..Enumerable.Range(0, hex.Length)
-                         .Where(x => x % 2 == 0)
-                         .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))];
+    public static byte[] StringToByteArray(string hex)
+    {
+        var bytes = Enumerable.Range(0, hex.Length)
+            .Where(x => x % 2 == 0)
+            .Select(x => Convert.ToByte(hex.Substring(x, 2), 16));
+        return [.. bytes];
+    }
 
     public object GetReferencedOperand(Module module, int metadataToken)
     {
