@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Concepts;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager.when_releasing_with_status;
@@ -11,6 +12,8 @@ public class and_a_decrypted_value_has_the_wrong_kind : given.a_manager
     const string Plaintext = "secret-plaintext";
     Exception _error;
     JsonSchema _releaseSchema;
+
+    protected override IEncryption CreateEncryption() => LegacyEncryption.Create();
 
     async Task Establish()
     {

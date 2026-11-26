@@ -11,6 +11,8 @@ public class and_the_current_private_key_is_malformed : given.protected_events
 {
     string _original;
 
+    protected override Encryption CreateEncryption() => LegacyEncryption.Create();
+
     async Task Establish()
     {
         _original = _converter.ToJsonObject(_stored[1][1], _sourceSchema).ToJsonString();

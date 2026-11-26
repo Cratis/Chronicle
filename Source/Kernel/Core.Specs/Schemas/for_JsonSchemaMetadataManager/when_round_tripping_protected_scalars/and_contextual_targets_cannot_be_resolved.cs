@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager.when_round_tripping_protected_scalars;
 
@@ -11,6 +12,8 @@ public class and_contextual_targets_cannot_be_resolved : given.real_pii_protecti
     Exception _recursiveError;
     JsonObject _unclassified;
     StatusedRelease _unclassifiedStatus;
+
+    protected override IEncryption CreateEncryption() => LegacyEncryption.Create();
 
     async Task Establish()
     {

@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -11,8 +12,10 @@ namespace Cratis.Chronicle.Schemas;
 /// Validates protected values for comparison without the erased-value fallbacks used by persistence release.
 /// Traversal is shared with apply and release in <see cref="JsonSchemaMetadataManager"/>.
 /// </summary>
-internal static class StrictJsonSchemaRelease
+internal sealed class StrictJsonSchemaRelease
 {
+    readonly LegacyProtectedTypes _types = new();
+
     /// <summary>
     /// Attempts to recover the complete original value, including its JSON kind.
     /// </summary>
@@ -23,7 +26,7 @@ internal static class StrictJsonSchemaRelease
     /// <param name="identifier">The protection identifier.</param>
     /// <param name="node">The stored value.</param>
     /// <returns>The original value, or null if it cannot be recovered without loss.</returns>
-    internal static async Task<JsonNode?> ReleaseValue(JsonSchema schema, IJsonSchemaMetadataValueHandler handler, EventStoreName eventStore, EventStoreNamespaceName @namespace, string identifier, JsonNode node)
+    internal async Task<JsonNode?> ReleaseValue(JsonSchema schema, IJsonSchemaMetadataValueHandler handler, EventStoreName eventStore, EventStoreNamespaceName @namespace, string identifier, JsonNode node)
     {
         var released = await handler.TryRelease(eventStore, @namespace, identifier, node);
         return released is null ? null : TryRestore(schema, released);
@@ -35,9 +38,10 @@ internal static class StrictJsonSchemaRelease
     /// <param name="schema">The protected boundary's schema.</param>
     /// <param name="released">The released value, which is text for non-string protected types.</param>
     /// <returns>The original value, or null if it cannot be restored without loss.</returns>
-    internal static JsonNode? TryRestore(JsonSchema schema, JsonNode released)
+    internal JsonNode? TryRestore(JsonSchema schema, JsonNode released)
     {
-        var type = ProtectedType(schema);
+        if (AuthenticatedProtectedValue.HasKind(released)) return released;
+        var type = _types.For(schema);
         released = RestoreJsonKind(type, released)!;
         return HasJsonKind(type, released) ? released : null;
     }
@@ -47,23 +51,7 @@ internal static class StrictJsonSchemaRelease
     /// </summary>
     /// <param name="schema">The protected boundary's schema.</param>
     /// <returns>Whether the codec's untyped text can be restored without ambiguity.</returns>
-    internal static bool HasSupportedType(JsonSchema schema) =>
-        ProtectedType(schema) is JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean or JsonObjectType.Array or JsonObjectType.Object;
-
-    /// <summary>
-    /// Gets the possible non-null JSON kinds, including resolved contextual targets.
-    /// </summary>
-    /// <param name="schema">The protected boundary's schema.</param>
-    /// <returns>The combined kinds, or none when contextual resolution is indeterminate.</returns>
-    internal static JsonObjectType ProtectedType(JsonSchema schema)
-    {
-        var reach = schema.MetadataReferences;
-        if (!reach.Contextual) return DeclaredType(schema);
-        if (reach.Indeterminate) return JsonObjectType.None;
-
-        // Retain all possible contextual kinds; choosing one carrier would hide ambiguity.
-        return reach.Schemas.Aggregate(JsonObjectType.None, (type, target) => type | DeclaredType(target));
-    }
+    internal bool HasSupportedType(JsonSchema schema) => _types.IsSupported(schema);
 
     static JsonNode? RestoreJsonKind(JsonObjectType type, JsonNode released)
     {
@@ -91,28 +79,4 @@ internal static class StrictJsonSchemaRelease
         JsonObjectType.Object => released is JsonObject,
         _ => false
     };
-
-    static JsonObjectType DeclaredType(JsonSchema schema)
-    {
-        // Do not use ActualTypeSchema here: for a union it selects the first non-null branch,
-        // which would hide exactly the ambiguity this operation must reject.
-        var type = schema.Type;
-        if (schema.HasReference)
-        {
-            type |= DeclaredType(schema.Reference!);
-        }
-
-        foreach (var alternative in schema.OneOf.Concat(schema.AnyOf).Concat(schema.AllOf))
-        {
-            var alternativeType = DeclaredType(alternative);
-            if (alternativeType == JsonObjectType.None && alternative.Type != JsonObjectType.Null)
-            {
-                return JsonObjectType.None;
-            }
-
-            type |= alternativeType;
-        }
-
-        return type & ~JsonObjectType.Null;
-    }
 }

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Releases;
+
 namespace Cratis.Chronicle.Schemas;
 
 public partial class JsonSchemaMetadataManager
@@ -43,6 +45,32 @@ public partial class JsonSchemaMetadataManager
     static bool SupportsContextualScalarMetadata(JsonSchema schema, bool supportsUndeclaredScalar) =>
         (schema.Type != JsonObjectType.None || supportsUndeclaredScalar) &&
         (schema.Type & (JsonObjectType.Object | JsonObjectType.Array)) == JsonObjectType.None;
+
+    (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] ForApply(
+        MetadataWalk walk,
+        JsonSchema schema,
+        (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata,
+        string path)
+    {
+        if (walk.ActionName != SchemaMetadataActionFailed.ApplyAction || metadata.Length == 0 || !schema.MetadataReferences.Contextual)
+        {
+            return metadata;
+        }
+
+        var own = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
+        CollectMetadata(schema, _categories, own);
+        return metadata.Where(entry =>
+        {
+            if (ContainsKey(own, entry) || !_propertyValueHandlers.TryGetValue((entry.Category, entry.Metadata.metadataType), out var handler) ||
+                handler.SupportsTypedValues || walk.LegacyTypes.HasSupportedType(schema))
+            {
+                return true;
+            }
+
+            logger.TypedProtectedValueFloorRequired(path, ClusterReleaseBoundary.TypedProtectedValues.ToString());
+            return false;
+        }).ToArray();
+    }
 
     (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Classify(JsonSchema schema, bool forComparison)
     {

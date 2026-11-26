@@ -139,10 +139,20 @@ public partial class JsonSchema
         void AddChildren(JsonSchema schema, bool contextualDocument)
         {
             var cached = schema.CachedMetadataChildren(includeChildren, contextualDocument);
+            AddCachedChildren(schema, cached);
+            AddUncachedChildren(schema, cached, contextualDocument);
+        }
+
+        void AddCachedChildren(JsonSchema schema, Dictionary<JsonObject, JsonSchema> cached)
+        {
             foreach (var child in cached)
             {
                 if (!Enqueue(schema, child.Key, child.Value)) break;
             }
+        }
+
+        void AddUncachedChildren(JsonSchema schema, Dictionary<JsonObject, JsonSchema> cached, bool contextualDocument)
+        {
             foreach (var child in schema.MetadataChildren(includeChildren, contextualDocument))
             {
                 var origin = schema.MetadataChildOrigin(child);

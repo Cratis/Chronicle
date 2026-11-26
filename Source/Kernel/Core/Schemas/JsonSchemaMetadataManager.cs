@@ -135,6 +135,7 @@ public partial class JsonSchemaMetadataManager(
     {
         var result = (JsonObject)json.DeepClone();
         var statuses = new Dictionary<string, ProtectedValueReleaseStatus>(StringComparer.Ordinal);
+        var restoration = new StrictJsonSchemaRelease();
         if (!schema.HasSchemaMetadata())
         {
             return new StatusedRelease(result, statuses);
@@ -156,8 +157,13 @@ public partial class JsonSchemaMetadataManager(
 
                 var released = await handlers[0].ReleaseWithStatus(eventStore, eventStoreNamespace, subject, value);
                 statuses[path] = released.Status;
+                if (!AuthenticatedProtectedValue.HasKind(released.Value) && !restoration.HasSupportedType(boundarySchema))
+                {
+                    throw new StrictSchemaMetadataReleaseNotSupported();
+                }
+
                 return released.Status == ProtectedValueReleaseStatus.Decrypted
-                    ? StrictJsonSchemaRelease.TryRestore(boundarySchema, released.Value) ?? throw new StrictSchemaMetadataReleaseNotSupported()
+                    ? restoration.TryRestore(boundarySchema, released.Value) ?? throw new StrictSchemaMetadataReleaseNotSupported()
                     : released.Value;
             },
             releaseAddress: (eventStore, eventStoreNamespace));
@@ -172,7 +178,7 @@ public partial class JsonSchemaMetadataManager(
         var erasure = new ErasedPathCollector(eventStore, eventStoreNamespace);
         if (schema.HasSchemaMetadata())
         {
-            await WalkObject(new MetadataWalk { Identifier = identifier, ActionName = SchemaMetadataActionFailed.ReleaseAction, Action = static (_, _, value) => Task.FromResult(value), Erasure = erasure, ReleaseAddress = (eventStore, eventStoreNamespace) }, schema, result, string.Empty);
+            await WalkObject(new MetadataWalk { Identifier = identifier, ActionName = SchemaMetadataActionFailed.ReleaseAction, Action = static (_, _, value) => Task.FromResult(value), Erasure = erasure, ReleaseAddress = (eventStore, eventStoreNamespace), LegacyTypes = new() }, schema, result, string.Empty);
         }
 
         return await ReleaseKeys.Complete<(JsonObject, IReadOnlyList<string>)>(() => (result, erasure.Paths.Order(StringComparer.Ordinal).ToArray()));
@@ -189,8 +195,9 @@ public partial class JsonSchemaMetadataManager(
 
         try
         {
+            var restoration = new StrictJsonSchemaRelease();
             var released = await TryTransformForComparison(schema, json, (current, handler, node) =>
-                StrictJsonSchemaRelease.ReleaseValue(current, handler, eventStore, eventStoreNamespace, identifier, node));
+                restoration.ReleaseValue(current, handler, eventStore, eventStoreNamespace, identifier, node));
             return await ReleaseKeys.Complete(() => released);
         }
         catch (Exception exception)
@@ -429,17 +436,16 @@ public partial class JsonSchemaMetadataManager(
         }
     }
 
-    void ValidateComparisonBoundary(JsonSchema schema, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata)
+    void ValidateComparisonBoundary((SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata)
     {
         if (metadata.Length == 0)
         {
             return;
         }
 
-        // Overlapping handlers have no proven inverse. Unknown handlers and ambiguous scalar kinds
-        // must fail closed even when the normal append traversal would skip an unknown metadata type.
-        if (metadata.Length != 1 || !_propertyValueHandlers.ContainsKey((metadata[0].Category, metadata[0].Metadata.metadataType)) ||
-            !StrictJsonSchemaRelease.HasSupportedType(schema))
+        // Overlapping and unknown handlers have no proven inverse. Kind validation happens only after
+        // release, when an authenticated kind can prove what legacy schemas cannot.
+        if (metadata.Length != 1 || !_propertyValueHandlers.ContainsKey((metadata[0].Category, metadata[0].Metadata.metadataType)))
         {
             throw new InvalidOperationException("Protected boundary cannot be compared.");
         }
@@ -455,7 +461,7 @@ public partial class JsonSchemaMetadataManager(
         var referenced = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
         CollectMetadata(reference, categories, referenced);
         if (referenced.Count == 0) return own.ToArray();
-        if (CanInspectReferencedType(reference) && StrictJsonSchemaRelease.HasSupportedType(reference))
+        if (CanInspectReferencedType(reference) && new LegacyProtectedTypes().IsSupported(reference))
         {
             // Referenced containers retain their existing member-level protection boundaries.
             var type = reference.ActualTypeSchema.Type;
@@ -477,12 +483,12 @@ public partial class JsonSchemaMetadataManager(
         Func<JsonSchema, IJsonSchemaMetadataValueHandler, JsonNode, Task<JsonNode?>>? comparisonTransform = null,
         Func<string, JsonSchema, IJsonSchemaMetadataValueHandler[], string, JsonNode, Task<JsonNode>>? boundaryTransform = null,
         (EventStoreName Store, EventStoreNamespaceName Namespace)? releaseAddress = null) =>
-        WalkObject(new MetadataWalk { Identifier = identifier, ActionName = actionName, Action = action, StrictRelease = strictRelease, ComparisonTransform = comparisonTransform, BoundaryTransform = boundaryTransform, ReleaseAddress = releaseAddress }, schema, json, path);
+        WalkObject(new MetadataWalk { Identifier = identifier, ActionName = actionName, Action = action, StrictRelease = strictRelease, ComparisonTransform = comparisonTransform, BoundaryTransform = boundaryTransform, ReleaseAddress = releaseAddress, LegacyTypes = new() }, schema, json, path);
 
     async Task WalkObject(MetadataWalk walk, JsonSchema schema, JsonObject json, string path, bool cacheable = true)
     {
         cacheable = cacheable && ClassificationFor(schema).Cacheable;
-        var metadataForContainer = MetadataFor(schema, walk.Comparing, cacheable);
+        var metadataForContainer = ForApply(walk, schema, MetadataFor(schema, walk.Comparing, cacheable), path);
         if (schema.Properties is null)
         {
             return;
@@ -498,28 +504,9 @@ public partial class JsonSchemaMetadataManager(
             var propertyPath = string.IsNullOrEmpty(path) ? property : $"{path}.{property}";
             var (propertySchema, declared) = ResolvePropertySchema(walk, schema, property, propertyPath);
             var propertyCacheable = cacheable && declared && ClassificationFor(propertySchema).Cacheable;
-            var propertyMetadata = Merge(MetadataFor(propertySchema, walk.Comparing, propertyCacheable), metadataForContainer);
-            if (walk.Comparing)
-            {
-                ValidateComparisonBoundary(propertySchema, propertyMetadata);
-            }
-
-            if (walk.BoundaryTransform is not null && RegisteredHandlers(propertyMetadata) is { Length: > 0 } handlers)
-            {
-                json[property] = await walk.BoundaryTransform(propertyPath, propertySchema, handlers, walk.Identifier, value);
-                continue;
-            }
-
+            var propertyMetadata = Merge(ForApply(walk, propertySchema, MetadataFor(propertySchema, walk.Comparing, propertyCacheable), propertyPath), metadataForContainer);
             var handlerApplied = await WalkPropertyHandlers(walk, propertySchema, propertyMetadata, json, property, value, propertyPath);
-
-            // Only descend when the property was not handled as a whole. A handled container has already
-            // been replaced by its ciphertext, so recursing would mutate the detached original — the work
-            // is thrown away on apply, and on release it would decrypt members that were never separately
-            // encrypted.
-            if (!handlerApplied && value is JsonObject or JsonArray)
-            {
-                await DescendIntoProperty(walk, propertySchema, value, propertyPath, propertyCacheable);
-            }
+            await DescendIntoProperty(walk, propertySchema, value, propertyPath, propertyCacheable, handlerApplied);
         }
     }
 
@@ -532,6 +519,17 @@ public partial class JsonSchemaMetadataManager(
         JsonNode value,
         string propertyPath)
     {
+        if (walk.Comparing)
+        {
+            ValidateComparisonBoundary(propertyMetadata);
+        }
+
+        if (walk.BoundaryTransform is not null && RegisteredHandlers(propertyMetadata) is { Length: > 0 } handlers)
+        {
+            json[property] = await walk.BoundaryTransform(propertyPath, propertySchema, handlers, walk.Identifier, value);
+            return true;
+        }
+
         var handlerApplied = false;
         foreach (var (category, metadata) in propertyMetadata)
         {
@@ -566,7 +564,7 @@ public partial class JsonSchemaMetadataManager(
         }
 
         cacheable = cacheable && ClassificationFor(itemSchema).Cacheable;
-        var itemMetadata = MetadataFor(itemSchema, walk.Comparing, cacheable);
+        var itemMetadata = ForApply(walk, itemSchema, MetadataFor(itemSchema, walk.Comparing, cacheable), path);
         for (var i = 0; i < array.Count; i++)
         {
             var element = array[i];
@@ -600,7 +598,7 @@ public partial class JsonSchemaMetadataManager(
 
         if (walk.Comparing)
         {
-            ValidateComparisonBoundary(itemSchema, itemMetadata);
+            ValidateComparisonBoundary(itemMetadata);
         }
 
         if (walk.BoundaryTransform is not null && RegisteredHandlers(itemMetadata) is { Length: > 0 } handlers)
@@ -661,8 +659,19 @@ public partial class JsonSchemaMetadataManager(
         return handlerApplied;
     }
 
-    Task DescendIntoProperty(MetadataWalk walk, JsonSchema propertySchema, JsonNode node, string path, bool cacheable) =>
-        node is JsonObject && propertySchema.DescribesGeospatialValue() ? Task.CompletedTask : DescendInto(walk, propertySchema.ActualTypeSchema, node, path, cacheable);
+    Task DescendIntoProperty(MetadataWalk walk, JsonSchema propertySchema, JsonNode node, string path, bool cacheable, bool handlerApplied)
+    {
+        // Only descend when the property was not handled as a whole. A handled container has already
+        // been replaced by its ciphertext, so recursing would mutate the detached original — the work
+        // is thrown away on apply, and on release it would decrypt members that were never separately
+        // encrypted.
+        if (handlerApplied || node is not (JsonObject or JsonArray))
+        {
+            return Task.CompletedTask;
+        }
+
+        return node is JsonObject && propertySchema.DescribesGeospatialValue() ? Task.CompletedTask : DescendInto(walk, propertySchema.ActualTypeSchema, node, path, cacheable);
+    }
 
     Task DescendIntoElement(MetadataWalk walk, JsonSchema itemSchema, JsonNode node, string path, bool cacheable) =>
         node is JsonObject && itemSchema.DescribesGeospatialValue() ? Task.CompletedTask : DescendInto(walk, itemSchema, node, path, cacheable);
@@ -722,6 +731,8 @@ public partial class JsonSchemaMetadataManager(
 
     readonly struct MetadataWalk
     {
+        public required StrictJsonSchemaRelease LegacyTypes { get; init; }
+
         public required string Identifier { get; init; }
 
         public required string ActionName { get; init; }

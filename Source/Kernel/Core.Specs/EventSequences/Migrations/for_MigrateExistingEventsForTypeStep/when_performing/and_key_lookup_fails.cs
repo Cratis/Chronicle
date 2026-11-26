@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
 using Cratis.Chronicle.Storage.Compliance;
 using NSubstitute.ExceptionExtensions;
 
@@ -14,6 +15,7 @@ public class and_key_lookup_fails : given.protected_events
     {
         _original = _converter.ToJsonObject(_stored[1][1], _sourceSchema).ToJsonString();
         _keyAccess.TryGetLatestFor(Store, Namespace, "erased-owner").ThrowsAsync(new MissingEncryptionKey("erased-owner"));
+        _keyAccess.TryGetAtRevisionFor(Store, Namespace, "erased-owner", Arg.Any<EncryptionKeyRevision>()).ThrowsAsync(new MissingEncryptionKey("erased-owner"));
     }
 
     async Task Because() => await Perform();

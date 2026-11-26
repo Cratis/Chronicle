@@ -39,5 +39,6 @@ public class a_pii_value_encrypted_per_subject : Specification
     {
         _keyStore.TryGetFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, subject).Returns(Task.FromResult<EncryptionKey?>(key));
         _keyStore.TryGetLatestFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, subject).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
+        _keyStore.TryGetAtRevisionFor(EventStoreName.NotSet, EventStoreNamespaceName.NotSet, subject, EncryptionKeyRevision.Initial).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
     }
 }

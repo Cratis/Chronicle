@@ -50,7 +50,7 @@ internal static class ErasedValueClassifier
         var fence = await ReleaseKeys.GetErasureForRelease(storage, address.EventStore, address.Namespace, address.Identifier);
         if (fence?.ErasedKeyFingerprints.Contains(fingerprint) == true)
         {
-            return new(stored, ProtectedValueReleaseStatus.Erased);
+            return new(envelope.Kind is null ? stored : AuthenticatedProtectedValue.WithKind(stored), ProtectedValueReleaseStatus.Erased);
         }
 
         var pair = await ReleaseKeys.TryGetPairForRelease(storage, address, envelope.Revision)

@@ -3,24 +3,16 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Schemas;
 
 public partial class JsonSchemaMetadataManager
 {
-    static JsonSchema RestorationSchema(JsonSchema schema)
-    {
-        var reach = schema.MetadataReferences;
-        if (!reach.Contextual) return schema.ActualTypeSchema;
-
-        var type = StrictJsonSchemaRelease.ProtectedType(schema);
-        return reach.Schemas.FirstOrDefault(target => (target.Type & ~JsonObjectType.Null) == type)?.ActualTypeSchema
-            ?? schema.ActualTypeSchema;
-    }
-
     static JsonNode? RestoreReleasedContainerShape(JsonNode released, JsonSchema propertySchema)
     {
-        propertySchema = RestorationSchema(propertySchema);
+        if (AuthenticatedProtectedValue.HasKind(released)) return released;
+        propertySchema = propertySchema.ActualTypeSchema;
         if (released is not JsonValue scalar || !scalar.TryGetValue<string>(out var text)) return released;
 
         // The ciphertext format stores scalar text without a JSON type tag. The schema supplies the

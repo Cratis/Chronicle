@@ -50,11 +50,13 @@ public class protected_events : Specification
         : """{"type":"object","properties":{"name":{"type":"string","compliance":[{"metadataType":"PII","details":""}]}}}""";
     protected virtual string SourceContentJson => UsesObjectArray ? """{"contacts":[{"name":"Jane"}]}""" : """{"name":"Jane"}""";
 
+    protected virtual Encryption CreateEncryption() => new();
+
     async Task Establish()
     {
         _keys = new InMemoryEncryptionKeyStorage();
         ConfigureKeyAccess();
-        var encryption = new Encryption();
+        var encryption = CreateEncryption();
         _manager = new JsonSchemaMetadataManager(
             new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(new ManagedEncryptionKeyProvisioner(_keys, encryption), _keyAccess, encryption)),
             NullLogger<JsonSchemaMetadataManager>.Instance);
@@ -139,6 +141,8 @@ public class protected_events : Specification
             .Returns(call => _keys.TryGetFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision?>(3)));
         _keyAccess.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
             .Returns(call => _keys.TryGetLatestFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        _keyAccess.TryGetAtRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision>())
+            .Returns(call => _keys.TryGetAtRevisionFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision>(3)));
         _keyAccess.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
             .Returns(call => _keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
     }
