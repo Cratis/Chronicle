@@ -28,5 +28,11 @@
   "attributionGroup": "namespace",
   "addedFilePolicy": "directory",
   "unmappedFilePolicy": "directory",
-  "sampleRate": 0
+  "sampleRate": 0,
+  "maxAttributionGroups": 120,
+  "implicitReferences": {
+    "Source/Kernel/Storage.MongoDB.Specs/**": [
+      "Source/Kernel/Server/Server.csproj"
+    ]
+  }
 }
