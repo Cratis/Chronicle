@@ -19,16 +19,15 @@ public class after_repeated_handshake_timeouts : given.a_connection_with_several
         await StartConnecting().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
 
         // The server stops answering the handshake: every attempt runs out of its time.
+        _streams[_a] = Observable.Never<ConnectionKeepAlive>;
         session.OnCompleted();
         for (var failures = 1; failures <= 3; failures++)
         {
             var timerCreated = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            _streams[_a] = () =>
-            {
-                // Arm only once the handshake starts, excluding timers from the earlier compatibility check.
-                _time.TimerCreated = () => timerCreated.TrySetResult();
-                return Observable.Never<ConnectionKeepAlive>();
-            };
+
+            // Only the handshake uses the manual clock: resolver/balancer tasks are complete, compatibility is skipped,
+            // and connect-lock/startup-grace waits use the system clock. Arm before the retry, not inside subscription startup.
+            _time.TimerCreated = () => timerCreated.TrySetResult();
             await ReleaseWatchdogDelay();
             await timerCreated.Task.WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
             _time.Advance(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
