@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "builtAt": "fbfa1f3e5f79a06a774acbee9db3452b2babece3",
+  "builtAt": "9140a362e061564fd64bbf82396648eb3465e1fb",
   "project": "Source/Kernel/Storage.InMemory.Specs/Storage.InMemory.Specs.csproj",
   "granularity": "class",
   "files": [
