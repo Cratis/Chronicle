@@ -25,13 +25,14 @@ public abstract class when_filtering_composite_child_candidates : Specification
     ISink _sink;
     Lookup _formatted;
     Lookup _empty;
+    Lookup _encoded;
 
     protected abstract ISqlSinkHarness CreateHarness(SqlReadCapture capture);
 
     async Task Establish()
     {
         _harness = CreateHarness(_capture);
-        var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"children":{"type":"array","items":{"type":"object","properties":{"id":{"type":"object"}}}},"fallbackChildren":{"type":"array","items":{"type":"object","properties":{"id":{"type":"object"}}}},"emptyChildren":{"type":"array","items":{"type":"object","properties":{"id":{"type":"object"}}}}}}""");
+        var schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"id":{"type":"string"},"children":{"type":"array","items":{"type":"object","properties":{"id":{"type":"object"}}}},"fallbackChildren":{"type":"array","items":{"type":"object","properties":{"id":{"type":"object"}}}},"emptyChildren":{"type":"array","items":{"type":"object","properties":{"id":{"type":"object"}}}},"encodedChildren":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"}}}}}}""");
         _sink = _harness.CreateSink(new ReadModelDefinition("composite_candidates", "composite_candidates", "Composite candidates", ReadModelOwner.Client, ReadModelSource.Code, ReadModelObserverType.Projection, "composite_candidates", SinkDefinition.None, new Dictionary<ReadModelGeneration, JsonSchema> { [ReadModelGeneration.First] = schema }, []));
         for (var index = 0; index < 12; index++)
         {
@@ -46,7 +47,8 @@ public abstract class when_filtering_composite_child_candidates : Specification
             changeset.Changes.Returns([new PropertiesChanged<ExpandoObject>(new ExpandoObject(), [
                 new PropertyDifference("children", null, Children(identity)),
                 new PropertyDifference("fallbackChildren", null, Children(fallback)),
-                new PropertyDifference("emptyChildren", null, Children(index == 0 ? new ExpandoObject() : fallback))
+                new PropertyDifference("emptyChildren", null, Children(index == 0 ? new ExpandoObject() : fallback)),
+                new PropertyDifference("encodedChildren", null, Children(JsonSerializer.Serialize((object)identity)))
             ])]);
             await _sink.ApplyChanges(new Key(index.ToString(), ArrayIndexers.NoIndexers), changeset, 1UL);
         }
@@ -58,6 +60,7 @@ public abstract class when_filtering_composite_child_candidates : Specification
         foreach (var key in new object[] { poco, JsonSerializer.SerializeToNode(poco)!, JsonSerializer.SerializeToElement(poco), new IdentityConcept(poco) }) _narrowed.Add(await Find("[children].id", key));
         _formatted = await Find("[fallbackChildren].id", new NumericIdentity(7, Guid.Parse(Version)));
         _empty = await Find("[emptyChildren].id", new JsonObject());
+        _encoded = await Find("[encodedChildren].id", poco);
     }
 
     async Task<Lookup> Find(PropertyPath path, object value)
@@ -85,6 +88,7 @@ public abstract class when_filtering_composite_child_candidates : Specification
     [Fact] public void should_fall_back_for_numeric_and_guid_only_keys() => _formatted.Rows.ShouldEqual(12);
     [Fact] public void should_find_an_empty_composite_key() => _empty.Root.ShouldEqual("0");
     [Fact] public void should_fall_back_when_the_key_has_no_leaf() => _empty.Rows.ShouldEqual(12);
+    [Fact] public void should_keep_composite_identities_stored_as_json_text_candidates() => _encoded.Root.ShouldEqual("0");
 
     record Scope(string Tenant);
     record Identity(long Sequence, string Version, Scope Scope) : IComparable
