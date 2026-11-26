@@ -28,6 +28,15 @@ public class and_subscriber_throws : given.an_observer_with_subscription_for_spe
     [Fact] void should_still_record_the_partition_as_in_flight_on_the_state_before_dispatch() =>
         _inFlightPartitionsDuringDispatch.ShouldContain((Key)"Something");
 
+    [Fact] void should_clear_the_marker_when_the_failure_is_recorded() =>
+        _stateStorage.State.InFlightPartitions.ShouldNotContain((Key)"Something");
+
+    [Fact] void should_record_the_failed_delivery_at_its_original_position() =>
+        _failedPartitionsState.Partitions.Single().Attempts.Single().SequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
+
+    [Fact] void should_retain_the_subscriber_exception_message() =>
+        _failedPartitionsState.Partitions.Single().Attempts.Single().Messages.ShouldContain("boom");
+
     [Fact] void should_not_record_the_marker_through_a_separate_in_flight_store() => _inFlightEventsStorage
         .DidNotReceive()
         .Add(Arg.Any<ObserverId>(), Arg.Any<Key>(), Arg.Any<EventSequenceNumber>());

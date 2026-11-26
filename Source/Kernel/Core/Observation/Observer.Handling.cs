@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Frozen;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
@@ -10,7 +9,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Events;
-using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
@@ -175,18 +173,7 @@ public partial class Observer
         foreach (var (eventTypeId, count) in partitionCounts)
         {
             totalForPartition += count.Value;
-            if (perEventType.TryGetValue(eventTypeId, out var existing))
-            {
-                var newCount = existing.Value > count.Value ? existing.Value - count.Value : 0UL;
-                if (newCount == 0)
-                {
-                    perEventType.Remove(eventTypeId);
-                }
-                else
-                {
-                    perEventType[eventTypeId] = newCount;
-                }
-            }
+            SubtractHandledCount(perEventType, eventTypeId, count);
         }
 
         var newTotal = state.HandledEventCount.Value > totalForPartition
@@ -198,6 +185,20 @@ public partial class Observer
             HandledEventCount = newTotal,
             HandledEventCountPerEventType = perEventType
         };
+    }
+
+    static void SubtractHandledCount(Dictionary<EventTypeId, EventCount> perEventType, EventTypeId eventTypeId, EventCount count)
+    {
+        if (!perEventType.TryGetValue(eventTypeId, out var existing)) return;
+        var newCount = existing.Value > count.Value ? existing.Value - count.Value : 0UL;
+        if (newCount == 0)
+        {
+            perEventType.Remove(eventTypeId);
+        }
+        else
+        {
+            perEventType[eventTypeId] = newCount;
+        }
     }
 
     static string FailureKindCode(FailureKind kind) => kind switch
@@ -297,14 +298,7 @@ public partial class Observer
 
             try
             {
-                foreach (var (failureId, retryDelay) in reminders)
-                {
-                    if (!IsQuarantined && Failures.Partitions.Any(_ => _.Id == failureId && !_.IsQuarantined))
-                    {
-                        await this.RegisterOrUpdateReminder(PartitionReminderName(failureId), retryDelay, GetRetryReminderPeriod(retryDelay));
-                    }
-                }
-
+                await RegisterPendingRetryReminders(reminders);
                 await WriteStateAsync();
             }
             catch
@@ -321,6 +315,17 @@ public partial class Observer
         finally
         {
             _alertMutationLock.Release();
+        }
+    }
+
+    async Task RegisterPendingRetryReminders(Dictionary<FailedPartitionId, TimeSpan> reminders)
+    {
+        foreach (var (failureId, retryDelay) in reminders)
+        {
+            if (!IsQuarantined && Failures.Partitions.Any(_ => _.Id == failureId && !_.IsQuarantined))
+            {
+                await this.RegisterOrUpdateReminder(PartitionReminderName(failureId), retryDelay, GetRetryReminderPeriod(retryDelay));
+            }
         }
     }
 
@@ -398,12 +403,6 @@ public partial class Observer
             return;
         }
 
-        var failed = false;
-        var failureKind = FailureKind.Unknown;
-        Exception? failureException = null;
-        var failurePolicy = WebhookDeliveryFailurePolicy.Retry;
-        var exceptionMessages = Enumerable.Empty<string>();
-        var exceptionStackTrace = string.Empty;
         var tailEventSequenceNumber = preparationContext.NextEventSequenceNumber;
 
         var eventsToHandle = prepared.EventsToHandle;
@@ -414,9 +413,6 @@ public partial class Observer
             return;
         }
 
-        var numEventsSuccessfullyHandled = EventCount.Zero;
-        var stateChanged = false;
-        IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
         if (await CanDispatchDelivery(partition, eventsToHandle))
         {
             // Only a delivery that reaches the subscriber can race a catch-up; a hand-over holds its partition instead.
@@ -425,174 +421,15 @@ public partial class Observer
             // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
             // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
             // on the reloaded observer state and drives partition catch-up on the next activation.
-            DeliveryFenceContext? deliveryFence = null;
             var inFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition };
             State = State with { InFlightPartitions = inFlightPartitions };
             RecordedHandlingState();
             await WriteStateAsync();
             if (!_observerExists) return;
 
-            using (new WriteSuspension(this))
-            {
-                try
-                {
-                    var firstEvent = eventsToHandle[0];
-                    tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
-                    var decryptedEvents = await DecryptEvents(eventsToHandle);
-
-                    var subscriberTimeout = GetLiveSubscriberTimeout(configuration.GetSubscriberTimeout());
-                    var hold = await GetClientDeliveryHold();
-
-                    ObserverSubscriberResult result;
-                    while (true)
-                    {
-                        var target = subscriberSelector.Select(_subscription, partition);
-
-                        // A webhook partition has one non-interleavable activation across live delivery and jobs,
-                        // independent of which silo owns the observer or executes the job.
-                        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
-                            ? SiloAddress.Zero
-                            : target.SiloAddress;
-                        var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
-
-                        if (_prefetchedPartitions.Remove(partition, out var prefetched) &&
-                            !(prefetched.Failure is null && prefetched.Result!.State == ObserverSubscriberState.Disconnected && target.ConnectedClient is not null && _subscription.Targets.Count > 1))
-                        {
-                            // The page this partition belongs to has already been delivered; this is its settlement.
-                            deliveryFence = prefetched.Fence;
-                            if (prefetched.Failure is not null)
-                            {
-                                throw prefetched.Failure;
-                            }
-
-                            result = prefetched.Result!;
-                            break;
-                        }
-
-                        var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }.WithDeadlines(subscriberTimeout, hold, _clock);
-                        deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, context);
-                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, context);
-
-                        // A disconnected result from one client instance only removes that instance —
-                        // the batch is retried against the remaining instances. Only when the last
-                        // instance is gone does the observer unsubscribe (below).
-                        if (result.State == ObserverSubscriberState.Disconnected &&
-                            target.ConnectedClient is not null &&
-                            _subscription.Targets.Count > 1)
-                        {
-                            logger.ClientInstanceDisconnectedRetryingWithRemaining(target.ConnectedClient.ConnectionId, partition);
-                            RemoveSubscriberTarget(target);
-                            continue;
-                        }
-
-                        break;
-                    }
-
-                    numEventsSuccessfullyHandled = result.HandledAnyEvents
-                        ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
-                        : EventCount.Zero;
-
-                    if (result.State == ObserverSubscriberState.Deferred)
-                    {
-                        await PartitionDeferred(partition, result.Deferral!);
-                        stateChanged = true;
-                    }
-                    else if (result.State == ObserverSubscriberState.Failed)
-                    {
-                        failed = true;
-                        failureKind = FailureKind.Handling;
-                        failurePolicy = result.FailurePolicy;
-                        exceptionMessages = result.ExceptionMessages;
-                        exceptionStackTrace = result.ExceptionStackTrace;
-                        tailEventSequenceNumber = result.HandledAnyEvents
-                            ? result.LastSuccessfulObservation
-                            : firstEvent.Context.SequenceNumber;
-                    }
-                    else if (result.State == ObserverSubscriberState.Disconnected)
-                    {
-                        // The batch is not advanced, so whatever subscription takes over catches up from the same position.
-                        await PromoteSupersededRegistrationOrUnsubscribe();
-                        stateChanged = true;
-                    }
-
-                    if (numEventsSuccessfullyHandled > 0)
-                    {
-                        stateChanged = true;
-                        State = State with
-                        {
-                            NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(result.LastSuccessfulObservation.Next())),
-                            TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
-                        };
-                        var previousLastHandled = State.LastHandledEventSequenceNumber;
-                        var shouldSetLastHandled =
-                            previousLastHandled == EventSequenceNumber.Unavailable ||
-                            previousLastHandled < result.LastSuccessfulObservation;
-                        State = State with
-                        {
-                            LastHandledEventSequenceNumber = shouldSetLastHandled
-                                ? result.LastSuccessfulObservation
-                                : previousLastHandled,
-                        };
-
-                        CompleteHeldBackDelivery(partition, result.LastSuccessfulObservation);
-                        var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
-                        handledCountsPerEventType = handledEvents.CountByEventType();
-                        State = WithIncrementedRunningTotals(State, handledCountsPerEventType);
-                        RecordedHandlingState();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    failed = true;
-                    failureKind = ex.ToFailureKind();
-                    failureException = ex;
-                    exceptionMessages = ex.GetAllMessages().ToArray();
-                    exceptionStackTrace = ex.StackTrace ?? string.Empty;
-                }
-            }
-
-            try
-            {
-                // The in-flight marker has served its purpose now that the outcome is known, so clear it before the
-                // outcome is persisted — whichever state write happens below carries the removal. A partition that
-                // failed is recovered through FailedPartitions storage, so keeping its marker would only force a
-                // redundant catch-up for events we already know about.
-                var remainingInFlight = new HashSet<Key>(State.InFlightPartitions);
-                remainingInFlight.Remove(partition);
-                State = State with { InFlightPartitions = remainingInFlight };
-                RecordedHandlingState();
-
-                await RecordHandlingOutcome();
-
-                if (stateChanged)
-                {
-                    await WriteStateAsync();
-                }
-
-                if (_observerExists)
-                {
-                    await CoalesceLiveHandledCounts(partition, handledCountsPerEventType);
-                }
-            }
-            catch (Exception ex)
-            {
-                activity?.RecordFailure(ex);
-                logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
-            }
-
-            Task RecordHandlingOutcome()
-            {
-                if (!failed)
-                {
-                    _metrics?.SuccessfulObservation(replay: false);
-                    return Task.CompletedTask;
-                }
-
-                if (failureException is not null) activity?.RecordFailure(failureException);
-                else activity?.RecordFailure(FailureKindCode(failureKind));
-                return RecordPartitionFailure(partition, tailEventSequenceNumber, exceptionMessages, exceptionStackTrace, failureKind, null, null, new(failurePolicy, deliveryFence));
-            }
+            var batch = new LiveHandlingBatch(partition, eventsToHandle, observedTailEventSequenceNumber, tailEventSequenceNumber, configuration);
+            var outcome = await HandleLiveDelivery(batch);
+            await SettleLiveDelivery(partition, outcome, activity);
         }
     }
 
@@ -641,16 +478,21 @@ public partial class Observer
             return false;
         }
 
+        return !IsPartitionHeldBack(partition);
+    }
+
+    bool IsPartitionHeldBack(Key partition)
+    {
         if (State.ReplayingPartitions.Contains(partition))
         {
             logger.PartitionReplayingCannotHandleNewEvents(partition);
-            return false;
+            return true;
         }
 
         if (State.CatchingUpPartitions.Contains(partition))
         {
             logger.PartitionCatchingUpCannotHandleNewEvents(partition);
-            return false;
+            return true;
         }
 
         // The walk reads every partition to the end of the log, including one whose first event arrives after it registered
@@ -658,10 +500,10 @@ public partial class Observer
         if (_walkingEveryPartition)
         {
             logger.CatchUpWalkCoversNewEvents(partition);
-            return false;
+            return true;
         }
 
-        return true;
+        return false;
     }
 
     void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
