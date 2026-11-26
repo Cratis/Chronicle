@@ -63,7 +63,7 @@ public class and_catch_up_concludes_while_the_subscriber_is_handling : given.an_
         await _delivering.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         try
         {
-            _acceptanceError = await Catch.Exception(() => _observer.CaughtUp(_finishingJob, 41UL, 41UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System));
+            _acceptanceError = await Cratis.Specifications.Catch.Exception(() => _observer.CaughtUp(_finishingJob, 41UL, 41UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System));
             _requestedBeforeDeliverySettled = _catchUpRequested.Task.IsCompleted;
         }
         finally

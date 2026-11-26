@@ -36,6 +36,7 @@ public partial class Observer
     public async Task CatchUp()
     {
         if (CatchUpObserverRemoved) return;
+
         // Repair transfer and admission also consult jobs storage; none may overtake durable acceptance.
         await CatchUpConclusionsApplied();
         if (CatchUpObserverRemoved) return;

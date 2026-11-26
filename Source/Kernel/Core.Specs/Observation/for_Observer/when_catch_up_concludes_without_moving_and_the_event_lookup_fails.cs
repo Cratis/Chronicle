@@ -34,7 +34,7 @@ public class when_catch_up_concludes_without_moving_and_the_event_lookup_fails :
     async Task Because()
     {
         await _observer.CaughtUp(JobId.New(), 42L);
-        _error = await Catch.Exception(() => _silo.RunCatchUpContinuation());
+        _error = await Catch.Exception(_silo.RunCatchUpContinuation);
     }
 
     Task<LookupResult> FailOnce()
