@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "builtAt": "63c47800a1a8b5a5c1381c64de385f345bf6dcad",
+  "project": "Source/Tools/ProtoGenerator.Specs/ProtoGenerator.Specs.csproj",
+  "granularity": "class",
+  "files": [
+    "Source/Kernel/Contracts/ReservedProtoFieldsAttribute.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_DescriptorSetWriter/when_writing/and_the_descriptor_set_changed.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_DescriptorSetWriter/when_writing/and_the_descriptor_set_is_unchanged.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_DescriptorSetWriter/when_writing/given/a_proto_directory.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaGeneration/when_writing/and_a_file_is_in_a_subdirectory.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaGeneration/when_writing/and_a_proto_is_no_longer_generated.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaGeneration/when_writing/and_a_schema_changed.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaGeneration/when_writing/and_a_schema_is_unchanged.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaGeneration/when_writing/given/an_output_directory.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaHelper/when_declaring_reserved_fields/and_a_type_has_retired_field_numbers.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaHelper/when_declaring_reserved_fields/and_the_real_contract_attribute_is_used.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaHelper/when_declaring_reserved_fields/and_the_reservation_cannot_be_emitted.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaHelper/when_declaring_reserved_fields/stand_ins/StandInTypes.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaHelper/when_fixing_enum_value_conflicts/and_a_value_is_named_after_a_message.cs",
+    "Source/Tools/ProtoGenerator.Specs/for_ProtoSchemaHelper/when_fixing_enum_value_conflicts/and_nothing_collides.cs",
+    "Source/Tools/ProtoGenerator/DescriptorSetWriter.cs",
+    "Source/Tools/ProtoGenerator/GeneratedFile.cs",
+    "Source/Tools/ProtoGenerator/ProtoSchemaGeneration.cs",
+    "Source/Tools/ProtoGenerator/ProtoSchemaHelper.cs"
+  ],
+  "units": [
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_DescriptorSetWriter.when_writing.and_the_descriptor_set_changed","covers":[1,2,3,15,16],"declaredIn":[1]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_DescriptorSetWriter.when_writing.and_the_descriptor_set_is_unchanged","covers":[1,2,3,15,16],"declaredIn":[2]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaGeneration.when_writing.and_a_file_is_in_a_subdirectory","covers":[4,5,6,7,8,16,17],"declaredIn":[4]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaGeneration.when_writing.and_a_proto_is_no_longer_generated","covers":[4,5,6,7,8,16,17],"declaredIn":[5]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaGeneration.when_writing.and_a_schema_changed","covers":[4,5,6,7,8,16,17],"declaredIn":[6]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaGeneration.when_writing.and_a_schema_is_unchanged","covers":[4,5,6,7,8,16,17],"declaredIn":[7]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_declaring_reserved_fields.and_a_type_has_retired_field_numbers","covers":[0,9,10,11,12,13,14,18],"declaredIn":[9]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_declaring_reserved_fields.and_the_real_contract_attribute_is_used","covers":[0,9,10,11,12,13,14,18],"declaredIn":[10]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_declaring_reserved_fields.and_the_reservation_cannot_be_emitted","covers":[0,9,10,11,12,13,14,18],"declaredIn":[11]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_fixing_enum_value_conflicts.and_a_value_is_named_after_a_message","covers":[0,9,10,11,12,13,14,18],"declaredIn":[13]},
+    {"name":"Cratis.Chronicle.Tools.ProtoGenerator.for_ProtoSchemaHelper.when_fixing_enum_value_conflicts.and_nothing_collides","covers":[0,9,10,11,12,13,14,18],"declaredIn":[14]}
+  ]
+}
