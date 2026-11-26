@@ -12,9 +12,11 @@ const zeroOid = /^0+$/;
 const objectId = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 
 // The .NET build reads more than source and project files (for example OrleansContracts.txt, rulesets,
-// NuGet configuration and lock files), so only files known not to feed it are allowed to skip the build.
-const nonBuildPath = /^(?:Documentation|\.github|\.cratis|\.githooks)\//;
-const nonBuildExtension = /\.(?:md|mdx|ts|tsx|js|mjs|cjs|css|scss|png|svg|jpg|jpeg|gif|webp)$/i;
+// NuGet configuration, lock files and embedded resources such as Source/Clients/Workbench/SwaggerDark.css),
+// so only files known not to feed it are allowed to skip the build. The Workbench front-end source in
+// Source/Workbench has no project of its own; the Release build embeds only its generated wwwroot output.
+const nonBuildPath = /^(?:Documentation|\.github|\.cratis|\.githooks|Source\/Workbench)\//;
+const nonBuildExtension = /\.(?:md|mdx)$/i;
 
 export function affectsDotnet(file) {
     return !nonBuildPath.test(file) && !nonBuildExtension.test(file);

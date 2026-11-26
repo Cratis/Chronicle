@@ -22,10 +22,12 @@ test('every .NET build input triggers analysis, including nested configuration',
         'src/.globalconfig', 'Directory.Packages.props', 'global.json', 'src/stylecop.json',
         'Source/Kernel/Core/OrleansContracts.txt', 'Source/Kernel/Core/GrainPayloadContracts.txt',
         'NuGet.config', 'nuget.config', 'src/rules.ruleset', 'src/Analyzers.globalconfig',
-        '.config/dotnet-tools.json', 'src/packages.lock.json', 'Source/Kernel/Protobuf/chronicle.desc'];
+        '.config/dotnet-tools.json', 'src/packages.lock.json', 'Source/Kernel/Protobuf/chronicle.desc',
+        'Source/Clients/Workbench/SwaggerDark.css', 'Source/Clients/Assets/logo.png', 'test.mjs', 'Source/file.ts'];
     for (const file of inputs) assert.equal(affectsDotnet(file), true, file);
-    for (const file of ['Documentation/index.md', 'Documentation/images/x.png', 'test.mjs', 'src/Foo.cs.md',
-        'Source/file.ts', 'README.md', '.github/workflows/dotnet-build.yml', '.cratis/ai.json']) {
+    for (const file of ['Documentation/index.md', 'Documentation/images/x.png', 'src/Foo.cs.md',
+        'Source/Workbench/Features/View.tsx', 'Source/Workbench/Styles/theme.css', 'README.md',
+        '.github/workflows/dotnet-build.yml', '.cratis/ai.json']) {
         assert.equal(affectsDotnet(file), false, file);
     }
 });
@@ -37,6 +39,8 @@ test('compares pushed endpoints and skips only non-.NET changes', () => {
         return ['Documentation/index.md'];
     }), false);
     assert.equal(pushNeedsBuild(update(), () => ['Source/deleted.cs']), true);
+    // A deleted or renamed embedded resource appears by its old path with --no-renames.
+    assert.equal(pushNeedsBuild(update(), () => ['Documentation/a.md', 'Source/Clients/Workbench/SwaggerDark.css']), true);
     assert.equal(pushNeedsBuild(update(), () => []), false);
 });
 

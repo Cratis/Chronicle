@@ -42,7 +42,8 @@ git config core.hooksPath .githooks
 
 If you already use another hooks directory, integrate the preflight there instead of replacing
 existing hooks. The hook checks every pushed ref against the remote commit supplied by Git. It skips
-the build only when every pushed change is outside the .NET build: documentation and Markdown,
-front-end and script files, images, and the `.github`, `.cratis` and `.githooks` folders. Ref
+the build only when every pushed change is outside the .NET build: Markdown files, the Workbench
+front-end source in `Source/Workbench`, and the `Documentation`, `.github`, `.cratis` and `.githooks`
+folders. Ref
 deletions also skip; any other change, and a new remote ref, triggers the build. The manual command always builds.
 Use Git's `git push --no-verify` only when intentionally bypassing pre-push hooks.
