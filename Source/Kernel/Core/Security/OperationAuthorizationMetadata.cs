@@ -52,7 +52,7 @@ internal sealed class OperationAuthorizationMetadata
     {
         var value = operation?.GetType().GetProperty("EventStore")?.GetValue(operation);
         var store = value is EventStoreName name ? name.Value : value as string;
-        var scope = store is null ? AuthorizationScope.Kernel : AuthorizationScope.ForEventStore(store);
+        var scope = string.IsNullOrWhiteSpace(store) ? AuthorizationScope.Kernel : AuthorizationScope.ForEventStore(store);
         var destructive = operation?.GetType().IsDefined(typeof(DestructiveOperationAttribute), false) is true;
         return new(operation?.GetType().Name ?? "unknown", scope, destructive);
     }
@@ -63,8 +63,7 @@ internal sealed class OperationAuthorizationMetadata
         if (providers is null || !providers.TryGetPerformersFor(query.Name, out var performer)) return null;
         if (performer is not IAuthorizationQueryTarget { AuthorizationMethod: { } method }) return null;
         if (performer.FullyQualifiedName != query.Name) return null;
-        var storeParameters = performer.Parameters.Where(_ => string.Equals(_.Name, "eventStore", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var scope = QueryScope(query, method, storeParameters);
+        var scope = QueryScope(query, method, performer.Parameters.ToArray());
         if (scope is null) return null;
 
         var destructive = method.IsDefined(typeof(DestructiveOperationAttribute), false) ||
@@ -72,10 +71,11 @@ internal sealed class OperationAuthorizationMetadata
         return new(performer.FullyQualifiedName.Value, scope, destructive);
     }
 
-    static AuthorizationScope? QueryScope(QueryContext query, MethodInfo method, QueryParameter[] storeParameters)
+    static AuthorizationScope? QueryScope(QueryContext query, MethodInfo method, QueryParameter[] parameters)
     {
+        var storeParameters = parameters.Where(_ => string.Equals(_.Name, "eventStore", StringComparison.OrdinalIgnoreCase)).ToArray();
         if (storeParameters.Length == 0) return AuthorizationScope.Kernel;
-        if (storeParameters.Length != 1) return null;
+        if (storeParameters.Length != 1 || HasAdditionalStoreParameter(parameters, storeParameters[0])) return null;
 
         var declared = storeParameters[0];
         var parameter = method.GetParameters().SingleOrDefault(_ => _.Name == declared.Name && _.ParameterType == declared.Type);
@@ -83,6 +83,9 @@ internal sealed class OperationAuthorizationMetadata
 
         return BoundStoreScope(query, parameter);
     }
+
+    static bool HasAdditionalStoreParameter(QueryParameter[] parameters, QueryParameter storeParameter) =>
+        parameters.Any(_ => _.Name != storeParameter.Name && _.Type == typeof(EventStoreName));
 
     static AuthorizationScope? BoundStoreScope(QueryContext query, ParameterInfo parameter)
     {

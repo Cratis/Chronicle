@@ -135,9 +135,10 @@ Self-service password changes and anonymous bootstrap endpoints keep their exist
 
 Queries under `Chronicle.Administrator.Operations` use the registered query method and its bound
 `eventStore` argument, including a declared default, to select the same scope as commands. Queries
-without a bindable store parameter are kernel-scoped. Destructive queries, including the constraint
-reindex capability probe, honor `EnforceDestructiveOperations` independently of the broader switch.
-An unresolved query or invalid required store argument is refused even in audit mode; unrelated
+without a bindable store parameter are kernel-scoped, as are commands whose `EventStore` is null,
+empty, or whitespace. Destructive queries, including the constraint reindex capability probe, honor
+`EnforceDestructiveOperations` independently of the broader switch. An unresolved query, ambiguous
+store declaration, or invalid required store argument is refused even in audit mode; unrelated
 arguments cannot change its scope. Ordinary application stores remain outside this administrator check.
 
 When authentication is disabled, administrator checks allow all callers and the server logs a startup

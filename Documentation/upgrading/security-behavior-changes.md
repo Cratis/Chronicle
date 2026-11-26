@@ -65,9 +65,10 @@ when authentication is enabled.
 
 Administrator-operations queries now follow the same store scope and destructive classification as
 commands. A query's declared `eventStore` parameter (or its default) determines scope; a query without
-one remains kernel-scoped. The constraint reindex capability probe now honors
-`EnforceDestructiveOperations`, matching the reindex command. Invalid or unresolved query metadata is
-refused rather than audit-allowed. System-store aliases such as `System+namespace` no longer receive
+one remains kernel-scoped. Commands with a null, empty, or whitespace `EventStore` are also
+kernel-scoped. The constraint reindex capability probe now honors `EnforceDestructiveOperations`,
+matching the reindex command. Invalid, ambiguous, or unresolved query metadata is refused rather than
+audit-allowed. System-store aliases such as `System+namespace` no longer receive
 the ordinary-store exemption in administrator-operation decisions. Neither flag's default nor
 ordinary-store enrollment changes.
 

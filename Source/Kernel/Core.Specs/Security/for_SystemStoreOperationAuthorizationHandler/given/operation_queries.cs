@@ -18,6 +18,9 @@ public static class operation_queries
 
     public static string Kernel() => "kernel";
 
+    [DestructiveOperation]
+    public static string DestructiveKernel() => "kernel";
+
     public static string Optional(string eventStore = "System") => eventStore;
 
     public static string OrdinaryDefault(string eventStore = "application") => eventStore;
@@ -28,6 +31,12 @@ public static class operation_queries
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1708:Identifiers should differ by more than case", Justification = "Exercises refusal of ambiguous case-insensitive store parameters.")]
     public static string Ambiguous(string eventStore, string EventStore) => eventStore + EventStore;
+
+    public static string AnotherStoreType(string eventStore, EventStoreName otherStore) => eventStore + otherStore.Value;
+
+    public static string AnotherStoreConcept(EventStoreName eventStore, EventStoreName otherStore) => eventStore.Value + otherStore.Value;
+
+    public static string AnotherOptionalStore(string eventStore, EventStoreName otherStore = null!) => eventStore + otherStore?.Value;
 
     public static object Injected(IServiceProvider eventStore) => eventStore;
 }
