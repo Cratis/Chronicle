@@ -146,6 +146,33 @@ only whole sequence numbers from 0 through 2147483647.
 If you need to retry processing after investigating the event, follow
 [Operating Chronicle](/chronicle/operations/) for recovery guidance.
 
+### Compare retained revisions
+
+The event details for a sequence event offer **Compare revisions**. When the event
+has no retained revision history, the comparison says so instead of showing
+differences. The comparison is read-only: it uses only the event data already on screen, makes
+no extra requests, and changes nothing.
+
+1. Select an event in a sequence, then select **Compare revisions**.
+2. Pick the **Left revision** and **Right revision**. By default the original is
+   compared with the latest retained revision, and each choice stays on the
+   revision you picked even if later revisions arrive.
+3. Read the table of differences. Paths are JSON Pointers, and arrays are
+   compared by index: removing the first array item shows every later index as
+   changed.
+
+For example, comparing an original of `{ "quantity": 1, "status": "new" }`
+with a revision of `{ "quantity": 3 }` lists `/quantity` as **Changed** from `1`
+to `3`, and `/status` as **Removed**.
+
+Each revision shows its own raw generation. Payloads are compared as stored, with
+no schema transformation. A comparison reports when it cannot be trusted rather
+than implying that nothing changed: no retained history, redacted or erased
+events, content that is missing or not valid JSON, numbers that cannot be
+compared exactly, and content that exceeds the safety limits (262,144 characters per side,
+32 levels of nesting, 5,000 values, 250 rows) are each reported explicitly. Only
+the history returned with the event is used; nothing is reconstructed.
+
 ## Continue
 
 <CardGrid>

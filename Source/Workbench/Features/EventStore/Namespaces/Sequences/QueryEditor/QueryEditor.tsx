@@ -165,7 +165,8 @@ export const QueryEditor = ({
 
                     {selectedEvent &&
                         <Allotment.Pane preferredSize='450px'>
-                            <EventDetails item={selectedEvent} onRefresh={run} />
+                            <EventDetails item={selectedEvent} onRefresh={run}
+                                comparisonScope={{ eventStore: runArguments.eventStore, namespace: runArguments.namespace, eventSequenceId: runArguments.eventSequenceId }} />
                         </Allotment.Pane>}
                 </Allotment>
             </div>

@@ -66,6 +66,8 @@ message EventTypeDetailsResponse {
    EventTypeSource Source = 3;
    string Schema = 4;
    string Id = 5;
+   EventTypeVisibility Visibility = 6;
+   string Origin = 7;
 }
 message EventTypeGenerationDefinition {
    uint32 Generation = 1;
