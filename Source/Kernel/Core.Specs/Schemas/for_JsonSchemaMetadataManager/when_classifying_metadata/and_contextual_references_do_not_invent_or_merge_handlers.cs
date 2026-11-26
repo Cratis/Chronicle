@@ -25,6 +25,6 @@ public class and_contextual_references_do_not_invent_or_merge_handlers : given.r
     }
 
     [Fact] void should_deduplicate_metadata_within_the_same_category() => _comparison.Count(entry => entry.Category == SchemaMetadataCategory.Compliance).ShouldEqual(1);
-    [Fact] void should_keep_the_other_category_distinct() => _comparison.Count(entry => entry.Category == SchemaMetadataCategory.Security).ShouldEqual(1);
+    [Fact] void should_not_select_a_speculative_security_handler() => _comparison.Count(entry => entry.Category == SchemaMetadataCategory.Security).ShouldEqual(0);
     [Fact] void should_not_manufacture_a_handler_for_an_unresolved_reference() => _unresolved.Length.ShouldEqual(0);
 }

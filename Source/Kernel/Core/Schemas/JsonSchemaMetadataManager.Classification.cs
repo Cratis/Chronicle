@@ -15,17 +15,34 @@ public partial class JsonSchemaMetadataManager
     {
         var metadata = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
         CollectMetadata(reach.Schemas[0], categories, metadata);
-        foreach (var target in reach.Schemas.Skip(1).Where(SupportsContextualScalarMetadata))
+
+        // Discovery is deliberately broader than handler selection. Own annotations already select
+        // this boundary; possible bindings must not introduce another operation on that value.
+        if (metadata.Count > 0) return metadata.ToArray();
+        var supportsUndeclaredScalar = reach.Schemas.Exists(schema => schema.Type != JsonObjectType.None) &&
+            !reach.Schemas.Exists(schema => (schema.Type & (JsonObjectType.Object | JsonObjectType.Array)) != JsonObjectType.None);
+        foreach (var target in reach.Schemas.Skip(1).Where(schema => SupportsContextualScalarMetadata(schema, supportsUndeclaredScalar)))
         {
-            CollectMetadata(target, categories, metadata);
+            var candidate = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
+            CollectMetadata(target, categories, candidate);
+            foreach (var entry in candidate.Where(entry => entry.Category == SchemaMetadataCategory.Compliance && entry.Metadata.metadataType == "PII"))
+            {
+                if (!ContainsKey(metadata, entry)) metadata.Add(entry);
+            }
         }
         return metadata.ToArray();
     }
 
-    static bool SupportsContextualScalarMetadata(JsonSchema schema) => schema.Type == JsonObjectType.None
-        ? CanInspectReferencedType(schema) && StrictJsonSchemaRelease.HasSupportedType(schema) &&
-            (schema.ActualTypeSchema.Type & (JsonObjectType.Object | JsonObjectType.Array)) == JsonObjectType.None
-        : (schema.Type & (JsonObjectType.Object | JsonObjectType.Array)) == JsonObjectType.None;
+    /// <summary>
+    /// Determines whether a contextual target may supply scalar metadata. Recursive strict type restoration is not used
+    /// to classify a graph: a declared scalar or an entirely scalar composition can supply PII; uncertainty never supplies an operation.
+    /// </summary>
+    /// <param name="schema">The candidate target schema.</param>
+    /// <param name="supportsUndeclaredScalar">Whether an undeclared target may be treated as scalar.</param>
+    /// <returns>True if the target may supply scalar metadata.</returns>
+    static bool SupportsContextualScalarMetadata(JsonSchema schema, bool supportsUndeclaredScalar) =>
+        (schema.Type != JsonObjectType.None || supportsUndeclaredScalar) &&
+        (schema.Type & (JsonObjectType.Object | JsonObjectType.Array)) == JsonObjectType.None;
 
     (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] Classify(JsonSchema schema, bool forComparison)
     {

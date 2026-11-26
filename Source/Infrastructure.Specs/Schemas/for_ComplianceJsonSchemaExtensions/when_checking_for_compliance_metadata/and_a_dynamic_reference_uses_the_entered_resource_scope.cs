@@ -32,6 +32,6 @@ public class and_a_dynamic_reference_uses_the_entered_resource_scope : Specifica
     [Fact] void should_include_the_protected_outer_binding() => _entered.HasComplianceMetadata().ShouldBeTrue();
     [Fact] void should_find_the_outer_metadata_type() => _entered.HasSchemaMetadata(SchemaMetadataCategory.Compliance, type => type == "PII").ShouldBeTrue();
     [Fact] void should_protect_conversion() => ConverterSchemas.HasProtectedValueMetadata(_entered).ShouldBeTrue();
-    [Fact] void should_not_enter_an_unrelated_resource() => _unrelated.HasSecurityMetadata().ShouldBeFalse();
-    [Fact] void should_not_reuse_a_different_route_classification() => _unrelated.HasComplianceMetadata().ShouldBeFalse();
+    [Fact] void should_include_matching_resources_outside_the_route() => _unrelated.HasSecurityMetadata().ShouldBeTrue();
+    [Fact] void should_classify_independently_of_the_route() => _unrelated.HasComplianceMetadata().ShouldBeTrue();
 }

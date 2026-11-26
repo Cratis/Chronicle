@@ -44,6 +44,8 @@ public partial class JsonSchema
             index.IndeterminateResources.Add(resource.AbsoluteUri);
             return;
         }
+        if (!index.DynamicGroups.TryGetValue(anchor, out var group)) index.DynamicGroups[anchor] = group = [];
+        group.Add(node);
         var key = (resource.AbsoluteUri, anchor);
         if (!index.DynamicAnchors.TryAdd(key, node)) index.IndeterminateResources.Add(resource.AbsoluteUri);
         if (index.Anchors.TryGetValue(key, out var existing) && !ReferenceEquals(existing, node)) index.IndeterminateResources.Add(resource.AbsoluteUri);
@@ -68,8 +70,7 @@ public partial class JsonSchema
 
     ResolutionContext EnterResource(Uri resource, string origin, JsonObject? originRoot = null)
     {
-        // Metadata reach is a union, so repeated entries cannot add a binding. Keeping the first
-        // occurrence makes cycles finite without conflating distinct entered-resource routes.
+        // Operational resolution retains its entered resources; security classification ignores routes.
         var entered = ResolutionScope.EnteredResources;
         return new(resource, origin, entered.Contains(resource) ? entered : [.. entered, resource], originRoot ?? ResolutionScope.OriginRoot);
     }

@@ -9,9 +9,6 @@ public partial class JsonSchema
 {
     const int MaxResourceTraversalDepth = 64;
     static readonly Uri _anonymousResourceBase = new("urn:cratis:schema:root");
-    static readonly string[] _resourceSchemaMaps = ["$defs", "definitions", "properties"];
-    static readonly string[] _resourceSchemaArrays = ["allOf", "anyOf", "oneOf"];
-    static readonly string[] _resourceSingleSchemas = ["items", "additionalProperties", "not"];
     readonly Uri? _resourceBase;
     readonly ResolutionContext? _resolutionContext;
     volatile Cached<ResourceIndexContext>? _resourceIndex;
@@ -47,7 +44,7 @@ public partial class JsonSchema
             var cached = _resourceIndex;
             if (cached is not null) return cached.Value;
             var index = new ResourceIndexContext();
-            IndexResources(Node, _anonymousResourceBase, index, 0);
+            IndexResources(Node, index);
             return (_resourceIndex = new(index)).Value;
         }
     }
@@ -78,22 +75,47 @@ public partial class JsonSchema
     static Uri ResolveResourceId(Uri inherited, string id) =>
         Uri.TryCreate(inherited, id, out var resource) && string.IsNullOrEmpty(resource.Fragment) ? resource : inherited;
 
-    static void IndexResources(JsonObject node, Uri inherited, ResourceIndexContext context, int depth)
+    static void IndexResources(JsonObject root, ResourceIndexContext context)
     {
-        if (depth > MaxResourceTraversalDepth)
+        var pending = new Queue<(JsonObject Node, Uri Inherited)>();
+        pending.Enqueue((root, _anonymousResourceBase));
+        while (pending.TryDequeue(out var current))
         {
-            context.Truncated = true;
-            return;
+            var scope = IndexResourceNode(current.Node, current.Inherited, context);
+            IndexChildren(current.Node, scope, context, pending);
         }
-        if (context.Scopes.ContainsKey(node)) return;
+    }
+
+    static Uri IndexResourceNode(JsonObject node, Uri inherited, ResourceIndexContext context)
+    {
         var scope = ResourceId(node, inherited);
         context.Scopes.Add(node, scope);
-        if (depth == 0 || scope != inherited) context.Roots.TryAdd(scope.AbsoluteUri, node);
+        context.Origins[node.GetPath()] = node;
+        if (context.Scopes.Count == 1 || scope != inherited) context.Roots.TryAdd(scope.AbsoluteUri, node);
         IndexAnchor(node, scope, context);
         IndexDynamicAnchor(node, scope, context);
-        foreach (var child in ResourceSchemaChildren(node))
+        context.Contextual |= node.ContainsKey("$dynamicRef") || node.ContainsKey("$recursiveRef");
+        if (!RecursiveAnchorIsValid(node)) context.IndeterminateResources.Add(scope.AbsoluteUri);
+        if (IsRecursiveRoot(node)) context.RecursiveAnchors.Add(node);
+        return scope;
+    }
+
+    static void IndexChildren(JsonObject node, Uri scope, ResourceIndexContext context, Queue<(JsonObject Node, Uri Inherited)> pending)
+    {
+        foreach (var child in SchemaChildren(node))
         {
-            IndexResources(child, scope, context, depth + 1);
+            if (child.Optional || IsBooleanSchema(child.Node)) continue;
+            if (child.Node is not JsonObject schema)
+            {
+                context.Truncated = true;
+                continue;
+            }
+            if (context.Scopes.Count + pending.Count >= MaxMetadataReferenceStates)
+            {
+                context.Truncated = true;
+                break;
+            }
+            pending.Enqueue((schema, scope));
         }
     }
 
@@ -106,17 +128,6 @@ public partial class JsonSchema
             context.IndeterminateResources.Add(resource.AbsoluteUri);
         }
         context.Anchors.TryAdd(key, node);
-    }
-
-    static IEnumerable<JsonObject> ResourceSchemaChildren(JsonObject node)
-    {
-        // Do not interpret instance annotations (default, examples, enum, const) as schema declarations.
-        var maps = _resourceSchemaMaps.Select(key => node[key]).OfType<JsonObject>()
-            .SelectMany(map => map.Select(_ => _.Value).OfType<JsonObject>());
-        var arrays = _resourceSchemaArrays.Select(key => node[key]).OfType<JsonArray>()
-            .SelectMany(array => array.OfType<JsonObject>());
-        var singles = _resourceSingleSchemas.Select(key => node[key]).OfType<JsonObject>();
-        return maps.Concat(arrays).Concat(singles);
     }
 
     JsonSchema ResolveTypeReference(JsonSchema fallback) => HasReference && Reference is null ? fallback : ResolvedReference;
@@ -175,6 +186,10 @@ public partial class JsonSchema
         internal Dictionary<(string Resource, string Anchor), JsonObject> Anchors { get; } = [];
         internal Dictionary<(string Resource, string Anchor), JsonObject> DynamicAnchors { get; } = [];
         internal Dictionary<JsonObject, Uri> Scopes { get; } = [];
+        internal Dictionary<string, JsonObject> Origins { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, List<JsonObject>> DynamicGroups { get; } = new(StringComparer.Ordinal);
+        internal List<JsonObject> RecursiveAnchors { get; } = [];
+        internal bool Contextual { get; set; }
         internal HashSet<string> IndeterminateResources { get; } = [];
         internal bool Truncated { get; set; }
     }

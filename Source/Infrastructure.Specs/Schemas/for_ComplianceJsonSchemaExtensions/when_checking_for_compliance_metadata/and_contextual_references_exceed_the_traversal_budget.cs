@@ -14,11 +14,11 @@ public class and_contextual_references_exceed_the_traversal_budget : Specificati
     void Establish()
     {
         var definitions = new JsonObject();
-        for (var index = 0; index < 80; index++)
+        for (var index = 0; index < 4200; index++)
         {
             definitions[$"node{index}"] = new JsonObject { ["$dynamicRef"] = $"#/$defs/node{index + 1}" };
         }
-        definitions["node80"] = new JsonObject { ["type"] = "string" };
+        definitions["node4200"] = new JsonObject { ["type"] = "string" };
         _schema = new JsonSchema(new JsonObject
         {
             ["properties"] = new JsonObject { ["value"] = new JsonObject { ["$dynamicRef"] = "#/$defs/node0" } },
@@ -32,4 +32,6 @@ public class and_contextual_references_exceed_the_traversal_budget : Specificati
     [Fact] void should_preserve_protection_during_conversion() => ConverterSchemas.HasProtectedValueMetadata(_property).ShouldBeTrue();
     [Fact] void should_treat_unexplored_compliance_as_protected() => _property.HasSchemaMetadata(SchemaMetadataCategory.Compliance, _ => true).ShouldBeTrue();
     [Fact] void should_not_manufacture_a_handler_type() => _property.GetComplianceMetadata().ShouldBeEmpty();
+    [Fact] void should_record_budget_exhaustion() => _property.MetadataReferences.Indeterminate.ShouldBeTrue();
+    [Fact] void should_bound_the_number_of_unique_nodes() => _property.MetadataReferences.UniqueNodes.ShouldEqual(4096);
 }

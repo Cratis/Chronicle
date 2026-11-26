@@ -9,182 +9,209 @@ public partial class JsonSchema
 {
     const int MaxMetadataReferenceStates = 4096;
 
-    static bool ContainsContextualReference(JsonObject node, int depth = 0) =>
-        node.ContainsKey("$dynamicRef") || node.ContainsKey("$recursiveRef") ||
-        (depth < MaxResourceTraversalDepth && ResourceSchemaChildren(node).Any(child => ContainsContextualReference(child, depth + 1)));
+    JsonObject MetadataOrigin => ReferenceEquals(ResolutionScope.OriginRoot, Root.Node)
+        ? Root.ResourceIndex.Origins.GetValueOrDefault(ResolutionScope.Origin, Node)
+        : Node;
 
-    static bool RecursiveAnchorIsValid(JsonObject node) => !node.ContainsKey("$recursiveAnchor") ||
-        (node["$recursiveAnchor"] is JsonValue value && value.TryGetValue<bool>(out _));
+    static bool RecursiveAnchorIsValid(JsonObject node) => !node.ContainsKey("$recursiveAnchor") || IsBooleanSchema(node["$recursiveAnchor"]);
 
     MetadataReach ReachMetadata(bool includeChildren) => new MetadataTraversal(includeChildren).Walk(this);
 
-    IEnumerable<JsonSchema> MetadataChildren(bool contextual)
-    {
-        // Retain the legacy composition selection for ordinary schemas. Contextual branches need
-        // conservative reach, not a first-branch type guess, including oneOf and anyOf alternatives.
-        var compositions = contextual || ContainsContextualReference(Node)
-            ? AllOf.Concat(AnyOf).Concat(OneOf)
-            : LegacyMetadataCompositions();
-        return Properties.Values.Concat(compositions)
-            .Concat(new[] { Item, AdditionalPropertiesSchema }.OfType<JsonSchema>());
-    }
+    JsonSchema MetadataView(JsonObject node) => new(node, Root, new(Root.ResourceIndex.Scopes.GetValueOrDefault(node, ResourceBase), node.GetPath(), [], Root.Node));
 
-    IEnumerable<JsonSchema> LegacyMetadataCompositions() => AllOf.Count > 0
-        ? AllOf
-        : AnyOf.Where(candidate => candidate.Type != JsonObjectType.Null &&
-            !(candidate.HasReference && candidate.Reference?.Type == JsonObjectType.Null)).Take(1);
-
-    MetadataReach MetadataEdges(bool contextual)
+    JsonObject MetadataChildOrigin(JsonObject node)
     {
-        var reach = new MetadataReach();
-        AddStaticTarget(reach, contextual);
-        if (Node.ContainsKey("$dynamicRef")) AddDynamicTargets(reach);
-        if (Node.ContainsKey("$recursiveRef")) AddRecursiveTargets(reach);
-        return reach;
-    }
-
-    void AddStaticTarget(MetadataReach reach, bool contextual)
-    {
-        if (Node["$ref"] is null) return;
-        var reference = contextual ? ResolveScopedRef(Node["$ref"]!.GetValue<string>()) : Reference;
-        if (reference is null) reach.Indeterminate |= contextual;
-        else reach.Schemas.Add(reference);
-    }
-
-    JsonSchema? InitialContextualTarget(string key, MetadataReach reach)
-    {
-        var reference = StringValue(Node, key);
-        var target = reference is null ? null : ResolveResourceRef(reference);
-        reach.Indeterminate |= target is null;
-        return target;
-    }
-
-    void AddDynamicTargets(MetadataReach reach)
-    {
-        var target = InitialContextualTarget("$dynamicRef", reach);
-        if (target is null) return;
-        reach.Schemas.Add(target);
-        var reference = StringValue(Node, "$dynamicRef")!;
-        var separator = reference.IndexOf('#');
-        if (separator < 0) return;
-        var fragment = reference[(separator + 1)..];
         var index = Root.ResourceIndex;
-        var key = (target.ResourceBase.AbsoluteUri, fragment);
-        reach.Indeterminate |= index.IndeterminateResources.Contains(target.ResourceBase.AbsoluteUri);
-
-        // Draft 2020-12 Core 8.2.3.2: only a fragment created by $dynamicAnchor rebinds.
-        // A pointer or ordinary $anchor remains a static reference.
-        if (!index.DynamicAnchors.TryGetValue(key, out var anchor) || anchor.GetPath() != target.ResolutionScope.Origin) return;
-        reach.Indeterminate |= index.Truncated;
-        foreach (var resource in ResolutionScope.EnteredResources)
-        {
-            reach.Indeterminate |= index.IndeterminateResources.Contains(resource.AbsoluteUri);
-            if (index.DynamicAnchors.TryGetValue((resource.AbsoluteUri, fragment), out var binding)) reach.Schemas.Add(CreateResolvedSchema(binding));
-        }
+        if (index.Scopes.ContainsKey(node)) return node;
+        JsonNode ancestor = node;
+        while (ancestor.Parent is { } parent) ancestor = parent;
+        if (!ReferenceEquals(ancestor, Node)) return node;
+        var origin = ResolutionScope.Origin + node.GetPath()[1..];
+        return index.Origins.GetValueOrDefault(origin, node);
     }
 
-    void AddRecursiveTargets(MetadataReach reach)
+    JsonObject? MetadataTarget(string reference, bool scoped)
     {
-        // Draft 2019-09 Core 8.2.4.2 defines only '#'. Unsupported forms remain indeterminate.
-        if (StringValue(Node, "$recursiveRef") != "#")
-        {
-            reach.Indeterminate = true;
-            return;
-        }
-        var target = InitialContextualTarget("$recursiveRef", reach);
-        if (target is null) return;
-        reach.Schemas.Add(target);
-        if (!RecursiveAnchorIsValid(target.Node)) reach.Indeterminate = true;
-        if (!IsRecursiveRoot(target.Node)) return;
-        reach.Indeterminate |= Root.ResourceIndex.Truncated;
-        AddRecursiveOuterRoots(reach);
+        // Ordinary references keep the historical root-pointer precedence, without cloned wrappers.
+        if (!scoped && reference.StartsWith('#') && ResolveResourcePointer(Root.Node, reference[1..]) is { } legacy) return legacy;
+        var separator = reference.IndexOf('#');
+        var resource = separator < 0 ? reference : reference[..separator];
+        var fragment = separator < 0 ? string.Empty : reference[(separator + 1)..];
+        var index = Root.ResourceIndex;
+        if (!Uri.TryCreate(ResourceBase, resource, out var uri) || !index.Roots.TryGetValue(uri.AbsoluteUri, out var root)) return null;
+        if (fragment.Length == 0) return root;
+        return fragment.StartsWith('/') ? ResolveResourcePointer(root, fragment) : index.Anchors.GetValueOrDefault((uri.AbsoluteUri, fragment));
     }
 
-    void AddRecursiveOuterRoots(MetadataReach reach)
+    IEnumerable<JsonObject> MetadataChildren(bool includeChildren, bool contextual)
     {
-        foreach (var resource in ResolutionScope.EnteredResources)
+        if (includeChildren && contextual)
         {
-            if (!Root.ResourceIndex.Roots.TryGetValue(resource.AbsoluteUri, out var root))
-            {
-                reach.Indeterminate = true;
-                continue;
-            }
-            reach.Indeterminate |= !RecursiveAnchorIsValid(root);
-            if (IsRecursiveRoot(root)) reach.Schemas.Add(CreateResolvedSchema(root));
+            return SchemaChildren(Node, includeDefinitions: false).Select(child => child.Node).OfType<JsonObject>();
         }
+        var compositions = contextual ? CompositionNodes("allOf").Concat(CompositionNodes("anyOf")).Concat(CompositionNodes("oneOf")) : LegacyMetadataCompositions();
+        if (!includeChildren) return contextual ? compositions : [];
+        var properties = (Node["properties"] as JsonObject)?.Select(entry => entry.Value).OfType<JsonObject>() ?? [];
+        return properties.Concat(compositions).Concat(new[] { Node["items"], Node["additionalProperties"] }.OfType<JsonObject>());
+    }
+
+    IEnumerable<JsonObject> CompositionNodes(string keyword) => (Node[keyword] as JsonArray)?.OfType<JsonObject>() ?? [];
+
+    IEnumerable<JsonObject> LegacyMetadataCompositions()
+    {
+        var allOf = CompositionNodes("allOf").ToArray();
+        if (allOf.Length > 0) return allOf;
+        return CompositionNodes("anyOf").Where(node =>
+        {
+            var candidate = MetadataView(node);
+            if (candidate.Type == JsonObjectType.Null) return false;
+            var target = StringValue(node, "$ref") is { } reference ? candidate.MetadataTarget(reference, scoped: false) : null;
+            return target is null || MetadataView(target).Type != JsonObjectType.Null;
+        }).Take(1);
     }
 
     /// <summary>
-    /// Carries real reachable schema annotations separately from uncertainty; uncertainty never invents a handler.
+    /// Carries concrete annotations separately from uncertainty; uncertainty never invents a handler.
     /// </summary>
     internal sealed class MetadataReach
     {
         /// <summary>
-        /// Gets schemas with concrete, reachable annotations.
+        /// Gets the unique reachable schema nodes.
         /// </summary>
         internal List<JsonSchema> Schemas { get; } = [];
 
         /// <summary>
-        /// Gets or sets whether some contextual metadata reach could not be proven.
+        /// Gets or sets whether traversal or resource indexing was incomplete.
         /// </summary>
         internal bool Indeterminate { get; set; }
 
         /// <summary>
-        /// Gets or sets whether reach includes a context-dependent reference.
+        /// Gets or sets whether a contextual reference was visited.
         /// </summary>
         internal bool Contextual { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of unique scheduled nodes, bounded by the traversal budget.
+        /// </summary>
+        internal int UniqueNodes { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of anchor groups expanded, at most once per group.
+        /// </summary>
+        internal int AnchorExpansions { get; set; }
     }
 
     sealed class MetadataTraversal(bool includeChildren)
     {
         readonly MetadataReach _reach = new();
-        readonly Queue<MetadataStep> _pending = [];
-        readonly HashSet<(JsonObject OriginRoot, string Origin, string Scope, bool Contextual)> _visited = [];
-        int _states;
+        readonly Queue<(JsonSchema Schema, int Depth)> _pending = [];
+        readonly HashSet<JsonObject> _visited = new(ReferenceEqualityComparer.Instance);
+        readonly HashSet<string> _expandedAnchors = new(StringComparer.Ordinal);
+        bool _recursiveExpanded;
+        bool _unresolvedStatic;
+        int _nextDepth;
 
         internal MetadataReach Walk(JsonSchema origin)
         {
-            _pending.Enqueue(new(origin, 0, false));
-            while (_pending.TryDequeue(out var step)) Visit(step);
+            var index = origin.Root.ResourceIndex;
+            _reach.Indeterminate = index.Truncated || index.IndeterminateResources.Count > 0;
+            Enqueue(origin, origin.MetadataOrigin, origin);
+            while (_pending.TryDequeue(out var step))
+            {
+                _nextDepth = step.Depth + 1;
+                Visit(step.Schema, index.Contextual);
+            }
+            _reach.Indeterminate |= _reach.Contextual && _unresolvedStatic;
+            _reach.UniqueNodes = _visited.Count;
             return _reach;
         }
 
-        static bool HasUnexploredContext(MetadataStep step) => step.Contextual || ContainsContextualReference(step.Schema.Node);
-
-        void Visit(MetadataStep step)
+        void Visit(JsonSchema schema, bool contextualDocument)
         {
-            if (++_states > MaxMetadataReferenceStates)
+            _reach.Schemas.Add(schema);
+            _reach.Contextual |= schema.HasContextualReference;
+            AddReference(schema, "$ref", contextualDocument);
+            if (schema.Node.ContainsKey("$dynamicRef")) AddDynamicTargets(schema);
+            if (schema.Node.ContainsKey("$recursiveRef")) AddRecursiveTargets(schema);
+            AddChildren(schema, contextualDocument);
+        }
+
+        void AddChildren(JsonSchema schema, bool contextualDocument)
+        {
+            var cached = schema.CachedMetadataChildren(includeChildren, contextualDocument);
+            foreach (var child in cached)
+            {
+                if (!Enqueue(schema, child.Key, child.Value)) break;
+            }
+            foreach (var child in schema.MetadataChildren(includeChildren, contextualDocument))
+            {
+                var origin = schema.MetadataChildOrigin(child);
+                if (!Enqueue(schema, origin, cached.GetValueOrDefault(origin))) break;
+            }
+        }
+
+        bool Enqueue(JsonSchema parent, JsonObject node, JsonSchema? cached = null)
+        {
+            if (!parent.Root.ResourceIndex.Contextual && _nextDepth > MaxResourceTraversalDepth) return true;
+            node = parent.MetadataChildOrigin(node);
+            if (_visited.Contains(node)) return true;
+            if (_visited.Count >= MaxMetadataReferenceStates)
             {
                 _reach.Indeterminate = true;
-                _pending.Clear();
-                return;
+                return false;
             }
-
-            var contextual = step.Contextual || step.Schema.HasContextualReference;
-            var scope = step.Schema.ResolutionScope;
-            var route = HasUnexploredContext(step) ? string.Join('\n', scope.EnteredResources) : string.Empty;
-            if (!_visited.Add((scope.OriginRoot, scope.Origin, route, contextual))) return;
-            _reach.Contextual |= contextual;
-            _reach.Schemas.Add(step.Schema);
-            Expand(step with { Contextual = contextual });
+            _visited.Add(node);
+            _pending.Enqueue((cached ?? parent.MetadataView(node), _nextDepth));
+            return true;
         }
 
-        void Expand(MetadataStep step)
+        JsonObject? AddReference(JsonSchema schema, string keyword, bool scoped)
         {
-            var edges = step.Schema.MetadataEdges(step.Contextual);
-            _reach.Indeterminate |= edges.Indeterminate;
-            var children = includeChildren ? step.Schema.MetadataChildren(step.Contextual) : [];
-            var next = edges.Schemas.Concat(children).ToArray();
-            if (step.Depth >= MaxResourceTraversalDepth)
+            if (!schema.Node.ContainsKey(keyword)) return null;
+            var reference = StringValue(schema.Node, keyword);
+            var target = reference is null ? null : schema.MetadataTarget(reference, scoped);
+            if (target is null)
             {
-                // Preserve the legacy ordinary-reference hop limit; only state-budget exhaustion
-                // is unconditional. Contextual depth truncation remains indeterminate as before.
-                _reach.Indeterminate |= HasUnexploredContext(step) && next.Length > 0;
+                _unresolvedStatic |= keyword == "$ref";
+                _reach.Indeterminate |= keyword != "$ref";
+            }
+            else
+            {
+                Enqueue(schema, target, keyword == "$ref" ? schema._referenceCache?.Value : null);
+            }
+            return target;
+        }
+
+        void AddDynamicTargets(JsonSchema schema)
+        {
+            var target = AddReference(schema, "$dynamicRef", scoped: true);
+            if (target is null) return;
+            var reference = StringValue(schema.Node, "$dynamicRef")!;
+            var separator = reference.IndexOf('#');
+            var fragment = separator < 0 ? string.Empty : reference[(separator + 1)..];
+
+            // Draft 2020-12 Core 8.2.3.2: pointers and ordinary anchors do not rebind.
+            if (fragment != StringValue(target, "$dynamicAnchor") || !_expandedAnchors.Add(fragment)) return;
+            _reach.AnchorExpansions++;
+            if (!schema.Root.ResourceIndex.DynamicGroups.TryGetValue(fragment, out var group)) return;
+            foreach (var candidate in group) Enqueue(schema, candidate);
+        }
+
+        void AddRecursiveTargets(JsonSchema schema)
+        {
+            // Draft 2019-09 Core 8.2.4.2 supports only '#'. Preserve its static target too.
+            if (StringValue(schema.Node, "$recursiveRef") != "#")
+            {
+                _reach.Indeterminate = true;
                 return;
             }
-            foreach (var child in next) _pending.Enqueue(new(child, step.Depth + 1, step.Contextual));
+            var target = AddReference(schema, "$recursiveRef", scoped: true);
+            if (target is null) return;
+            if (!IsRecursiveRoot(target)) return;
+            if (_recursiveExpanded) return;
+            _recursiveExpanded = true;
+            _reach.AnchorExpansions++;
+            foreach (var candidate in schema.Root.ResourceIndex.RecursiveAnchors) Enqueue(schema, candidate);
         }
     }
-
-    sealed record MetadataStep(JsonSchema Schema, int Depth, bool Contextual);
 }
