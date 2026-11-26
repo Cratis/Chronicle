@@ -9,7 +9,11 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_spilled_to_catch_up;
 
 public class and_zero_work_settles_while_already_queued : given.an_observer_settling_after_zero_work
 {
-    Task Because() => _observer.CaughtUp(_jobId, 0UL);
+    async Task Because()
+    {
+        await _observer.CaughtUp(_jobId, 0UL);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact] void should_keep_the_physical_subscription() => _queued.ShouldBeTrue();
     [Fact] async Task should_not_subscribe_again() =>

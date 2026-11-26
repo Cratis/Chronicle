@@ -21,15 +21,21 @@ public class when_catch_up_concludes_without_moving_and_the_event_lookup_fails :
     {
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _eventSequence
             .GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
             .Returns(_ => FailOnce());
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _timersBefore = _silo.TimerRegistry.NumberOfActiveTimers;
         _failNextLookup = true;
     }
 
-    async Task Because() => _error = await Catch.Exception(() => _observer.CaughtUp(JobId.New(), 42L));
+    async Task Because()
+    {
+        await _observer.CaughtUp(JobId.New(), 42L);
+        _error = await Catch.Exception(() => _silo.RunCatchUpContinuation());
+    }
 
     Task<LookupResult> FailOnce()
     {

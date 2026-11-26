@@ -53,9 +53,11 @@ public class when_catch_up_concludes_repeatedly_while_an_earlier_job_never_final
     async Task Because()
     {
         await _observer.CaughtUp(_neverFinalizingJob, 1UL);
+        await _silo.RunCatchUpContinuation();
         for (var completion = 1; completion <= LaterCompletions; completion++)
         {
             await _observer.CaughtUp(_lastStartedJob, (EventSequenceNumber)(ulong)(completion + 1));
+            await _silo.RunCatchUpContinuation();
         }
     }
 

@@ -19,7 +19,9 @@ public class when_catch_up_concludes_without_moving_the_observer : given.an_obse
     {
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _attemptsBefore = 3;
         _observer.SetCatchupRecoveryAttemptsForTesting(_attemptsBefore);
     }
@@ -27,6 +29,7 @@ public class when_catch_up_concludes_without_moving_the_observer : given.an_obse
     async Task Because()
     {
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _attemptsAfter = _observer.CatchupRecoveryAttempts;
         _backedOff = await _observer.IsCatchUpBackedOff();
     }

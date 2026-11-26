@@ -41,7 +41,11 @@ public class when_catch_up_concludes_while_its_job_is_still_finalizing : given.a
             .Returns((EventSequenceNumber)2UL);
     }
 
-    Task Because() => _observer.CaughtUp(_finishingJob, 1UL);
+    async Task Because()
+    {
+        await _observer.CaughtUp(_finishingJob, 1UL);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact]
     async Task should_start_a_catch_up_job_for_the_event_appended_at_the_boundary() =>

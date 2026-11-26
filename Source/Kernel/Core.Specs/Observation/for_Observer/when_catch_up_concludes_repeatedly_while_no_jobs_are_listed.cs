@@ -52,11 +52,13 @@ public class when_catch_up_concludes_repeatedly_while_no_jobs_are_listed : given
     {
         _concludedJobs.Add(_firstJob);
         await _observer.CaughtUp(_firstJob, 1UL);
+        await _silo.RunCatchUpContinuation();
         for (var completion = 1; completion <= LaterCompletions; completion++)
         {
             var concluding = _lastStartedJob;
             _concludedJobs.Add(concluding);
             await _observer.CaughtUp(concluding, (EventSequenceNumber)(ulong)(completion + 1));
+            await _silo.RunCatchUpContinuation();
         }
     }
 

@@ -56,14 +56,15 @@ public class and_a_concluded_catch_up_job_is_being_handed_over : given.an_observ
 
     async Task Because()
     {
-        var caughtUp = _observer.CaughtUp(_concludedJob, _lastHandledByConcludedJob);
+        await _observer.CaughtUp(_concludedJob, _lastHandledByConcludedJob).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var continuation = _silo.RunCatchUpContinuation();
 
         var watchdog = _observer.RunWatchdogAsync();
         _isPreparingCatchupAfterWatchdog = await _observer.IsPreparingCatchup();
         _recoveryAttemptsAfterWatchdog = _observer.CatchupRecoveryAttempts;
 
         _heldStart.SetResult(Result<JobId, StartJobError>.Success(_successorJob));
-        await Task.WhenAll(caughtUp, watchdog);
+        await Task.WhenAll(continuation, watchdog).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
     [Fact] void should_still_be_preparing_catch_up() => _isPreparingCatchupAfterWatchdog.ShouldBeTrue();

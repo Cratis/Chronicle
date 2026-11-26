@@ -18,7 +18,11 @@ public class and_zero_work_settles_without_catch_up_work : given.an_observer_set
             .Returns(EventSequenceNumber.Unavailable);
     }
 
-    Task Because() => _observer.CaughtUp(_jobId, 0UL);
+    async Task Because()
+    {
+        await _observer.CaughtUp(_jobId, 0UL);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact] void should_rejoin_the_physical_queue() => _queued.ShouldBeTrue();
     [Fact] async Task should_not_start_another_catch_up() =>

@@ -15,12 +15,14 @@ public class when_catch_up_concludes_having_moved_the_observer : given.an_observ
     {
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [], SiloAddress.Zero);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _observer.SetCatchupRecoveryAttemptsForTesting(3);
     }
 
     async Task Because()
     {
         await _observer.CaughtUp(JobId.New(), 50L);
+        await _silo.RunCatchUpContinuation();
         _attemptsAfter = _observer.CatchupRecoveryAttempts;
         _backedOff = await _observer.IsCatchUpBackedOff();
     }

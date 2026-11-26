@@ -5,6 +5,8 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_catch_up_round_completes;
 
@@ -52,10 +54,12 @@ public class and_partitions_finished_at_different_positions : given.an_observer_
 
         // CatchUpObserver reports the maximum of A@12 and B@9, not B's lower drained position.
         await _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
+        await _silo.RunCatchUpContinuation();
     }
 
     [Fact] void should_hold_the_live_event_for_repair() => _subscriber.DidNotReceive().OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_keep_the_drained_partition_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"B");
     [Fact] void should_report_one_suspected_skip() => _suspectedSkips.ShouldEqual(1);
-    [Fact] void should_probe_from_the_missed_event() => _eventSequence.Received().GetNextSequenceNumberGreaterOrEqualTo(Arg.Is<EventSequenceNumber>(number => number <= (EventSequenceNumber)10UL), Arg.Any<IEnumerable<EventType>>());
+    [Fact] void should_repair_from_the_missed_event() => _jobsManager.Received(1).Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == (Key)"B" && _.FromSequenceNumber == (EventSequenceNumber)10UL && _.ToSequenceNumber == EventSequenceNumber.Max && _.IsHandoverRepair));
+    [Fact] void should_keep_the_missed_range_durable() => _stateStorage.State.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("B", 10UL, 13UL));
 }

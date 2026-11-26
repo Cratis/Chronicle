@@ -94,9 +94,11 @@ public partial class Observer
         var version = _catchUpContinuationVersion;
         try
         {
+            EvaluateSuspectedSkips();
+            var acceptedRepairs = PendingCatchUpRepairs;
             QueueUnownedHeldBackDeliveries();
             AcceptPendingCatchUpRepairs();
-            await ConfirmCatchUpAcceptance();
+            if (!acceptedRepairs.SequenceEqual(PendingCatchUpRepairs)) await ConfirmCatchUpAcceptance();
             await ResumePendingCatchUpRepairs();
             if (!_catchUpContinuationPending) return;
             await RepairMissedDeliveries();

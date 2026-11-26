@@ -22,6 +22,7 @@ public class and_the_observer_is_quarantined : given.a_quarantined_observer
     async Task Because()
     {
         await _observer.CaughtUp(JobId.NotSet, 42UL);
+        await _silo.RunCatchUpContinuation();
         await RunWatchdogTicks();
     }
 

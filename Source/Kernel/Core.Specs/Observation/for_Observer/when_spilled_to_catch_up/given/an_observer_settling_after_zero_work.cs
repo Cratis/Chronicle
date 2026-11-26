@@ -32,9 +32,11 @@ public class an_observer_settling_after_zero_work : for_Observer.given.an_observ
 
         await _observer.Subscribe<IObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         await _observer.CaughtUp(JobId.New(), 0UL);
+        await _silo.RunCatchUpContinuation();
 
         // The first zero-work lap routes normally. The next one settles directly into Observing with backoff.
         await _observer.CaughtUp(JobId.New(), 0UL);
+        await _silo.RunCatchUpContinuation();
         (await _observer.GetCurrentState()).ShouldBeOfExactType<Observing>();
         _queued.ShouldBeTrue();
         await _observer.CatchUp();

@@ -67,7 +67,8 @@ public class and_a_catch_up_handover_starts_during_the_job_lookup : given.an_obs
     {
         var watchdog = _observer.RunWatchdogAsync();
         await _lookupEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
-        var caughtUp = _observer.CaughtUp(_concludedJob, _lastHandledByConcludedJob);
+        await _observer.CaughtUp(_concludedJob, _lastHandledByConcludedJob).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var continuation = _silo.RunCatchUpContinuation();
         await _startEntered.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         try
         {
@@ -80,7 +81,7 @@ public class and_a_catch_up_handover_starts_during_the_job_lookup : given.an_obs
         finally
         {
             _heldStart.SetResult(Result<JobId, StartJobError>.Success(_successorJob));
-            await Task.WhenAll(caughtUp, watchdog).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            await Task.WhenAll(continuation, watchdog).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         }
     }
 

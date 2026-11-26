@@ -18,11 +18,17 @@ public class when_catch_up_concludes_without_moving_and_no_events_of_its_types_e
     {
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _timersBefore = _silo.TimerRegistry.NumberOfActiveTimers;
     }
 
-    async Task Because() => await _observer.CaughtUp(JobId.New(), 42L);
+    async Task Because()
+    {
+        await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact] async Task should_back_off() => (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
     [Fact] void should_not_schedule_a_short_retry() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(_timersBefore);

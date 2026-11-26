@@ -114,6 +114,8 @@ public class a_catch_up_observer_job : Specification
         _stateStorage = _silo.StorageManager.GetStorage<JobStateWithLastHandledEvent>(
             typeof(TestableCatchUpObserver).FullName);
 
-        _job = await _silo.CreateGrainAsync<TestableCatchUpObserver>(_jobId, _jobKey);
+        await CreateJob();
     }
+
+    protected virtual async Task CreateJob() => _job = await _silo.CreateGrainAsync<TestableCatchUpObserver>(_jobId, _jobKey);
 }

@@ -13,19 +13,29 @@ public class and_storage_is_blocked : given.an_observer_accepting_a_catch_up_han
     bool _acquisitionWaited;
     bool _lookedUpJobs;
     ObserverState _accepted;
+    ICatchUpAdmission _admission;
+    bool _admitted;
+
+    protected override ICatchUpAdmission CreateCatchUpAdmission() => _admission = base.CreateCatchUpAdmission();
+
+    protected virtual Task Acknowledge() => _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
 
     async Task Because()
     {
         _writes.BeforeWrite = _write.Invoke;
-        var acknowledging = _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
+        var acknowledging = Acknowledge();
         Task? acquiring = null;
         try
         {
             await _write.WaitForStart();
+            _jobsManager.ClearReceivedCalls();
+            _jobStorage.ClearReceivedCalls();
+            _admission.ClearReceivedCalls();
             _acknowledgementWaited = !acknowledging.IsCompleted;
             acquiring = _observer.CatchUp();
             _acquisitionWaited = !acquiring.IsCompleted;
-            _lookedUpJobs = _jobsManager.ReceivedCalls().Any();
+            _lookedUpJobs = _jobsManager.ReceivedCalls().Any() || _jobStorage.ReceivedCalls().Any();
+            _admitted = _admission.ReceivedCalls().Any();
         }
         finally
         {
@@ -39,6 +49,7 @@ public class and_storage_is_blocked : given.an_observer_accepting_a_catch_up_han
     [Fact] void should_not_acknowledge_before_storage() => _acknowledgementWaited.ShouldBeTrue();
     [Fact] void should_keep_the_handover_barrier_until_storage_accepts() => _acquisitionWaited.ShouldBeTrue();
     [Fact] void should_not_acquire_a_job_while_acknowledging() => _lookedUpJobs.ShouldBeFalse();
+    [Fact] void should_not_admit_catch_up_while_acknowledging() => _admitted.ShouldBeFalse();
     [Fact] void should_commit_the_scanned_cursor() => _accepted.NextEventSequenceNumber.ShouldEqual((Concepts.Events.EventSequenceNumber)13UL);
     [Fact] void should_commit_the_missed_partition_with_the_cursor() => _accepted.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("B", 10UL, 13UL));
 }

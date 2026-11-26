@@ -54,6 +54,7 @@ public class when_catch_up_concludes_and_looking_up_the_concluded_job_fails : gi
     async Task Because()
     {
         await _observer.CaughtUp(_concludedJob, _lastHandledByConcludedJob);
+        await _silo.RunCatchUpContinuation();
         await _observer.CatchUp();
     }
 

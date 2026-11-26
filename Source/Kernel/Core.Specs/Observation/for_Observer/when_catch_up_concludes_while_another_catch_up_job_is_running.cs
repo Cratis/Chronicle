@@ -45,7 +45,11 @@ public class when_catch_up_concludes_while_another_catch_up_job_is_running : giv
             .Returns((EventSequenceNumber)2UL);
     }
 
-    Task Because() => _observer.CaughtUp(_finishingJob, 1UL);
+    async Task Because()
+    {
+        await _observer.CaughtUp(_finishingJob, 1UL);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact]
     async Task should_not_start_another_catch_up_job() =>

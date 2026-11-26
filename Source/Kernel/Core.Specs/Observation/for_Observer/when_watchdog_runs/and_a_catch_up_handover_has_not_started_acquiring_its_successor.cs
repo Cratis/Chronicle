@@ -83,6 +83,7 @@ public class and_a_catch_up_handover_has_not_started_acquiring_its_successor : g
         {
             _heldWrite.SetResult();
             await Task.WhenAll(caughtUp, watchdog).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            await _silo.RunCatchUpContinuation().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         }
     }
 

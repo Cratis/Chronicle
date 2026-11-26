@@ -19,22 +19,31 @@ public class when_catch_up_makes_progress_after_stale_retries : given.an_observe
     {
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _timersBefore = _silo.TimerRegistry.NumberOfActiveTimers;
         _eventSequence
             .GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
             .Returns((EventSequenceNumber)50UL);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         for (var lap = 0; lap < 3; lap++)
         {
             await _observer.CaughtUp(JobId.New(), 42L);
+            await _silo.RunCatchUpContinuation();
         }
 
         await _observer.CaughtUp(JobId.New(), 43L);
+        await _silo.RunCatchUpContinuation();
         await _observer.CaughtUp(JobId.New(), 43L);
+        await _silo.RunCatchUpContinuation();
         _timersAfterProgress = _silo.TimerRegistry.NumberOfActiveTimers;
     }
 
-    async Task Because() => await _observer.CaughtUp(JobId.New(), 43L);
+    async Task Because()
+    {
+        await _observer.CaughtUp(JobId.New(), 43L);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact] void should_drop_the_pending_retry_on_progress() => _timersAfterProgress.ShouldEqual(_timersBefore);
     [Fact] void should_restart_the_short_retry_allowance() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(_timersAfterProgress + 1);

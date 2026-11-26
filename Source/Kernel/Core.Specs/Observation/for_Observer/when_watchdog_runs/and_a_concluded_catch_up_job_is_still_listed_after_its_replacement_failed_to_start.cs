@@ -50,6 +50,7 @@ public class and_a_concluded_catch_up_job_is_still_listed_after_its_replacement_
     async Task Because()
     {
         await _observer.CaughtUp(_concludedJob, _lastHandledByConcludedJob);
+        await _silo.RunCatchUpContinuation();
         _wasPreparingCatchupAfterFailedStart = await _observer.IsPreparingCatchup();
 
         // The boundary event has since been handled live, so re-routing finds the observer caught up.

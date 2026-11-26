@@ -5,6 +5,8 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
@@ -32,6 +34,7 @@ public class and_held_back_events_span_next : given.an_observer_with_skip_detect
         await _observer.Handle("Q", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 20UL)]);
         await _observer.Handle("B", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 12UL)]);
         await _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
+        await _silo.RunCatchUpContinuation();
         _measurementsAfterFirstRound = _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).ToArray();
         await _observer.Handle("B", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 19UL)]);
     }
@@ -39,4 +42,6 @@ public class and_held_back_events_span_next : given.an_observer_with_skip_detect
     [Fact] void should_only_report_the_crossed_event_first() => _measurementsAfterFirstRound.SequenceEqual([1]).ShouldBeTrue();
     [Fact] void should_not_cross_the_other_event_while_repair_owns_it() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
     [Fact] void should_keep_the_later_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"Q");
+    [Fact] void should_keep_the_whole_held_back_range_durable() => _stateStorage.State.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("Q", 10UL, 15UL));
+    [Fact] void should_transfer_the_suffix_to_the_unbounded_repair() => _jobsManager.Received(1).Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == (Key)"Q" && _.FromSequenceNumber == (EventSequenceNumber)10UL && _.ToSequenceNumber == EventSequenceNumber.Max && _.IsHandoverRepair));
 }

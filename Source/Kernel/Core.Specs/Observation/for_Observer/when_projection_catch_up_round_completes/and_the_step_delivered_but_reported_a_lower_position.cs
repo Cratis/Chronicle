@@ -32,6 +32,7 @@ public class and_the_step_delivered_but_reported_a_lower_position : given.an_obs
         await _observer.Handle("A", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 10UL)]);
         await _observer.Handle("B", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 12UL)]);
         await _observer.CaughtUp(JobId.NotSet, 9UL, 9UL);
+        await _silo.RunCatchUpContinuation();
     }
 
     [Fact] void should_not_measure_a_skip_that_was_prevented() => _metrics.For(EventsSuspectedSkipped).ShouldBeEmpty();

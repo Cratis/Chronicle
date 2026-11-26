@@ -18,18 +18,25 @@ public class when_catch_up_concludes_without_moving_and_stale_retries_are_exhaus
     {
         await _observer.Subscribe<NullObserverSubscriber>(ObserverType.Reactor, [EventType.Unknown], SiloAddress.Zero);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _eventSequence
             .GetNextSequenceNumberGreaterOrEqualTo(Arg.Any<EventSequenceNumber>(), Arg.Any<IEnumerable<EventType>>())
             .Returns((EventSequenceNumber)50UL);
         await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
         _timersWithoutShortRetry = _silo.TimerRegistry.NumberOfActiveTimers;
         for (var lap = 0; lap < 3; lap++)
         {
             await _observer.CaughtUp(JobId.New(), 42L);
+            await _silo.RunCatchUpContinuation();
         }
     }
 
-    async Task Because() => await _observer.CaughtUp(JobId.New(), 42L);
+    async Task Because()
+    {
+        await _observer.CaughtUp(JobId.New(), 42L);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact] async Task should_back_off() => (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
     [Fact] void should_not_leave_a_short_retry_scheduled() => _silo.TimerRegistry.NumberOfActiveTimers.ShouldEqual(_timersWithoutShortRetry);

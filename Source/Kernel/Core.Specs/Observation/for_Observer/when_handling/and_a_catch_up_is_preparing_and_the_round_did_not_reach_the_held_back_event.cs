@@ -50,7 +50,8 @@ public class and_a_catch_up_is_preparing_and_the_round_did_not_reach_the_held_ba
 
         await _observer.CaughtUp(JobId.NotSet, 101UL, 101UL);
         _heldStart.SetResult(Result<JobId, StartJobError>.Success(JobId.New()));
-        await _catchUp;
+        await _catchUp.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _silo.RunCatchUpContinuation().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
     [Fact] void should_not_measure_before_the_round_hands_over() => _measurementsBeforeHandover.ShouldEqual(0);

@@ -6,6 +6,8 @@ using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
+using Cratis.Chronicle.Observation.Jobs;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_projection_catch_up_round_completes;
 
@@ -54,11 +56,13 @@ public class and_live_delivery_for_another_partition_arrived : given.an_observer
         _cursorDrained.TrySetResult();
         await _completeRound.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _observer.CaughtUp(JobId.NotSet, 9UL, 9UL);
+        await _silo.RunCatchUpContinuation();
     }
 
     [Fact] void should_hold_the_catching_up_partition_event_for_repair() => _subscriber.DidNotReceive().OnNext((Key)"A", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_handle_the_other_partition_live() => _subscriber.Received(1).OnNext((Key)"B", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_keep_the_held_back_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"A");
     [Fact] void should_not_report_a_skip_that_was_prevented() => _suspectedSkips.ShouldEqual(0);
-    [Fact] void should_probe_from_the_missed_event() => _eventSequence.Received().GetNextSequenceNumberGreaterOrEqualTo(Arg.Is<EventSequenceNumber>(number => number <= (EventSequenceNumber)10UL), Arg.Any<IEnumerable<EventType>>());
+    [Fact] void should_repair_from_the_missed_event() => _jobsManager.Received(1).Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == (Key)"A" && _.FromSequenceNumber == (EventSequenceNumber)10UL && _.ToSequenceNumber == EventSequenceNumber.Max && _.IsHandoverRepair));
+    [Fact] void should_keep_the_missed_range_durable() => _stateStorage.State.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("A", 10UL, 11UL));
 }

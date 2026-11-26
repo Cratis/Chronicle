@@ -18,7 +18,11 @@ public class and_an_event_appends_while_rejoining_the_queue : given.an_observer_
             .Returns((EventSequenceNumber)1UL);
     }
 
-    Task Because() => _observer.CaughtUp(_jobId, 0UL);
+    async Task Because()
+    {
+        await _observer.CaughtUp(_jobId, 0UL);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact] void should_rejoin_the_physical_queue() => _queued.ShouldBeTrue();
     [Fact] async Task should_start_exactly_one_catch_up() =>

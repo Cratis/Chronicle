@@ -58,7 +58,8 @@ public class when_catch_up_concludes_before_its_job_has_finished_starting : give
         });
         _heldStart.SetResult(Result<JobId, StartJobError>.Success(_quickJob));
 
-        await Task.WhenAll(catchUp, caughtUp);
+        await Task.WhenAll(catchUp, caughtUp).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        await _silo.RunCatchUpContinuation().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
     [Fact]

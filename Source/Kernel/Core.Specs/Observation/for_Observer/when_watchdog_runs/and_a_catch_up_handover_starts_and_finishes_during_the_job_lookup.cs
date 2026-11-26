@@ -67,6 +67,7 @@ public class and_a_catch_up_handover_starts_and_finishes_during_the_job_lookup :
 
             // The whole handover runs to completion while only the watchdog's lookup is held.
             await _observer.CaughtUp(_concludedJob, _lastHandledByConcludedJob).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            await _silo.RunCatchUpContinuation().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         }
         finally
         {

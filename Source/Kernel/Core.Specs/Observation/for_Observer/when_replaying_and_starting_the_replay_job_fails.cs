@@ -35,6 +35,7 @@ public class when_replaying_and_starting_the_replay_job_fails : given.an_observe
 
         // Routing afterwards must not pick a replay that was never entered back up.
         await _observer.CaughtUp(JobId.New(), 1UL);
+        await _silo.RunCatchUpContinuation();
     }
 
     [Fact] void should_fail_the_replay_request() => _error.ShouldNotBeNull();

@@ -10,6 +10,7 @@ public class and_a_live_spill_requests_catch_up_during_backoff : given.an_observ
     async Task Establish()
     {
         await _observer.CaughtUp(_jobId, 0UL);
+        await _silo.RunCatchUpContinuation();
         (await _observer.IsCatchUpBackedOff()).ShouldBeTrue();
         _queued = false;
         _jobsManager.ClearReceivedCalls();

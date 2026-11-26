@@ -16,7 +16,11 @@ public class and_zero_work_settles_after_queue_removal : given.an_observer_settl
             .Returns((EventSequenceNumber)1UL);
     }
 
-    Task Because() => _observer.CaughtUp(_jobId, 0UL);
+    async Task Because()
+    {
+        await _observer.CaughtUp(_jobId, 0UL);
+        await _silo.RunCatchUpContinuation();
+    }
 
     [Fact] void should_rejoin_the_physical_queue() => _queued.ShouldBeTrue();
     [Fact] async Task should_keep_the_logical_subscription() => (await _observer.IsSubscribed()).ShouldBeTrue();

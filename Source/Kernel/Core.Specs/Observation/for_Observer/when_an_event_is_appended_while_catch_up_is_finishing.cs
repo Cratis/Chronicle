@@ -64,11 +64,13 @@ public class when_an_event_is_appended_while_catch_up_is_finishing : given.an_ob
     async Task Because()
     {
         await _observer.CaughtUp(_finishingJob, _lastHandledByFinishingJob);
+        await _silo.RunCatchUpContinuation();
         _wasPreparingCatchupBeforeTheReplacementPrepared = await _observer.IsPreparingCatchup();
 
         // What the replacement job does: register the partition it catches up, handle the event and report back.
         await _observer.RegisterCatchingUpPartitions([_partitionOfTheAppendedEvent]);
         await _observer.CaughtUp(_replacementJob, _eventAppendedAtTheBoundary);
+        await _silo.RunCatchUpContinuation();
         _isPreparingCatchupAfterwards = await _observer.IsPreparingCatchup();
     }
 

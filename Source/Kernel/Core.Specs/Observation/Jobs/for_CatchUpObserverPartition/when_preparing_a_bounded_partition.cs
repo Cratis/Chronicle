@@ -5,15 +5,14 @@ using Cratis.Chronicle.Concepts.Events;
 
 namespace Cratis.Chronicle.Observation.Jobs.for_CatchUpObserverPartition;
 
-public class when_preparing_a_bounded_partition : for_CatchUpObserver.given.a_catch_up_observer_job
+public class when_preparing_a_bounded_partition : given.a_partition_catch_up_job
 {
     HandleEventsForPartitionArguments _arguments;
 
     async Task Because()
     {
-        var job = await _silo.CreateGrainAsync<TestableCatchUpObserverPartition>(_jobId, _jobKey);
         var request = new CatchUpObserverPartitionRequest(_request.ObserverKey, _request.ObserverType, "B", 10UL, []) { ToSequenceNumber = 12UL };
-        _arguments = (HandleEventsForPartitionArguments)(await job.PrepareForTesting(request)).Single().Request;
+        _arguments = (HandleEventsForPartitionArguments)(await _partitionJob.PrepareForTesting(request)).Single().Request;
     }
 
     [Fact] void should_preserve_the_start() => _arguments.StartEventSequenceNumber.ShouldEqual((EventSequenceNumber)10UL);
