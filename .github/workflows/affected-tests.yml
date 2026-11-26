@@ -41,7 +41,7 @@ jobs:
       contents: write
     uses: Cratis/Workflows/.github/workflows/affected-tests.yml@main
     with:
-      cli-version: 3.152.0
+      cli-version: 3.154.0
       split-merge: true
       parallelism: 2
       merge-timeout-minutes: 360
