@@ -133,6 +133,13 @@ with enforcement disabled. With enforcement enabled, security management and ker
 System operations. Operations on application stores remain available without administrator privilege.
 Self-service password changes and anonymous bootstrap endpoints keep their existing behavior.
 
+Queries under `Chronicle.Administrator.Operations` use the registered query method and its bound
+`eventStore` argument, including a declared default, to select the same scope as commands. Queries
+without a bindable store parameter are kernel-scoped. Destructive queries, including the constraint
+reindex capability probe, honor `EnforceDestructiveOperations` independently of the broader switch.
+An unresolved query or invalid required store argument is refused even in audit mode; unrelated
+arguments cannot change its scope. Ordinary application stores remain outside this administrator check.
+
 When authentication is disabled, administrator checks allow all callers and the server logs a startup
 warning. Do not use authentication-off mode on a reachable server.
 
