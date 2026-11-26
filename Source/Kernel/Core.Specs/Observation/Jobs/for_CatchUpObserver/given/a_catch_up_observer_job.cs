@@ -83,6 +83,8 @@ public class a_catch_up_observer_job : Specification
         _eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(_namespaceStorage);
         _eventStoreStorage.Observers.Get(Arg.Any<ObserverId>()).Returns(ObserverDefinition.Empty);
         _namespaceStorage.Jobs.Returns(_jobStorage);
+        _jobStorage.GetJobs(Arg.Any<JobQuery>())
+            .Returns(Task.FromResult(Catch<IImmutableList<JobState>>.Success(ImmutableList<JobState>.Empty)));
         _namespaceStorage.JobSteps.Returns(_jobStepStorage);
         _namespaceStorage.ObserverKeyIndexes.Returns(_keyIndexes);
 

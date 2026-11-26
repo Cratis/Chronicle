@@ -160,11 +160,10 @@ public class CatchUpObserver(
         var failedPartitions = await observer.GetFailedPartitionKeys();
         var failedPartitionSet = failedPartitions.ToHashSet();
         var current = await observer.GetState();
-        var exclusions = (current?.PendingCatchUpRepairs ?? []).Select(_ => _.Partition)
-            .Concat(current?.CatchingUpPartitions ?? Enumerable.Empty<Key>()).Distinct().ToArray();
+        var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
+        var exclusions = await GetExcludedPartitions(current);
         failedPartitionSet.UnionWith(exclusions);
 
-        var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
         var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
 
         // Legacy key enumeration used the stored definition at preparation time, not the request's types.
@@ -211,6 +210,15 @@ public class CatchUpObserver(
 
         await observer.RegisterCatchingUpPartitions(keysToCatchUp);
         return steps;
+    }
+
+    async Task<Key[]> GetExcludedPartitions(Storage.Observation.ObserverState? current)
+    {
+        var outstanding = await storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).Jobs.GetOutstandingJobs();
+        var now = DateTimeOffset.UtcNow;
+        var jobs = outstanding.Match(_ => _, exception => throw exception);
+        var owned = jobs.Where(_ => _.IsLive(now)).PartitionsHeldBy<CatchUpObserverPartitionRequest>(Request.ObserverKey, now, current);
+        return (current?.PendingCatchUpRepairs ?? []).Select(_ => _.Partition).Concat(owned).Distinct().ToArray();
     }
 
     ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys, bool deliversPartitionPages, IReadOnlyList<Key> exclusions)

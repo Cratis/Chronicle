@@ -15,7 +15,7 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_handling;
 
 /// <summary>
 /// Event 42 is being delivered live when a catch-up job reports back. Suspended writes cannot accept that report yet.
-/// Retrying after the delivery settles must not start catch-up at or below 42, or the subscriber receives it twice.
+/// Waiting for the delivery to settle must not start catch-up at or below 42, or the subscriber receives it twice.
 /// </summary>
 public class and_catch_up_concludes_while_the_subscriber_is_handling : given.an_observer_with_subscription_for_specific_event_type
 {
@@ -25,7 +25,7 @@ public class and_catch_up_concludes_while_the_subscriber_is_handling : given.an_
     readonly TaskCompletionSource _catchUpRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly SignallingLogger _logs = new();
     readonly List<EventSequenceNumber> _catchUpsFrom = [];
-    Exception _acceptanceError;
+    bool _acceptanceCompletedBeforeDeliverySettled;
     bool _requestedBeforeDeliverySettled;
 
     void Establish()
@@ -61,21 +61,21 @@ public class and_catch_up_concludes_while_the_subscriber_is_handling : given.an_
     {
         var handling = _observer.Handle("ordinary-0", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 42UL)]);
         await _delivering.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var acceptance = _observer.CaughtUp(_finishingJob, 41UL, 41UL);
         try
         {
-            _acceptanceError = await Cratis.Specifications.Catch.Exception(() => _observer.CaughtUp(_finishingJob, 41UL, 41UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System));
+            _acceptanceCompletedBeforeDeliverySettled = acceptance.IsCompleted;
             _requestedBeforeDeliverySettled = _catchUpRequested.Task.IsCompleted;
         }
         finally
         {
             _subscriberResult.TrySetResult(ObserverSubscriberResult.Ok(42UL));
-            await handling.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            await Task.WhenAll(handling, acceptance).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         }
-        await _observer.CaughtUp(_finishingJob, 41UL, 41UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         await _silo.RunCatchUpContinuation().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
-    [Fact] void should_not_acknowledge_a_suspended_write() => _acceptanceError.ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] void should_wait_for_the_suspended_write() => _acceptanceCompletedBeforeDeliverySettled.ShouldBeFalse();
     [Fact] void should_not_request_catch_up_before_delivery_settles() => _requestedBeforeDeliverySettled.ShouldBeFalse();
     [Fact] void should_deliver_the_event_live_once() => _subscriber.Received(1).OnNext(Arg.Any<Key>(), Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_not_start_a_catch_up_at_or_below_the_live_delivered_event() => _catchUpsFrom.ShouldEachConformTo(_ => _ > 42UL);

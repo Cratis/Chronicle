@@ -77,7 +77,8 @@ public partial class Observer
             return SuspectedSkipReason.HeldBackWhileReplaying;
         }
 
-        return PartitionIsCatchingUp(partition) ? SuspectedSkipReason.HeldBackWhileCatchingUp : null;
+        // A walk's exclusions are frozen. A partition whose owner finishes mid-walk still needs its dropped suffix tracked.
+        return PartitionIsCatchingUp(partition) || _walkingEveryPartition ? SuspectedSkipReason.HeldBackWhileCatchingUp : null;
     }
 
     bool CanHoldBackForCatchUpOrReplay(Key partition) =>

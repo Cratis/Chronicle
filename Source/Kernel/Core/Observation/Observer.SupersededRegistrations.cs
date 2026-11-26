@@ -177,8 +177,9 @@ public partial class Observer
     /// The promotion is kernel-initiated: it subscribes automatically, so it neither ends a quarantine nor reactivates a retired observer.
     /// Entries of clients that are no longer connected are dropped on the way.
     /// </remarks>
+    /// <param name="beforePromotion">Releases an answered subscriber's write suspension before a promotion that can synchronously conclude catch-up.</param>
     /// <returns>Awaitable task.</returns>
-    async Task PromoteSupersededRegistrationOrUnsubscribe()
+    async Task PromoteSupersededRegistrationOrUnsubscribe(Action? beforePromotion = null)
     {
         while (_supersededRegistrations.Count > 0)
         {
@@ -198,6 +199,7 @@ public partial class Observer
             _subscription = _subscription with { Targets = [] };
             try
             {
+                beforePromotion?.Invoke();
                 await candidate.Resubscribe();
             }
             catch (Exception ex)

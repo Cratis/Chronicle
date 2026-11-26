@@ -18,7 +18,7 @@ public class and_repair_is_requested_while_state_writes_are_suspended : given.an
     EventSequenceNumber _durableCursorAtRepairStart;
     EventSequenceNumber _durableCursorWhileSuspended;
     bool _repairStartedWhileSuspended;
-    Exception _acceptanceError;
+    bool _acceptanceCompletedWhileSuspended;
     ObserverState _durableStateAtRepairStart;
 
     public and_repair_is_requested_while_state_writes_are_suspended()
@@ -50,24 +50,25 @@ public class and_repair_is_requested_while_state_writes_are_suspended : given.an
     {
         var delivery = _observer.Handle("P", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 12UL)]);
         await _subscriberStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var acceptance = Task.CompletedTask;
         try
         {
             await _observer.RegisterCatchingUpPartitions(new HashSet<Key> { "B" });
             await _observer.Handle("B", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 10UL)]);
-            _acceptanceError = await Catch.Exception(() => _observer.CaughtUp(JobId.NotSet, 12UL, 12UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System));
+            acceptance = _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
+            _acceptanceCompletedWhileSuspended = acceptance.IsCompleted;
             _repairStartedWhileSuspended = _jobsManager.ReceivedCalls().Any(_ => _.GetMethodInfo().Name == "Start");
             _durableCursorWhileSuspended = _durableStorage.PersistedState.NextEventSequenceNumber;
         }
         finally
         {
             _subscriberResult.TrySetResult(ObserverSubscriberResult.Ok(12UL));
-            await delivery.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            await Task.WhenAll(delivery, acceptance).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
         }
-        await _observer.CaughtUp(JobId.NotSet, 12UL, 12UL);
         await _silo.RunCatchUpContinuation().WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
-    [Fact] void should_not_acknowledge_a_suspended_write() => _acceptanceError.ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] void should_wait_for_the_suspended_write_in_the_original_acknowledgement() => _acceptanceCompletedWhileSuspended.ShouldBeFalse();
     [Fact] void should_not_start_repair_until_writes_resume() => _repairStartedWhileSuspended.ShouldBeFalse();
     [Fact] void should_keep_the_durable_cursor_while_suspended() => _durableCursorWhileSuspended.ShouldEqual((EventSequenceNumber)9UL);
     [Fact] void should_persist_the_accepted_cursor_before_starting_repair() => _durableCursorAtRepairStart.ShouldEqual((EventSequenceNumber)13UL);

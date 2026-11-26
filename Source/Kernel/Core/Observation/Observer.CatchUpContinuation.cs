@@ -34,6 +34,8 @@ public partial class Observer
     bool CanRunCatchUpRepairs =>
         !State.IsReplaying && !IsRetired && !_removed && _continuationLifetime.Capture().IsCurrent;
 
+    bool CatchUpAcceptanceInvalidated => _disposed || CatchUpObserverRemoved || !_observerExists || !KeyOwnsDefinition;
+
     void AcceptPendingCatchUpRepairs()
     {
         var repairs = PendingCatchUpRepairs.ToDictionary(_ => _.Partition);
@@ -68,9 +70,16 @@ public partial class Observer
 
     async Task ConfirmCatchUpAcceptance()
     {
-        if (!await WriteStateAndConfirm())
+        while (!await WriteStateAndConfirm())
         {
-            throw new InvalidOperationException("The catch-up handover could not be durably accepted.");
+            if (CatchUpAcceptanceInvalidated)
+            {
+                throw new InvalidOperationException("The catch-up handover could not be durably accepted.");
+            }
+
+            // Wait only for the subscriber's write suspension, never the whole delivery or successor routing.
+            // Those can themselves be waiting for this durable acknowledgement.
+            if (_stateWritesResumed is { } resumed) await resumed.Task;
         }
     }
 

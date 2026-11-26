@@ -1001,6 +1001,8 @@ orleans [Alias("Cratis.Chronicle.Observation.DeliveryFence")] Cratis.Chronicle.O
   [Id(1,Level=0,Constructor=true)] ReleaseBy: System.DateTimeOffset
   [Id(2,Level=0,Constructor=true)] Targets: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Observation.DeliveryFenceTarget>
 orleans [Alias("Cratis.Chronicle.Observation.Jobs.CatchUpObserverPartitionRequest")] Cratis.Chronicle.Observation.Jobs.CatchUpObserverPartitionRequest
+  [Id(5)] ToSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  [Id(6)] IsHandoverRepair: bool
   [Id(3,Level=0,Constructor=true)] FromSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(4,Level=0,Constructor=true)] EventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
   [Id(3,Level=1,Constructor=false)] ReaderScope: Cratis.Chronicle.Concepts.Observation.ObserverReaderScope
@@ -1022,6 +1024,7 @@ orleans [Alias("Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverArgumen
   [Id(7)] Revision: ulong?
   [Id(8)] OwnershipEpoch: ulong?
   [Id(9)] SkipFailedPartitions: bool
+  [Id(10)] ExcludedPartitions: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Keys.Key>
   [Id(0,Level=0,Constructor=true)] ObserverKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   [Id(1,Level=0,Constructor=true)] ObserverType: Cratis.Chronicle.Concepts.Observation.ObserverType
   [Id(2,Level=0,Constructor=true)] StartEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
@@ -1033,6 +1036,7 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverState
   endEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   eventObservationState: Cratis.Chronicle.Concepts.Events.EventObservationState
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
+  excludedPartitions: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Keys.Key>
   id: Cratis.Choreography.Jobs.JobStepIdentifier
   isPrepared: bool
   lastSuccessfullyHandledEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
@@ -1481,6 +1485,7 @@ orleans [Alias("Cratis.Chronicle.Storage.Observation.ObserverState")] Cratis.Chr
   [Id(24)] HandledEventCount: Cratis.Chronicle.Concepts.Events.EventCount
   [Id(25)] HandledEventCountPerEventType: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId,Cratis.Chronicle.Concepts.Events.EventCount>
   [Id(26)] _nextEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  [Id(27)] PendingCatchUpRepairs: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingCatchUpRepair>
   [Id(0,Level=0,Constructor=true)] Identifier: Cratis.Chronicle.Concepts.Observation.ObserverId
   [Id(1,Level=0,Constructor=true)] LastHandledEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(2,Level=0,Constructor=true)] RunningState: Cratis.Chronicle.Concepts.Observation.ObserverRunningState
@@ -1531,6 +1536,10 @@ orleans [Alias("Cratis.Chronicle.Storage.Observation.PartitionClaim")] Cratis.Ch
   [Id(3,Level=0,Constructor=true)] Epoch: Cratis.Chronicle.Storage.Observation.ClaimEpoch
   [Id(4,Level=0,Constructor=true)] ResumePosition: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(5,Level=0,Constructor=true)] PendingWork: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingPartitionWork>
+orleans [Alias("Cratis.Chronicle.Storage.Observation.PendingCatchUpRepair")] Cratis.Chronicle.Storage.Observation.PendingCatchUpRepair
+  [Id(0,Level=0,Constructor=true)] Partition: Cratis.Chronicle.Concepts.Keys.Key
+  [Id(1,Level=0,Constructor=true)] From: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  [Id(2,Level=0,Constructor=true)] To: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
 orleans [Alias("Cratis.Chronicle.Storage.Observation.PendingPartitionWork")] Cratis.Chronicle.Storage.Observation.PendingPartitionWork
   [Id(0,Level=0,Constructor=true)] Partition: Cratis.Chronicle.Concepts.Keys.Key
   [Id(1,Level=0,Constructor=true)] Holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind

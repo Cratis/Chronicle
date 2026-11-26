@@ -432,7 +432,7 @@ public partial class Observer
             await WriteStateAsync();
             if (!_observerExists) return;
 
-            using (new WriteSuspension(this))
+            using (var writeSuspension = new WriteSuspension(this))
             {
                 try
                 {
@@ -512,7 +512,7 @@ public partial class Observer
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {
                         // The batch is not advanced, so whatever subscription takes over catches up from the same position.
-                        await PromoteSupersededRegistrationOrUnsubscribe();
+                        await PromoteSupersededRegistrationOrUnsubscribe(writeSuspension.Dispose);
                         stateChanged = true;
                     }
 

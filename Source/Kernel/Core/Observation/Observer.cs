@@ -101,6 +101,8 @@ public partial class Observer(
     ObserverSubscription _subscription = ObserverSubscription.Unsubscribed;
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
+    int _stateWriteSuspensions;
+    TaskCompletionSource? _stateWritesResumed;
     bool _resumingQuarantine;
 
     /// <summary>
@@ -1508,13 +1510,25 @@ public partial class Observer(
     class WriteSuspension : IDisposable
     {
         readonly Observer _observer;
+        bool _disposed;
 
         public WriteSuspension(Observer observer)
         {
             _observer = observer;
             _observer._stateWritingSuspended = true;
+            _observer._stateWriteSuspensions++;
+            _observer._stateWritesResumed ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        public void Dispose() => _observer._stateWritingSuspended = false;
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            if (--_observer._stateWriteSuspensions != 0) return;
+            _observer._stateWritingSuspended = false;
+            var resumed = _observer._stateWritesResumed;
+            _observer._stateWritesResumed = null;
+            resumed?.TrySetResult();
+        }
     }
 }
