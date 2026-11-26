@@ -16,7 +16,7 @@ public class and_the_handover_fails : given.an_observer_with_subscription
 
     readonly TaskCompletionSource<EventSequenceNumber> _tail = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly TaskCompletionSource _routingReadsTail = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    Exception? _handoverError;
+    Exception? _routingError;
     JobId _result = JobId.NotSet;
 
     void Establish()
@@ -33,17 +33,23 @@ public class and_the_handover_fails : given.an_observer_with_subscription
 
     async Task Because()
     {
-        var caughtUp = _observer.CaughtUp(_concludedCatchUpJob, 1UL);
-        await _routingReadsTail.Task;
-
-        var replay = _observer.Replay();
-
-        _tail.SetException(new InvalidOperationException("Reading the tail failed"));
-        _handoverError = await Cratis.Specifications.Catch.Exception(() => caughtUp);
-        _result = await replay;
+        await _observer.CaughtUp(_concludedCatchUpJob, 1UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var routing = _silo.RunCatchUpContinuation();
+        Task<JobId>? replay = null;
+        try
+        {
+            await _routingReadsTail.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            replay = _observer.Replay();
+        }
+        finally
+        {
+            _tail.TrySetException(new InvalidOperationException("Reading the tail failed"));
+            _routingError = await Cratis.Specifications.Catch.Exception(() => routing.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System));
+            if (replay is not null) _result = await replay.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        }
     }
 
-    [Fact] void should_fail_the_handover() => _handoverError.ShouldNotBeNull();
+    [Fact] void should_fail_deferred_routing_without_revoking_acceptance() => _routingError.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_return_the_started_replay_job() => _result.ShouldEqual(_replayJob);
     [Fact] void should_be_replaying() => _stateStorage.State.RunningState.ShouldEqual(ObserverRunningState.Replaying);
 

@@ -40,16 +40,22 @@ public class and_routing_is_still_in_progress : given.an_observer_with_subscript
 
     async Task Because()
     {
-        var caughtUp = _observer.CaughtUp(_concludedCatchUpJob, 1UL);
-        await _routingReadsTail.Task;
-
-        var replay = _observer.Replay();
-        _replayCompletedWhileRouting = replay.IsCompleted;
-        _replayStartedWhileRouting = _jobsManager.ReceivedCalls().Any(_ => _.GetMethodInfo().Name == nameof(IJobsManager.Start));
-
-        _tail.SetResult(EventSequenceNumber.Unavailable);
-        await caughtUp;
-        _result = await replay;
+        await _observer.CaughtUp(_concludedCatchUpJob, 1UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var routing = _silo.RunCatchUpContinuation();
+        Task<JobId>? replay = null;
+        try
+        {
+            await _routingReadsTail.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            replay = _observer.Replay();
+            _replayCompletedWhileRouting = replay.IsCompleted;
+            _replayStartedWhileRouting = _jobsManager.ReceivedCalls().Any(_ => _.GetMethodInfo().Name == nameof(IJobsManager.Start));
+        }
+        finally
+        {
+            _tail.TrySetResult(EventSequenceNumber.Unavailable);
+            await routing.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            if (replay is not null) _result = await replay.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        }
     }
 
     [Fact] void should_wait_for_routing_to_finish() => _replayCompletedWhileRouting.ShouldBeFalse();

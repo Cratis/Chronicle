@@ -7,7 +7,6 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Observation.Jobs;
-using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_projection_catch_up_round_completes;
 
@@ -63,6 +62,17 @@ public class and_live_delivery_for_another_partition_arrived : given.an_observer
     [Fact] void should_handle_the_other_partition_live() => _subscriber.Received(1).OnNext((Key)"B", Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>());
     [Fact] void should_keep_the_held_back_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"A");
     [Fact] void should_not_report_a_skip_that_was_prevented() => _suspectedSkips.ShouldEqual(0);
-    [Fact] void should_repair_from_the_missed_event() => _jobsManager.Received(1).Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == (Key)"A" && _.FromSequenceNumber == (EventSequenceNumber)10UL && _.ToSequenceNumber == EventSequenceNumber.Max && _.IsHandoverRepair));
-    [Fact] void should_keep_the_missed_range_durable() => _stateStorage.State.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("A", 10UL, 11UL));
+    [Fact] void should_repair_from_the_missed_event() => _jobsManager.Received(1).Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == (Key)"A" && _.FromSequenceNumber == (EventSequenceNumber)10UL && _.ToSequenceNumber == EventSequenceNumber.Max && !_.IsHandoverRepair));
+
+    [Fact]
+    async Task should_keep_a_durable_owner_for_the_missed_event()
+    {
+        var lookup = await _jobStorage.GetOutstandingJobs();
+        lookup.TryGetResult(out var jobs).ShouldBeTrue();
+        jobs.Count.ShouldEqual(1);
+        var request = (CatchUpObserverPartitionRequest)jobs[0].Request!;
+        request.Key.ShouldEqual((Key)"A");
+        request.FromSequenceNumber.ShouldEqual((EventSequenceNumber)10UL);
+        request.ToSequenceNumber.ShouldEqual(EventSequenceNumber.Max);
+    }
 }

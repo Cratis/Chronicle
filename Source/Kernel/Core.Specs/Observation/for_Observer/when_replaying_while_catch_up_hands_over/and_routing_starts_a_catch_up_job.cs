@@ -40,14 +40,20 @@ public class and_routing_starts_a_catch_up_job : given.an_observer_with_subscrip
 
     async Task Because()
     {
-        var caughtUp = _observer.CaughtUp(_concludedCatchUpJob, 1UL);
-        await _routingReadsTail.Task;
-
-        var replay = _observer.Replay();
-
-        _tail.SetResult(2UL);
-        await caughtUp;
-        _result = await replay;
+        await _observer.CaughtUp(_concludedCatchUpJob, 1UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var routing = _silo.RunCatchUpContinuation();
+        Task<JobId>? replay = null;
+        try
+        {
+            await _routingReadsTail.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            replay = _observer.Replay();
+        }
+        finally
+        {
+            _tail.TrySetResult(2UL);
+            await routing.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            if (replay is not null) _result = await replay.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        }
     }
 
     [Fact] void should_return_the_started_replay_job() => _result.ShouldEqual(_replayJob);

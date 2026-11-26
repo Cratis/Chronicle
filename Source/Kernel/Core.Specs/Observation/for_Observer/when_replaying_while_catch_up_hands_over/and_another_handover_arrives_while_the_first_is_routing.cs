@@ -45,20 +45,27 @@ public class and_another_handover_arrives_while_the_first_is_routing : given.an_
 
     async Task Because()
     {
-        var firstHandover = _observer.CaughtUp(JobId.New(), 1UL);
-        await _routingReadsTail.Task;
+        await _observer.CaughtUp(JobId.New(), 1UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        var routing = _silo.RunCatchUpContinuation();
+        Task<JobId>? replay = null;
+        try
+        {
+            await _routingReadsTail.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            replay = _observer.Replay();
 
-        var replay = _observer.Replay();
-
-        // Routing moves on to Observing, which holds on its missed-events check while the second handover arrives.
-        _routingTail.SetResult(EventSequenceNumber.Unavailable);
-        await _observingReadsTail.Task;
-        await _observer.CaughtUp(JobId.New(), 1UL);
-        _replayCompletedAfterSecondHandover = replay.IsCompleted;
-
-        _observingTail.SetResult(EventSequenceNumber.Unavailable);
-        await firstHandover;
-        _result = await replay;
+            // Observing holds its missed-events check while the second acknowledgement arrives.
+            _routingTail.TrySetResult(EventSequenceNumber.Unavailable);
+            await _observingReadsTail.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            await _observer.CaughtUp(JobId.New(), 1UL).WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            _replayCompletedAfterSecondHandover = replay.IsCompleted;
+        }
+        finally
+        {
+            _routingTail.TrySetResult(EventSequenceNumber.Unavailable);
+            _observingTail.TrySetResult(EventSequenceNumber.Unavailable);
+            await routing.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            if (replay is not null) _result = await replay.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+        }
     }
 
     [Fact] void should_still_wait_after_the_second_handover_returned() => _replayCompletedAfterSecondHandover.ShouldBeFalse();

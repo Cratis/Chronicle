@@ -20,9 +20,16 @@ public partial class Observer
 
     bool HasAcceptedCatchUpActivity => HasAcceptedCatchUpWork || _catchUpContinuationInProgress;
 
+    /// <summary>
+    /// Gets a value indicating whether acquisition or another catch-up turn is still active.
+    /// </summary>
+    /// <remarks>
+    /// Timer and watchdog turns do not interleave. A failed transition hook leaves its flag set;
+    /// treating that flag as activity would strand acceptance after a failed replay start.
+    /// </remarks>
     bool CatchUpContinuationBusy =>
         _catchUpContinuationInProgress || _catchUpHandoversInFlight > 0 ||
-        _pendingCatchUpAcquisition is not null || _stateTransitionInProgress;
+        _pendingCatchUpAcquisition is not null;
 
     bool CanRunCatchUpRepairs =>
         !State.IsReplaying && !IsRetired && !_removed && _continuationLifetime.Capture().IsCurrent;
@@ -91,6 +98,8 @@ public partial class Observer
     {
         if (!CanContinueAcceptedCatchUp()) return;
         _catchUpContinuationInProgress = true;
+        _catchUpHandoversInFlight++;
+        _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         var version = _catchUpContinuationVersion;
         try
         {
@@ -113,6 +122,11 @@ public partial class Observer
         finally
         {
             _catchUpContinuationInProgress = false;
+            if (--_catchUpHandoversInFlight == 0 && _catchUpHandoversSettled is { } settled)
+            {
+                _catchUpHandoversSettled = null;
+                settled.TrySetResult();
+            }
         }
     }
 

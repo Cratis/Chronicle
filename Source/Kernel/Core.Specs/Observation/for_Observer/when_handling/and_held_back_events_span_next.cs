@@ -19,6 +19,7 @@ public class and_held_back_events_span_next : given.an_observer_with_skip_detect
 
     async Task Establish()
     {
+        PersistStartedPartitionCatchUps();
         _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 9UL };
         await _observer.RegisterCatchingUpPartitions(["Q"]);
         _eventSequence.GetTailSequenceNumber().Returns((EventSequenceNumber)12UL);
@@ -42,6 +43,6 @@ public class and_held_back_events_span_next : given.an_observer_with_skip_detect
     [Fact] void should_only_report_the_crossed_event_first() => _measurementsAfterFirstRound.SequenceEqual([1]).ShouldBeTrue();
     [Fact] void should_not_cross_the_other_event_while_repair_owns_it() => _metrics.For(EventsSuspectedSkipped).Select(_ => _.Value).SequenceEqual([1]).ShouldBeTrue();
     [Fact] void should_keep_the_later_event_pending() => _stateStorage.State.CatchingUpPartitions.ShouldContain((Key)"Q");
-    [Fact] void should_keep_the_whole_held_back_range_durable() => _stateStorage.State.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("Q", 10UL, 15UL));
+    [Fact] void should_keep_the_accepted_repair_range_durable() => _stateStorage.State.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("Q", 10UL, 13UL));
     [Fact] void should_transfer_the_suffix_to_the_unbounded_repair() => _jobsManager.Received(1).Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == (Key)"Q" && _.FromSequenceNumber == (EventSequenceNumber)10UL && _.ToSequenceNumber == EventSequenceNumber.Max && _.IsHandoverRepair));
 }
