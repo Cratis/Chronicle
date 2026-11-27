@@ -170,7 +170,9 @@ export async function main({ environment = process.env, argv = process.argv.slic
         output(JSON.stringify(result));
         return 0;
     } catch (error) {
-        output(JSON.stringify({ status: 'failed', error: error.message === 'tracker-missing' ? 'tracker-missing' : 'watchdog-reporting-failed' }));
+        // Every throw site in this module and its imports uses a fixed, non-sensitive code
+        // (never interpolated request/response data), so the real cause is always safe to report.
+        output(JSON.stringify({ status: 'failed', error: typeof error.message === 'string' && error.message ? error.message : 'watchdog-reporting-failed' }));
         return 1;
     }
 }
