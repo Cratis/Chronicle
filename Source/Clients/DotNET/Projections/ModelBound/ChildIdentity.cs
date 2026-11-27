@@ -6,7 +6,7 @@ namespace Cratis.Chronicle.Projections.ModelBound;
 /// <summary>
 /// How the items of a children collection are identified.
 /// </summary>
-/// <param name="Key">The event property (or well-known expression) that carries the child key.</param>
+/// <param name="Key">The event property (or well-known expression) that carries a single child key, or null for a composite key.</param>
 /// <param name="KeyExpression">The key with the naming policy applied.</param>
 /// <param name="IdentifiedBy">The child property that holds the identity, before the naming policy is applied.</param>
-internal sealed record ChildIdentity(string Key, string KeyExpression, string? IdentifiedBy);
+internal sealed record ChildIdentity(string? Key, string KeyExpression, string IdentifiedBy);

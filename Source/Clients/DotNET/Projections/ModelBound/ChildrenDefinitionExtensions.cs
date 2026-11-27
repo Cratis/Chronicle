@@ -100,26 +100,21 @@ static class ChildrenDefinitionExtensions
         var propertyName = (string)ProjectionPropertyPaths.Resolve(declaration.MemberName, namingPolicy, ProjectionPathRole.Target);
         var eventTypeId = context.GetOrCreateEventType(declaration.EventType);
 
-        var key = attr.ReadString(nameof(ChildrenFromAttribute<object>.Key)) ?? WellKnownExpressions.EventSourceId;
-        var parentKey = attr.ReadString(nameof(ChildrenFromAttribute<object>.ParentKey))
-            ?? ChildTypeInspection.DiscoverEventPropertyForParentId(declaration.EventType, declaration.ParentModelType, key, namingPolicy)
-            ?? WellKnownExpressions.EventSourceId;
-
         var childType = ChildTypeInspection.ResolveConcreteChildType(ChildTypeInspection.GetChildType(declaration.MemberType));
-        var identifiedBy = attr.ReadString(nameof(ChildrenFromAttribute<object>.IdentifiedBy));
-        if (string.IsNullOrEmpty(identifiedBy))
-        {
-            identifiedBy = ChildTypeInspection.DiscoverKeyPropertyName(childType, key);
-        }
+        var compositeKey = ModelBoundCompositeKey.Read(attr);
+        var identity = ResolveChildIdentity(declaration, childType, compositeKey, namingPolicy);
+        var keyProperties = compositeKey?.Select(path => path.Split('.')[0]).ToArray() ?? [identity.Key];
+        var parentKey = attr.ReadString(nameof(ChildrenFromAttribute<object>.ParentKey))
+            ?? ChildTypeInspection.DiscoverEventPropertyForParentId(declaration.EventType, declaration.ParentModelType, keyProperties, namingPolicy)
+            ?? WellKnownExpressions.EventSourceId;
 
         // If parent has NoAutoMap, children should also not auto-map (inheritance of the policy)
         var shouldAutoMap = HasNoNoAutoMapAttribute(childType) && HasNoNoAutoMapAttribute(declaration.ParentModelType);
 
-        var childrenDef = GetOrCreateChildrenDefinition(targetChildren, propertyName, ApplyNamingToIdentifier(identifiedBy, namingPolicy), shouldAutoMap, childType, namingPolicy);
+        var childrenDef = GetOrCreateChildrenDefinition(targetChildren, propertyName, ApplyNamingToIdentifier(identity.IdentifiedBy, namingPolicy), shouldAutoMap, childType, namingPolicy);
 
         ChildrenOrdering.Apply(childrenDef, ChildrenOrdering.Declared(attr, childType, declaration.MemberName, namingPolicy), declaration.MemberName);
 
-        var identity = new ChildIdentity(key, ToSourceExpression(key, namingPolicy), identifiedBy);
         var fromDefinition = new FromDefinition
         {
             Key = identity.KeyExpression,
@@ -135,6 +130,31 @@ static class ChildrenDefinitionExtensions
         }
 
         return childrenDef;
+    }
+
+    static ChildIdentity ResolveChildIdentity(ChildrenFromDeclaration declaration, Type? childType, string[]? compositeKey, INamingPolicy namingPolicy)
+    {
+        var attribute = declaration.Attribute;
+        var identifiedBy = attribute.ReadString(nameof(ChildrenFromAttribute<object>.IdentifiedBy));
+        var key = compositeKey is null
+            ? attribute.ReadString(nameof(ChildrenFromAttribute<object>.Key)) ?? WellKnownExpressions.EventSourceId
+            : null;
+        if (string.IsNullOrEmpty(identifiedBy))
+        {
+            identifiedBy = ChildTypeInspection.DiscoverKeyPropertyName(childType, key);
+        }
+
+        if (compositeKey is null)
+        {
+            return new(key, ToSourceExpression(key!, namingPolicy), identifiedBy);
+        }
+
+        if (identifiedBy == WellKnownExpressions.EventSourceId)
+        {
+            throw new InvalidOperationException($"The composite child key on '{declaration.MemberName}' requires an identifiedBy property or a child key property.");
+        }
+
+        return new(null, ModelBoundCompositeKey.Build(declaration.EventType, compositeKey, namingPolicy), identifiedBy);
     }
 
     static bool HasNoNoAutoMapAttribute(Type? type) =>

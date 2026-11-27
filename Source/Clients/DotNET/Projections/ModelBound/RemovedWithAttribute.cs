@@ -38,6 +38,12 @@ public sealed class RemovedWithAttribute<TEvent>(string? key = default, string? 
     public string Key { get; } = key ?? WellKnownExpressions.EventSourceId;
 
     /// <summary>
+    /// Gets the event property paths that together identify the instance to remove in a read model projection.
+    /// When set, at least two distinct paths are required and this replaces <see cref="Key"/>.
+    /// </summary>
+    public string[]? CompositeKey { get; init; }
+
+    /// <summary>
     /// Gets the property name that identifies the parent (only used for children).
     /// </summary>
     public string ParentKey { get; } = parentKey ?? WellKnownExpressions.EventSourceId;

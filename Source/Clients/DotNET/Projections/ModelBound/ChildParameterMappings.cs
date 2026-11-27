@@ -43,7 +43,13 @@ static class ChildParameterMappings
         ApplyCounters(scope, parameter, propertyName);
         ApplySetValue(scope, parameter, propertyName, Propagated<SetValueAttribute<object>>(scope, parameter));
         ApplyClearWith(scope, parameter, propertyName);
-        ApplyIdentifierMapping(scope, parameter, propertyName);
+
+        // The collection key resolver already writes a composite identifier into a new child.
+        if (scope.Identity.Key is not null)
+        {
+            ApplyIdentifierMapping(scope, parameter, propertyName);
+        }
+
         ApplySelfReferencingFromEvents(scope, parameter, propertyName);
         ApplyJoins(scope, parameter, propertyName);
         ApplyRemovals(scope, parameter);

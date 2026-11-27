@@ -35,6 +35,12 @@ public sealed class ChildrenFromAttribute<TEvent>(
     /// <inheritdoc/>
     public string Key { get; } = key ?? WellKnownExpressions.EventSourceId;
 
+    /// <summary>
+    /// Gets the event property paths that together identify the child.
+    /// When set, at least two distinct paths are required and this replaces <see cref="Key"/>.
+    /// </summary>
+    public string[]? CompositeKey { get; init; }
+
     /// <inheritdoc/>
     public string? ParentKey { get; } = parentKey;
 

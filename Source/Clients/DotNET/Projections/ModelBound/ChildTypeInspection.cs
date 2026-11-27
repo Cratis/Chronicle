@@ -92,7 +92,7 @@ static class ChildTypeInspection
     /// <param name="childType">The item type of the collection, if known.</param>
     /// <param name="childKey">The child key property name, used as the last resort.</param>
     /// <returns>The identifying property name, or <see cref="WellKnownExpressions.EventSourceId"/> when none is found.</returns>
-    internal static string DiscoverKeyPropertyName(Type? childType, string childKey)
+    internal static string DiscoverKeyPropertyName(Type? childType, string? childKey)
     {
         if (childType is null)
         {
@@ -104,7 +104,7 @@ static class ChildTypeInspection
         return properties.FirstOrDefault(p => Attribute.IsDefined(p, typeof(KeyAttribute), true))?.Name
             ?? FindKeyConstructorParameterName(childType)
             ?? FindPropertyName(properties, "Id")
-            ?? FindPropertyName(properties, childKey)
+            ?? (childKey is not null ? FindPropertyName(properties, childKey) : null)
             ?? WellKnownExpressions.EventSourceId;
     }
 
@@ -114,19 +114,19 @@ static class ChildTypeInspection
     /// </summary>
     /// <param name="eventType">The event type the children are built from.</param>
     /// <param name="parentModelType">The parent read model type, or <see langword="null"/> when unavailable.</param>
-    /// <param name="childKey">The child key property name, excluded from the candidates.</param>
+    /// <param name="childKeyProperties">Child key property names, excluded from the candidates.</param>
     /// <param name="namingPolicy">The <see cref="INamingPolicy"/> used to shape the resolved property name.</param>
     /// <returns>
     /// The inferred parent-key property name, or <see langword="null"/> when no candidate matches (the caller
     /// then falls back to <see cref="WellKnownExpressions.EventSourceId"/> for the same-event-source case).
     /// </returns>
     /// <remarks>
-    /// The child <paramref name="childKey"/> property is excluded from the candidates — a property is the
+    /// The <paramref name="childKeyProperties"/> are excluded from the candidates — a property is the
     /// child's own key or the parent reference, never both. When more than one property still matches the
     /// parent identifier type the inference is ambiguous and the first by declaration order is used; supply
     /// an explicit <c language="csharp">parentKey</c> to disambiguate.
     /// </remarks>
-    internal static string? DiscoverEventPropertyForParentId(Type eventType, Type? parentModelType, string childKey, INamingPolicy namingPolicy)
+    internal static string? DiscoverEventPropertyForParentId(Type eventType, Type? parentModelType, IReadOnlyCollection<string> childKeyProperties, INamingPolicy namingPolicy)
     {
         var parentIdType = parentModelType is null ? null : GetIdentifierType(parentModelType);
         if (parentIdType is null)
@@ -136,7 +136,7 @@ static class ChildTypeInspection
 
         var match = Array.Find(
             eventType.GetProperties(PublicInstance),
-            p => p.PropertyType == parentIdType && !p.Name.Equals(childKey, StringComparison.OrdinalIgnoreCase));
+            p => p.PropertyType == parentIdType && !childKeyProperties.Contains(p.Name, StringComparer.OrdinalIgnoreCase));
 
         return match is not null
             ? (string)ProjectionPropertyPaths.Resolve(match.Name, namingPolicy, ProjectionPathRole.Source)
