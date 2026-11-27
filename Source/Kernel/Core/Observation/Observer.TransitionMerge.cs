@@ -75,11 +75,23 @@ public partial class Observer
         return RecoverSubscriptionAfterLeaving();
     }
 
-    Task RecoverSubscriptionAfterLeaving()
+    async Task RecoverSubscriptionAfterLeaving()
     {
         var recover = _recoverSubscriptionAfterLeaving && _subscription.IsSubscribed;
         _recoverSubscriptionAfterLeaving = false;
-        return recover ? RecoverAfterSubscribing(leavesQuarantine: false) : Task.CompletedTask;
+        if (!recover) return;
+
+        try
+        {
+            await RecoverAfterSubscribing(leavesQuarantine: false);
+        }
+        catch
+        {
+            // The callers that deferred this recovery already reported the subscription as established, so a failure here
+            // must say it is not, or the keeper, restoration and recovery never retry it.
+            _subscriptionSetupFailed = true;
+            throw;
+        }
     }
 
     /// <summary>
