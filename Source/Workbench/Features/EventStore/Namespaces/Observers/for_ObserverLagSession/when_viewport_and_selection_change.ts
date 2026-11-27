@@ -20,14 +20,14 @@ describe('when the viewport and selection change', () => {
 
     it('should read a selection outside the viewport', async () => {
         context.session.select(target('elsewhere'));
-        await context.settle();
+        await vi.advanceTimersByTimeAsync(300);
         context.reads.should.include('elsewhere');
     });
 
     it('should not read again for the same selection reported twice', async () => {
         context.session.select(target('elsewhere'));
         context.session.select({ ...target('elsewhere') });
-        await context.settle();
+        await vi.advanceTimersByTimeAsync(300);
         context.reads.filter(id => id === 'elsewhere').length.should.equal(1);
     });
 

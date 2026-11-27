@@ -110,15 +110,13 @@ export class ObserverLagController {
         this.pump();
     }
 
-    /** Stops reading while the page is hidden, and starts again when it is not. */
+    /** Stops reading while the page is hidden. Resuming starts nothing; the owner asks for a refresh when it wants one. */
     setPaused(paused: boolean) {
         if (this.paused === paused || this.disposed) return;
         this.paused = paused;
         if (paused) {
             this.queue = [];
             this.inFlight.forEach(controller => controller.abort());
-        } else {
-            this.refresh();
         }
     }
 
@@ -136,6 +134,7 @@ export class ObserverLagController {
             this.nextCycle(candidates).forEach(key => this.enqueue(key));
         } else {
             candidates.filter(key => this.isUnread(key)).forEach(key => this.enqueue(key));
+            if (this.selectedKey && this.isUnread(this.selectedKey)) this.prioritise(this.selectedKey);
         }
         this.pump();
     }
@@ -179,8 +178,16 @@ export class ObserverLagController {
         return true;
     }
 
+    /**
+     * Puts the key at the front of the queue. When the cycle has no budget left it takes the place of the last queued
+     * read instead, so a selection is never kept waiting behind rows and the cycle never reads more than its budget.
+     */
     private prioritise(key: string) {
-        if (!this.enqueue(key)) return;
+        if (!this.queue.includes(key)) {
+            if (this.cycleReads < this.maxPerCycle) this.cycleReads++;
+            else if (this.queue.length > 0) this.queue.pop();
+            else return;
+        }
         this.queue = [key, ...this.queue.filter(queued => queued !== key)];
     }
 

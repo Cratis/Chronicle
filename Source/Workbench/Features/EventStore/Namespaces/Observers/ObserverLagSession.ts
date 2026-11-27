@@ -5,8 +5,15 @@ import { type ObserverLag } from 'Features/Observation';
 import { ObserverLagController, type ObserverLagReader, type ObserverLagTarget, observerLagKey } from './ObserverLagController';
 
 const refreshIntervalMs = 30_000;
-const visibilityDebounceMs = 250;
+const minBatchIntervalMs = 250;
 const clockIntervalMs = 5_000;
+
+/** The longest delay a timer honours; a longer one fires at once. */
+export const maxTimerDelayMs = 2 ** 31 - 1;
+
+/** How long to wait from now until the earliest due moment, never negative and never more than a timer can wait. */
+export const boundedDelay = (due: number[], now: number) =>
+    Math.min(maxTimerDelayMs, Math.max(0, Math.min(...due) - now));
 
 /** Where the session learns whether the page is shown. */
 export interface PageVisibility {
@@ -25,10 +32,13 @@ export interface ObserverLagSessionOptions {
 }
 
 /**
- * The lifetime of reading the lag of one view's observers. It can be attached, detached and attached again, which is
- * what React does to a mounted component in strict mode, and each attach starts a fresh controller, so nothing read
- * before a detach is shown after it. What is on screen and what is selected outlive an attach, because the cells report
- * themselves before the view that owns the session attaches it.
+ * The lifetime of reading the lag of one view's observers, driven by one scheduler. Everything that could call for a read
+ * (attaching, a selection, the viewport, the page being shown, the poll, an expiry) only marks the session dirty and asks
+ * for a pump. The pump does nothing while the session is detached or the page hidden, never runs batches closer together
+ * than the minimum interval, and after each run sets exactly one timer for whatever comes next: the poll, the nearest
+ * measurement expiry or the clock. It can be attached, detached and attached again, as React does in strict mode, and each
+ * attach starts a fresh controller, so nothing read before a detach is shown after it. What is on screen and what is
+ * selected outlive an attach, because the cells report themselves before the view that owns the session attaches it.
  */
 export class ObserverLagSession {
     private readonly options: ObserverLagSessionOptions;
@@ -36,11 +46,14 @@ export class ObserverLagSession {
     private controller: ObserverLagController | undefined;
     private selected: ObserverLagTarget | undefined;
     private detachFromPage: (() => void) | undefined;
-    private intervals: ReturnType<typeof setInterval>[] = [];
-    private expiryWake: ReturnType<typeof setTimeout> | undefined;
-    private debounce: ReturnType<typeof setTimeout> | undefined;
+    private timer: ReturnType<typeof setTimeout> | undefined;
+    private dirty = false;
+    private selectionDirty = false;
+    private lastBatchAt = Number.NEGATIVE_INFINITY;
+    private nextPollAt = 0;
+    private nextClockAt = 0;
 
-    /** The moment the view judges measurements at; it moves with the clock and when a measurement arrives. */
+    /** The moment the view judges measurements at; it moves with every pump and when a measurement arrives. */
     now = Date.now();
 
     constructor(options: ObserverLagSessionOptions) {
@@ -68,70 +81,104 @@ export class ObserverLagSession {
         const controller = new ObserverLagController({ reader: this.options.reader, onChange: () => this.measurementArrived() });
         this.controller = controller;
         this.visible.forEach(target => controller.setVisible(target, true));
-        controller.select(this.selected);
-        controller.setPaused(this.options.visibility.isHidden());
+        controller.setPaused(this.isHidden);
+        this.selectionDirty = true;
         this.detachFromPage = this.options.visibility.subscribe(() => this.pageVisibilityChanged());
-        this.intervals = [
-            setInterval(() => controller.refresh(), refreshIntervalMs),
-            setInterval(() => { if (!this.options.visibility.isHidden()) this.tick(); }, clockIntervalMs)
-        ];
-        controller.refresh();
+        this.request();
     }
 
     /** Stops reading, aborts what is outstanding and forgets what was read. */
     detach() {
         this.detachFromPage?.();
         this.detachFromPage = undefined;
-        this.intervals.forEach(clearInterval);
-        this.intervals = [];
-        clearTimeout(this.expiryWake);
-        clearTimeout(this.debounce);
+        clearTimeout(this.timer);
+        this.timer = undefined;
         this.controller?.dispose();
         this.controller = undefined;
+        this.dirty = false;
+        this.lastBatchAt = Number.NEGATIVE_INFINITY;
     }
 
     /** Selects the target the detail shows, or none. */
     select(target: ObserverLagTarget | undefined) {
-        const changed = (target ? observerLagKey(target) : undefined) !== (this.selected ? observerLagKey(this.selected) : undefined);
+        if (this.keyOf(target) === this.keyOf(this.selected)) return;
         this.selected = target;
-        if (changed) this.controller?.select(target);
+        this.selectionDirty = true;
+        this.request();
     }
 
-    /** Records that a target scrolled into or out of view, and reads what became visible once the scrolling settles. */
+    /** Records that a target scrolled into or out of view. */
     setVisible(target: ObserverLagTarget, isVisible: boolean) {
         if (isVisible) this.visible.set(observerLagKey(target), target);
         else this.visible.delete(observerLagKey(target));
 
         this.controller?.setVisible(target, isVisible);
-        clearTimeout(this.debounce);
-        this.debounce = setTimeout(() => this.controller?.refresh(), visibilityDebounceMs);
+        this.request();
+    }
+
+    private get isHidden() {
+        return this.options.visibility.isHidden();
+    }
+
+    private keyOf(target: ObserverLagTarget | undefined) {
+        return target ? observerLagKey(target) : undefined;
+    }
+
+    private request() {
+        this.dirty = true;
+        this.schedule();
     }
 
     private pageVisibilityChanged() {
-        const hidden = this.options.visibility.isHidden();
+        const hidden = this.isHidden;
         this.controller?.setPaused(hidden);
-        // Time passed while hidden, so what was current may not be any more: judge it again before anything is shown.
-        if (!hidden) this.tick();
-    }
+        if (hidden) return;
 
-    private tick() {
+        // Time passed while hidden: judge what was read again, and read again.
         this.now = Date.now();
         this.options.onChange();
-        this.scheduleExpiryWake();
+        this.request();
     }
 
     private measurementArrived() {
         this.now = Date.now();
         this.options.onChange();
-        this.scheduleExpiryWake();
+        this.schedule();
     }
 
-    /** Wakes the view just after the nearest measurement stops describing its observer, wherever the clock is. */
-    private scheduleExpiryWake() {
-        clearTimeout(this.expiryWake);
-        const expiry = this.controller?.nextExpiryAfter(Date.now());
-        if (expiry === undefined) return;
+    /** Sets the one timer. It waits for the earliest of what is due, never closer than the minimum interval to the last batch. */
+    private schedule() {
+        clearTimeout(this.timer);
+        this.timer = undefined;
+        if (!this.controller || this.isHidden) return;
 
-        this.expiryWake = setTimeout(() => this.tick(), Math.max(0, expiry - Date.now()) + 1);
+        const due = [this.nextPollAt, this.nextClockAt];
+        if (this.dirty) due.push(this.lastBatchAt + minBatchIntervalMs);
+
+        const expiry = this.controller.nextExpiryAfter(this.now);
+        if (expiry !== undefined) due.push(expiry + 1);
+
+        this.timer = setTimeout(() => this.pump(), boundedDelay(due, this.now));
+    }
+
+    private pump() {
+        this.timer = undefined;
+        const controller = this.controller;
+        if (!controller || this.isHidden) return;
+
+        this.now = Date.now();
+        const batchDue = this.dirty && this.now >= this.lastBatchAt + minBatchIntervalMs;
+        if (batchDue || this.now >= this.nextPollAt) {
+            controller.refresh();
+            if (this.selectionDirty) controller.select(this.selected);
+            this.selectionDirty = false;
+            this.dirty = false;
+            this.lastBatchAt = this.now;
+            this.nextPollAt = this.now + refreshIntervalMs;
+        }
+        if (this.now >= this.nextClockAt) this.nextClockAt = this.now + clockIntervalMs;
+
+        this.options.onChange();
+        this.schedule();
     }
 }

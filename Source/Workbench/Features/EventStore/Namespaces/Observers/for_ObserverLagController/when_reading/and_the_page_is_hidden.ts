@@ -25,8 +25,9 @@ describe('when reading and the page is hidden', () => {
         other.reads[0].signal.aborted.should.be.true;
     });
 
-    it('should read again when it is shown', () => {
+    it('should read again when it is shown and a refresh is asked for', () => {
         context.controller.setPaused(false);
+        context.controller.refresh();
         context.reads.length.should.equal(1);
     });
 });
