@@ -57,6 +57,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
     ChronicleClient _client = null!;
     IEventStore _store = null!;
     IReactorHandler _reactor = null!;
+    ClusterReconnectDiagnostics _reconnectDiagnostics = null!;
     Task _load = Task.CompletedTask;
     int _failures;
 
@@ -117,6 +118,7 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         {
             await _store.Reducers.GetHandlerFor(typeof(ClusterReconnectReducer)).WaitTillActive(TimeSpan.FromSeconds(60));
         }
+        _reconnectDiagnostics = new(cluster, _store, _probeSource);
         _load = Run();
     }
 
@@ -173,7 +175,11 @@ public sealed partial class ClusterLoad(int transitions = 1, TimeProvider? timeP
         }
         catch (OperationCanceledException) when (deadline.IsCancellationRequested)
         {
-            throw new TimeoutException(DescribeMissedReconnectProgress(timeout, started.Elapsed, acknowledged));
+            // Freeze the missed-deadline evidence before observational reads: late delivery cannot turn it into success.
+            var failedAt = DateTimeOffset.UtcNow;
+            var failure = new TimeoutException(DescribeMissedReconnectProgress(timeout, started.Elapsed, acknowledged));
+            await _reconnectDiagnostics.Dump(_reactor, Console.Out, failedAt);
+            throw failure;
         }
     }
 

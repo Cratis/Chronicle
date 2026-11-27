@@ -26,19 +26,18 @@ public partial class Observer
         EventGenerationDelivery generationDelivery = EventGenerationDelivery.Compatibility)
         where TObserverSubscriber : IObserverSubscriber
     {
-        // The subscription and the superseded registrations live for the activation only. A client this activation
-        // already knows about - as a target or as a registration a later one replaced - has nothing to restore.
+        // Membership can survive failed setup. Retry the current target, but never promote a superseded registration.
         if (_subscription.IsServedByWebhook)
         {
             logger.ClientSubscriptionWaitingForWebhook(_observerKey);
             return;
         }
-        if (IsKnownClient(connectedClient.ConnectionId) || CannotReconcileSubscription()) return;
+        if (NeedsNoClientRestoration(connectedClient.ConnectionId) || CannotReconcileSubscription()) return;
 
         // A namespace removed while its client is still running must not be brought back by restoring an observer in it.
         var namespaces = await storage.GetEventStore(_observerKey.EventStore).Namespaces.GetAll();
         if (!namespaces.Any(@namespace => @namespace.Name == _observerKey.Namespace)) return;
-        if (IsKnownClient(connectedClient.ConnectionId)) return;
+        if (NeedsNoClientRestoration(connectedClient.ConnectionId)) return;
 
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.RestoringClientSubscription(connectedClient.ConnectionId);
@@ -55,6 +54,9 @@ public partial class Observer
             isReplayable,
             filters);
     }
+
+    bool NeedsNoClientRestoration(ConnectionId connectionId) =>
+        IsKnownClient(connectionId) && (!IsTarget(connectionId) || !_subscriptionSetupFailed);
 
     bool IsTarget(ConnectionId connectionId) =>
         _subscription.Targets.Any(target => target.ConnectedClient?.ConnectionId == connectionId);

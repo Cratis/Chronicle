@@ -5,7 +5,11 @@ namespace Cratis.Chronicle.Services.Observation.for_ClientSubscriptionKeeper.whe
 
 public class and_the_observer_knows_the_client : given.a_confirmation_from_the_observer
 {
-    void Establish() => ObserverKnowsTheClient(true);
+    void Establish()
+    {
+        ObserverKnowsTheClient(true);
+        _observer.IsSubscriptionEstablished().Returns(true);
+    }
 
     Task Because() => Confirm();
 

@@ -278,8 +278,8 @@ public interface IObserver : IGrainWithStringKey
     /// Checks whether this activation knows a client, as a subscription target or as a superseded registration.
     /// </summary>
     /// <remarks>
-    /// An interleaved, read-only hint for the grain holding a client registration. A new activation - after the
-    /// silo that hosted the previous one was lost - starts out knowing no client.
+    /// An interleaved, read-only membership hint, not proof that subscription setup succeeded. A new activation can
+    /// restore durable targets before the client registration checks it.
     /// </remarks>
     /// <param name="connectionId">The <see cref="ConnectionId"/> of the client.</param>
     /// <returns>True if the client is known; otherwise false.</returns>
@@ -301,14 +301,14 @@ public interface IObserver : IGrainWithStringKey
     Task<bool> IsClientTarget(ConnectionId connectionId);
 
     /// <summary>
-    /// Restore the subscription of a connected client that this activation does not know about.
+    /// Restore a connected client's missing subscription or retry its failed setup.
     /// </summary>
     /// <remarks>
-    /// The subscription is activation-only state. When the silo hosting an observer is lost, the observer comes back
-    /// on another silo with no subscription while the client stays connected and its registration grain survives.
-    /// The registration grain calls this to put the client back. It does nothing if the client is already known,
-    /// the observer is sealed, retired or quarantined, operator-cleared recovery is still owed, or the namespace no
-    /// longer exists. Like <see cref="ReconcileSubscription"/>, it never ends quarantine or resets live progress.
+    /// An activation may restore durable targets itself. Otherwise the surviving client registration calls this to
+    /// put its target back, or to retry setup that failed after installing the target. Established subscriptions and
+    /// superseded-only registrations are left alone. It does nothing if the observer is sealed, retired or quarantined,
+    /// operator-cleared recovery is still owed, or the namespace no longer exists. Like <see cref="ReconcileSubscription"/>,
+    /// it never ends quarantine or resets live progress.
     /// </remarks>
     /// <typeparam name="TObserverSubscriber">The client-owned subscriber type.</typeparam>
     /// <param name="type">The observer type.</param>

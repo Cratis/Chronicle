@@ -11,7 +11,7 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 /// </summary>
 public sealed class RecordingQueueLogger : ILogger<AppendedEventsQueue>
 {
-    readonly ConcurrentQueue<(LogLevel Level, string Message, Exception? Exception)> _entries = new();
+    readonly ConcurrentQueue<(LogLevel Level, string Message, Exception? Exception, EventId EventId, IReadOnlyList<KeyValuePair<string, object?>> State)> _entries = new();
 
     /// <summary>
     /// Gets or sets a predicate on the formatted message. When it returns true for a message, logging it throws.
@@ -31,6 +31,16 @@ public sealed class RecordingQueueLogger : ILogger<AppendedEventsQueue>
     /// <param name="level">The <see cref="LogLevel"/> to get the messages of.</param>
     /// <returns>The formatted messages.</returns>
     public IEnumerable<string> Messages(LogLevel level) => _entries.Where(_ => _.Level == level).Select(_ => _.Message);
+
+    /// <summary>
+    /// Gets the structured fields of messages logged at a level with a named event identity.
+    /// </summary>
+    /// <param name="level">The log level to match.</param>
+    /// <param name="eventName">The event identity to match.</param>
+    /// <returns>The structured message fields.</returns>
+    public IEnumerable<IReadOnlyDictionary<string, object?>> StructuredMessages(LogLevel level, string eventName) => _entries
+        .Where(_ => _.Level == level && _.EventId.Name == eventName)
+        .Select(_ => _.State.ToDictionary(field => field.Key, field => field.Value));
 
     /// <summary>
     /// Gets the exceptions that were logged.
@@ -53,6 +63,6 @@ public sealed class RecordingQueueLogger : ILogger<AppendedEventsQueue>
             throw new InvalidOperationException("The logger failed");
         }
 
-        _entries.Enqueue((logLevel, message, exception));
+        _entries.Enqueue((logLevel, message, exception, eventId, (state as IReadOnlyList<KeyValuePair<string, object?>>)?.ToArray() ?? []));
     }
 }

@@ -5,7 +5,11 @@ namespace Cratis.Chronicle.Observation.Reactors.Clients.for_ClientReactorSubscri
 
 public class and_the_observer_still_knows_the_client : given.a_client_reactor_subscription_with_a_stored_definition
 {
-    void Establish() => _observer.KnowsClient(_client.ConnectionId).Returns(true);
+    void Establish()
+    {
+        _observer.KnowsClient(_client.ConnectionId).Returns(true);
+        _observer.IsSubscriptionEstablished().Returns(true);
+    }
 
     Task Because() => _subscription.KeepSubscription(_connectionDefinition);
 
