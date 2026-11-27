@@ -303,7 +303,8 @@ public partial class Observer
         FailureKind kind,
         FailedPartitionId? episodeId,
         Guid? deferralId,
-        PartitionFailureContext context)
+        PartitionFailureContext context,
+        bool deferQuarantine = false)
     {
         // An activation that does not own the definition is not the observer that failed; it records nothing.
         if (IsRetired || _removed || !KeyOwnsDefinition)
@@ -318,6 +319,7 @@ public partial class Observer
         {
             if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
             var config = await GetRetryConfiguration();
+            if (deferQuarantine && (CatchUpAcceptanceInvalidated || !PendingCatchUpRepairs.Any(_ => _.Partition == partition))) return;
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             _metrics?.PartitionFailed();
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
@@ -418,8 +420,7 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
-            ArmWebhookProbeAfterFailure();
-            await TransitionTo<QuarantinedObserver>();
+            await ApplyFailureQuarantine(deferQuarantine);
         }
     }
 

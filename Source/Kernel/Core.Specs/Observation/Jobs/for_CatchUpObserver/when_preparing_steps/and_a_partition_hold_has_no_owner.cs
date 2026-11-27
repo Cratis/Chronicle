@@ -27,7 +27,8 @@ public class and_a_partition_hold_has_no_owner : given.a_catch_up_observer_job
 
     async Task Because() => await StartAndLetTheStepsCome();
 
-    [Fact] void should_exclude_only_the_live_job_owned_partition() => ((HandleEventsForObserverArguments)_job.PreparedSteps!.Single().Request).ExcludedPartitions.ShouldContainOnly((Key)"Q");
+    [Fact] void should_not_snapshot_partition_job_ownership() => _observer.Received(1)
+        .RegisterCatchingUpPartitions(Arg.Is<IEnumerable<Key>>(_ => _.Contains((Key)"Q")));
     [Fact] void should_cover_the_ownerless_partition_with_the_walk() => _observer.Received(1)
         .RegisterCatchingUpPartitions(Arg.Is<IEnumerable<Key>>(_ => _.Contains((Key)"P")));
     [Fact] void should_cover_the_stopped_job_partition_with_the_walk() => _observer.Received(1)

@@ -1024,7 +1024,6 @@ orleans [Alias("Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverArgumen
   [Id(7)] Revision: ulong?
   [Id(8)] OwnershipEpoch: ulong?
   [Id(9)] SkipFailedPartitions: bool
-  [Id(10)] ExcludedPartitions: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Keys.Key>
   [Id(0,Level=0,Constructor=true)] ObserverKey: Cratis.Chronicle.Concepts.Observation.ObserverKey
   [Id(1,Level=0,Constructor=true)] ObserverType: Cratis.Chronicle.Concepts.Observation.ObserverType
   [Id(2,Level=0,Constructor=true)] StartEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
@@ -1036,7 +1035,6 @@ json Cratis.Chronicle.Observation.Jobs.HandleEventsForObserverState
   endEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   eventObservationState: Cratis.Chronicle.Concepts.Events.EventObservationState
   eventTypes: System.Collections.Generic.IEnumerable<Cratis.Chronicle.Concepts.Events.EventType>
-  excludedPartitions: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Concepts.Keys.Key>
   id: Cratis.Choreography.Jobs.JobStepIdentifier
   isPrepared: bool
   lastSuccessfullyHandledEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber

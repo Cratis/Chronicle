@@ -7,8 +7,8 @@ using Cratis.Chronicle.Concepts.Keys;
 namespace Cratis.Chronicle.Storage.Observation;
 
 /// <summary>
-/// A durably accepted repair. Its unbounded partition job also owns the suffix from <paramref name="To"/>;
-/// observer-wide successors exclude this partition until its owner acknowledges completion.
+/// A durably accepted repair covering the bounded interval from <paramref name="From"/> to <paramref name="To"/>.
+/// Observer-wide delivery and successors wait until every accepted repair acknowledges completion.
 /// </summary>
 /// <param name="Partition">The partition needing repair.</param>
 /// <param name="From">The first potentially missed event, inclusive.</param>

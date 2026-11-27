@@ -186,6 +186,7 @@ public static class JobsManagerExtensions
     /// <param name="onJobsDropped">The optional callback with the number of jobs that were deleted, called before anything is resumed or started.</param>
     /// <param name="stampBeforeStart">The optional callback granting and persisting the claim a new job runs under, returning the request stamped with its epoch. Called after <paramref name="onStartNew"/>, right before the job is started.</param>
     /// <param name="isObsolete">The optional check for a request carrying an ownership epoch its claim no longer holds. A stopped job running such a request is refused when resumed, so it is passed over rather than resumed.</param>
+    /// <param name="canAcquire">The optional admission check repeated after awaited lookup and preparation.</param>
     /// <typeparam name="TJob">The type of the job.</typeparam>
     /// <typeparam name="TRequest">The type of the observer request.</typeparam>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -202,7 +203,8 @@ public static class JobsManagerExtensions
         int maxJobsToDrop,
         Action<int>? onJobsDropped,
         Func<TRequest, Task<TRequest>>? stampBeforeStart = null,
-        Func<IObserverJobRequest, bool>? isObsolete = null)
+        Func<IObserverJobRequest, bool>? isObsolete = null,
+        Func<bool>? canAcquire = null)
         where TJob : IJob<TRequest>
         where TRequest : class, IObserverJobRequest
     {
@@ -220,7 +222,8 @@ public static class JobsManagerExtensions
             MaxJobsToDrop = maxJobsToDrop,
             OnJobsDropped = onJobsDropped,
             StampBeforeStart = stampBeforeStart,
-            IsObsolete = isObsolete
+            IsObsolete = isObsolete,
+            CanAcquire = canAcquire ?? (() => true)
         };
         return await starter.Run();
     }

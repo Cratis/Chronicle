@@ -73,6 +73,12 @@ public class Routing(
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         using var logScope = logger.BeginRoutingScope(state.Identifier, observerKey);
+        var repairsPending = StateMachine is Cratis.Chronicle.Observation.Observer owner ? owner.HasCatchUpRepairBarrier : state.PendingCatchUpRepairs is { Count: > 0 };
+        if (repairsPending)
+        {
+            await Observer.CatchUp();
+            return state;
+        }
 
         // An in-flight routing pass owns its lookup; only a completed failure owes a watchdog retry.
         NextEventLookupFailed = false;

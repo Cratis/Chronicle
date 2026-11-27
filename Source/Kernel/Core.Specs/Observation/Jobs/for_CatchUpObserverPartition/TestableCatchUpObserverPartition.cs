@@ -13,5 +13,10 @@ public class TestableCatchUpObserverPartition(JsonSerializerOptions options, ILo
 {
     public Type GrainType => typeof(ICatchUpObserverPartition);
 
+    public string DescribeStateForTesting() =>
+        $"Status={State.Status}; StatusChanges={string.Join(", ", State.StatusChanges.Select(_ => _.Status))}; History={JsonSerializer.Serialize(State.StatusChanges)}; Progress={JsonSerializer.Serialize(State.Progress)}";
+
     public Task<IImmutableList<JobStepDetails>> PrepareForTesting(CatchUpObserverPartitionRequest request) => PrepareSteps(request);
+
+    public void RestoreForTesting(JobStateWithLastHandledEvent state) => State = state;
 }

@@ -14,9 +14,14 @@ public partial class Observer
     bool _acceptedCatchUpMadeProgress;
     int _catchUpContinuationVersion;
 
+    /// <summary>
+    /// Gets a value indicating whether accepted repairs or their durable acknowledgements hold the delivery barrier.
+    /// </summary>
+    internal bool HasCatchUpRepairBarrier => PendingCatchUpRepairs.Count > 0 || _handoverRepairAcknowledgementsInFlight > 0;
+
     IReadOnlyList<PendingCatchUpRepair> PendingCatchUpRepairs => State.PendingCatchUpRepairs ?? [];
 
-    bool HasAcceptedCatchUpWork => _catchUpContinuationPending || PendingCatchUpRepairs.Count > 0;
+    bool HasAcceptedCatchUpWork => _catchUpContinuationPending || HasCatchUpRepairBarrier;
 
     bool HasAcceptedCatchUpActivity => HasAcceptedCatchUpWork || _catchUpContinuationInProgress;
 
@@ -47,6 +52,12 @@ public partial class Observer
         }
 
         State = State with { PendingCatchUpRepairs = repairs.Values.ToArray() };
+        if (HasCatchUpRepairBarrier)
+        {
+            // The frozen cursor covers the suffix; only the bounded obligations own earlier events.
+            _heldBackDeliveries.Clear();
+            _missedDeliveries.Clear();
+        }
     }
 
     bool PartitionIsCatchingUp(Concepts.Keys.Key partition) =>
@@ -55,18 +66,8 @@ public partial class Observer
     bool NeedsDurableCatchUpRepair(Concepts.Keys.Key partition, Concepts.Events.EventSequenceNumber from) =>
         from.IsActualValue && from < State.NextEventSequenceNumber && !MissedDeliveryAlreadyOwned(partition);
 
-    void CompletePendingCatchUpRepair(Concepts.Keys.Key partition)
-    {
-        var repairs = PendingCatchUpRepairs.Where(_ => _.Partition != partition).ToList();
-        if (_heldBackDeliveries.TryGetValue(partition, out var held))
-        {
-            var from = held.First;
-            var to = from >= State.NextEventSequenceNumber ? from.Next() : State.NextEventSequenceNumber;
-            repairs.Add(new(partition, from, to));
-            _missedDeliveries.Remove(partition);
-        }
-        State = State with { PendingCatchUpRepairs = repairs.ToArray() };
-    }
+    void CompletePendingCatchUpRepair(Concepts.Keys.Key partition) =>
+        State = State with { PendingCatchUpRepairs = PendingCatchUpRepairs.Where(_ => _.Partition != partition).ToArray() };
 
     async Task ConfirmCatchUpAcceptance()
     {
@@ -112,30 +113,46 @@ public partial class Observer
         var version = _catchUpContinuationVersion;
         try
         {
-            EvaluateSuspectedSkips();
-            var acceptedRepairs = PendingCatchUpRepairs;
-            QueueUnownedHeldBackDeliveries();
-            AcceptPendingCatchUpRepairs();
-            if (!acceptedRepairs.SequenceEqual(PendingCatchUpRepairs)) await ConfirmCatchUpAcceptance();
-            await ResumePendingCatchUpRepairs();
+            if (await ApplyPendingRepairQuarantine()) return;
+            await AcceptNewCatchUpRepairs();
+            if (await ContinuePendingRepairs()) return;
             if (!_catchUpContinuationPending) return;
-            await RepairMissedDeliveries();
-            var madeProgress = _acceptedCatchUpMadeProgress;
-            await ContinueAfterCatchUpLap(await NoteCatchUpLap(madeProgress));
-            if (version == _catchUpContinuationVersion)
-            {
-                _catchUpContinuationPending = false;
-                _acceptedCatchUpMadeProgress = false;
-            }
+            await ContinueAcceptedSuccessor(version);
         }
         finally
         {
-            _catchUpContinuationInProgress = false;
-            if (--_catchUpHandoversInFlight == 0 && _catchUpHandoversSettled is { } settled)
-            {
-                _catchUpHandoversSettled = null;
-                settled.TrySetResult();
-            }
+            FinishCatchUpContinuation();
+        }
+    }
+
+    async Task AcceptNewCatchUpRepairs()
+    {
+        EvaluateSuspectedSkips();
+        var acceptedRepairs = PendingCatchUpRepairs;
+        QueueUnownedHeldBackDeliveries();
+        AcceptPendingCatchUpRepairs();
+        if (!acceptedRepairs.SequenceEqual(PendingCatchUpRepairs)) await ConfirmCatchUpAcceptance();
+    }
+
+    async Task ContinueAcceptedSuccessor(int version)
+    {
+        await RepairMissedDeliveries();
+        var madeProgress = _acceptedCatchUpMadeProgress;
+        await ContinueAfterCatchUpLap(await NoteCatchUpLap(madeProgress));
+        if (version == _catchUpContinuationVersion)
+        {
+            _catchUpContinuationPending = false;
+            _acceptedCatchUpMadeProgress = false;
+        }
+    }
+
+    void FinishCatchUpContinuation()
+    {
+        _catchUpContinuationInProgress = false;
+        if (--_catchUpHandoversInFlight == 0 && _catchUpHandoversSettled is { } settled)
+        {
+            _catchUpHandoversSettled = null;
+            settled.TrySetResult();
         }
     }
 
@@ -149,13 +166,39 @@ public partial class Observer
         return request with { OwnershipEpoch = epochs[repair.Partition] };
     }
 
+    async Task<bool> ContinuePendingRepairs()
+    {
+        if (!HasCatchUpRepairBarrier) return false;
+        await ResumePendingCatchUpRepairs();
+        return true;
+    }
+
     async Task ResumePendingCatchUpRepairs()
     {
-        if (IsWithoutClient || !CanRunCatchUpRepairs) return;
+        if (!CanRunCatchUpRepairs) return;
         foreach (var repair in PendingCatchUpRepairs.ToArray())
         {
-            if (failures.State.IsFailed(repair.Partition)) continue;
-            await StartPendingCatchUpRepair(repair);
+            await ResumePendingCatchUpRepair(repair);
+        }
+    }
+
+    async Task ResumePendingCatchUpRepair(PendingCatchUpRepair repair)
+    {
+        if (!PendingCatchUpRepairs.Contains(repair)) return;
+        if (failures.State.IsFailed(repair.Partition))
+        {
+            await DischargeFailedCatchUpRepair(repair);
+            return;
+        }
+        if (IsWithoutClient) return;
+        await StartPendingCatchUpRepair(repair);
+    }
+
+    async Task DischargeFailedCatchUpRepair(PendingCatchUpRepair repair)
+    {
+        if (await RecordHandoverRepairCompletion(repair.Partition, repair.From, Concepts.Events.EventSequenceNumber.Unavailable, succeeded: false))
+        {
+            ScheduleCatchUpContinuation(madeProgress: false);
         }
     }
 
@@ -164,7 +207,8 @@ public partial class Observer
         var request = new CatchUpObserverPartitionRequest(_observerKey, Definition.Type, repair.Partition, repair.From, Definition.EventTypes)
         {
             ReaderScope = ReaderScope,
-            IsHandoverRepair = true
+            IsHandoverRepair = true,
+            ToSequenceNumber = repair.To - 1
         };
         var checkpoint = _continuationLifetime.Capture();
         var starter = new ObserverJobStarter<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>
@@ -172,12 +216,13 @@ public partial class Observer
             JobsManager = _jobsManager,
             Logger = logger,
             CreateRequest = () => request,
-            RequestPredicate = existing => existing.IsHandoverRepair && existing.Key == repair.Partition && existing.FromSequenceNumber == repair.From,
+            RequestPredicate = existing => existing.IsHandoverRepair && existing.Key == repair.Partition && existing.FromSequenceNumber == repair.From && existing.ToSequenceNumber == request.ToSequenceNumber,
             OnAlreadyRunningJob = () => Task.CompletedTask,
             OnResume = () => Task.CompletedTask,
             OnStartNew = () => Task.CompletedTask,
             OnResumeRefused = () => Task.CompletedTask,
             IsObsolete = IsObsolete,
+            CanAcquire = () => checkpoint.IsCurrent && !CatchUpAcceptanceInvalidated && PendingCatchUpRepairs.Contains(repair),
             StampBeforeStart = pending => StampCatchUpRepair(pending, repair)
         };
         await checkpoint.Await(starter.Run);

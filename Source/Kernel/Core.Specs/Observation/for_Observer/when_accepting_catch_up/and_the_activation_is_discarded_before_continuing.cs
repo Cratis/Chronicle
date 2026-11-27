@@ -25,11 +25,12 @@ public class and_the_activation_is_discarded_before_continuing : given.an_observ
         await Crash();
         _observer.SetSubscription(new ObserverSubscription(_observerId, _observerKey, [EventType.Unknown], typeof(NullObserverSubscriber), SiloAddress.Zero, null));
         await _observer.CatchUp();
+        await _silo.RunCatchUpContinuation();
         _restored = await _observer.GetState();
     }
 
     [Fact] void should_keep_the_accepted_cursor() => _restored.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)13UL);
     [Fact] void should_start_the_repair_from_the_original_missed_event() => _jobsManager.Received().Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == "B" && _.FromSequenceNumber == (EventSequenceNumber)10UL && _.IsHandoverRepair));
-    [Fact] void should_give_the_partition_job_the_whole_suffix() => _jobsManager.Received().Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.ToSequenceNumber == EventSequenceNumber.Max));
+    [Fact] void should_bound_the_partition_job_before_the_successor() => _jobsManager.Received().Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.ToSequenceNumber == (EventSequenceNumber)12UL));
     [Fact] void should_keep_the_intent_until_the_partition_acknowledges() => _restored.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("B", 10UL, 13UL));
 }

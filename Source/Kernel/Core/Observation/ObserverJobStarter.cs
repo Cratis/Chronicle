@@ -85,6 +85,11 @@ internal sealed class ObserverJobStarter<TJob, TRequest>
     internal Func<IObserverJobRequest, bool>? IsObsolete { get; init; }
 
     /// <summary>
+    /// Gets the admission check repeated after awaited lookup and preparation.
+    /// </summary>
+    internal Func<bool> CanAcquire { get; init; } = () => true;
+
+    /// <summary>
     /// Starts or resumes the job.
     /// </summary>
     /// <returns>The <see cref="JobId"/> of the running, resumed, or newly started job; or <see cref="JobId.NotSet"/> if no job could be started.</returns>
@@ -99,6 +104,7 @@ internal sealed class ObserverJobStarter<TJob, TRequest>
         jobs = SelectJobsOfTheObserver(jobs, request);
         var now = DateTimeOffset.UtcNow;
         jobs = await DeleteAbandonedJobs(jobs, now);
+        if (!CanAcquire()) return JobId.NotSet;
 
         var alreadyRunningJob = jobs.FirstOrDefault(job => job.IsLive(now));
         if (alreadyRunningJob is not null)
@@ -155,6 +161,7 @@ internal sealed class ObserverJobStarter<TJob, TRequest>
     {
         Logger.FoundStoppedJob(pausedJob.Id);
         await OnResume();
+        if (!CanAcquire()) return JobId.NotSet;
 
         // Resuming can refuse - the observer is no longer subscribed, the job was never prepared. Reporting
         // the job's id anyway told the caller something is driving catch-up forward when nothing is: the job
@@ -180,6 +187,7 @@ internal sealed class ObserverJobStarter<TJob, TRequest>
             request = await StampBeforeStart(request);
         }
 
+        if (!CanAcquire()) return JobId.NotSet;
         var startResult = await JobsManager.Start<TJob, TRequest>(request);
         if (startResult is not null && startResult.TryGetResult(out var jobId))
         {

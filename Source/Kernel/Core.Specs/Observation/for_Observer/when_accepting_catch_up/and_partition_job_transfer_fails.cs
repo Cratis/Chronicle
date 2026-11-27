@@ -19,11 +19,12 @@ public class and_partition_job_transfer_fails : given.an_observer_accepting_a_ca
     async Task Because()
     {
         _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>()).ThrowsAsync(new IOException("job start failed"));
-        await Cratis.Specifications.Catch.Exception(_observer.CatchUp);
+        await Cratis.Specifications.Catch.Exception(_silo.RunCatchUpContinuation);
         _afterFailure = _writes.PersistedState;
         _jobsManager.Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>())
             .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
         await _observer.CatchUp();
+        await _silo.RunCatchUpContinuation();
     }
 
     [Fact] void should_retain_the_durable_obligation_after_failed_transfer() => _afterFailure.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("B", 10UL, 13UL));

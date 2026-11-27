@@ -28,6 +28,7 @@ public class and_an_accepted_repair_is_waiting_for_its_continuation : given.an_o
     {
         _result = await _observer.FastForward();
         await _staleContinuation(CancellationToken.None);
+        await _observer.HandoverRepairCaughtUp("B", 10UL, 13UL, EventSequenceNumber.Unavailable, succeeded: false);
         await _observer.RunWatchdogAsync();
     }
 
@@ -36,5 +37,6 @@ public class and_an_accepted_repair_is_waiting_for_its_continuation : given.an_o
     [Fact] void should_leave_no_partition_hold() => _stateStorage.State.CatchingUpPartitions.ShouldBeEmpty();
     [Fact] void should_not_restart_the_discarded_repair() => _jobsManager.DidNotReceive()
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Any<CatchUpObserverPartitionRequest>());
+    [Fact] void should_ignore_a_late_failure_from_the_discarded_repair() => _failedPartitionsStorage.State.Partitions.ShouldBeEmpty();
     [Fact] void should_stay_at_the_fast_forwarded_position() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)13UL);
 }

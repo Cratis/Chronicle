@@ -389,7 +389,7 @@ public partial class Observer
 
     async Task<bool> CheckNextSequenceNumber()
     {
-        if (IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
+        if (HasCatchUpRepairBarrier || IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
         {
             return false;
         }

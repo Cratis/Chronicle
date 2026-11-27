@@ -21,7 +21,7 @@ public class and_partition_owners_cannot_be_verified : given.a_catch_up_observer
 
     async Task Because() => await StartAndLetTheStepsCome();
 
-    [Fact] void should_not_prepare_an_overlapping_walk() => _job.PreparedSteps.ShouldBeNull();
-    [Fact] void should_not_register_unverified_partition_holds() => _observer.DidNotReceive()
-        .RegisterCatchingUpPartitions(Arg.Any<IEnumerable<Key>>());
+    [Fact] void should_prepare_the_walk_without_an_ownership_lookup() => _job.PreparedSteps!.Count.ShouldEqual(1);
+    [Fact] void should_cover_the_partition_without_an_exclusion() => _observer.Received(1)
+        .RegisterCatchingUpPartitions(Arg.Is<IEnumerable<Key>>(_ => _.Contains((Key)"P")));
 }

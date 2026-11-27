@@ -3,11 +3,9 @@
 
 namespace Cratis.Chronicle.Observation.Jobs.for_HandleEventsForObserver.when_performing.with_pages;
 
-public class and_a_concurrent_repair_owns_the_partition_suffix : given.a_page_job_step
+public class and_all_partitions_belong_to_the_successor : given.a_page_job_step
 {
-    void Establish() => _performState.ExcludedPartitions = ["module"];
-
     async Task Because() => await _jobStep.InvokePerformStep(_performState);
 
-    [Fact] void should_leave_the_owned_suffix_to_its_partition_job() => _pages.SelectMany(_ => _).Select(_ => _.Context.SequenceNumber.Value).ShouldEqual([2UL]);
+    [Fact] void should_deliver_all_partitions_without_a_frozen_exclusion() => _pages.SelectMany(_ => _).Select(_ => _.Context.SequenceNumber.Value).ShouldEqual([1UL, 2UL, 3UL]);
 }

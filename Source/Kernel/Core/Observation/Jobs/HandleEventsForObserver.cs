@@ -176,7 +176,6 @@ public partial class HandleEventsForObserver(
         State.StartEventSequenceNumber = request.StartEventSequenceNumber;
         State.EndEventSequenceNumber = request.EndEventSequenceNumber;
         State.SkipFailedPartitions = request.SkipFailedPartitions;
-        State.ExcludedPartitions = request.ExcludedPartitions.ToArray();
         return ValueTask.CompletedTask;
     }
 
@@ -1108,12 +1107,8 @@ public partial class HandleEventsForObserver(
         return true;
     }
 
-    async Task<HashSet<Key>> GetSkippedPartitions(HandleEventsForObserverState currentState)
-    {
-        HashSet<Key> partitions = currentState.SkipFailedPartitions ? [.. await _observer.GetFailedPartitionKeys()] : [];
-        partitions.UnionWith(currentState.ExcludedPartitions);
-        return partitions;
-    }
+    async Task<HashSet<Key>> GetSkippedPartitions(HandleEventsForObserverState currentState) =>
+        currentState.SkipFailedPartitions ? [.. await _observer.GetFailedPartitionKeys()] : [];
 
     void LogCancelled(EventSequenceNumber lastHandledSequenceNumber)
     {

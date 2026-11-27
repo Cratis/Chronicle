@@ -38,10 +38,8 @@ public partial class Observer
         if (CatchUpObserverRemoved) return;
 
         // Repair transfer and admission also consult jobs storage; none may overtake durable acceptance.
-        await CatchUpConclusionsApplied();
-        if (CatchUpObserverRemoved) return;
+        if (!await CanPrepareObserverWideCatchUp()) return;
         _isPreparingCatchup = true;
-        _walkingEveryPartition = false;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
         if (await AdoptedPendingCatchUpJob()) return;
@@ -56,7 +54,6 @@ public partial class Observer
             return;
         }
 
-        await ResumePendingCatchUpRepairs();
         using var admission = await AdmitCatchUpOrDefer();
         if (admission is null) return;
 
@@ -184,13 +181,6 @@ public partial class Observer
         _partitionHoldsVersion++;
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         CompleteHeldBackDelivery(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        if (PendingCatchUpRepairs.Any(_ => _.Partition == partition))
-        {
-            CompletePendingCatchUpRepair(partition);
-            await ConfirmCatchUpAcceptance();
-            ScheduleCatchUpContinuation(madeProgress: true);
-            return;
-        }
 
         await WriteStateAsync();
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
@@ -286,7 +276,7 @@ public partial class Observer
         var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
         HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
         State.CatchingUpPartitions.ExceptWith(releasable);
-        if (HasScannedUpToNext(lastScannedEventSequenceNumber))
+        if (!HasCatchUpRepairBarrier && HasScannedUpToNext(lastScannedEventSequenceNumber))
         {
             State = State with { NextEventSequenceNumber = lastScannedEventSequenceNumber.Next() };
         }
@@ -563,12 +553,14 @@ public partial class Observer
             {
                 // A job that concluded during the lookup was excluded before its position was applied (#6145).
                 await CatchUpConclusionsApplied();
+                if (HasCatchUpRepairBarrier) return request;
                 request = request with { FromEventSequenceNumber = State.NextEventSequenceNumber };
                 var epoch = await GrantObserverWideBeforeStart(ClaimHolderKind.ObserverCatchUp, request.FromEventSequenceNumber);
                 onStamped(epoch);
                 return request with { OwnershipEpoch = epoch };
             },
-            IsObsolete);
+            IsObsolete,
+            () => !HasCatchUpRepairBarrier && !CatchUpObserverRemoved);
     }
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)
@@ -601,9 +593,18 @@ public partial class Observer
         await ProbeAndStartCatchupJobFrom(partition, fromSequenceNumber);
     }
 
+    async Task<bool> CanPrepareObserverWideCatchUp()
+    {
+        await CatchUpConclusionsApplied();
+        if (CatchUpObserverRemoved) return false;
+        if (!HasCatchUpRepairBarrier) return true;
+        ScheduleCatchUpContinuation(madeProgress: false);
+        return false;
+    }
+
     async Task ProbeAndStartCatchupJobFrom(Key partition, EventSequenceNumber fromSequenceNumber)
     {
-        if (!fromSequenceNumber.IsActualValue) return;
+        if (HasCatchUpRepairBarrier || !fromSequenceNumber.IsActualValue) return;
 
         if (State.RunningState == ObserverRunningState.Replaying)
         {

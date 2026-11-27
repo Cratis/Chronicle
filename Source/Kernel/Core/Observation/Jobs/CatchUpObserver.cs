@@ -159,10 +159,7 @@ public class CatchUpObserver(
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         var failedPartitions = await observer.GetFailedPartitionKeys();
         var failedPartitionSet = failedPartitions.ToHashSet();
-        var current = await observer.GetState();
         var eventStoreStorage = storage.GetEventStore(JobKey.Scope);
-        var exclusions = await GetExcludedPartitions(current);
-        failedPartitionSet.UnionWith(exclusions);
 
         var observerKeyIndexes = eventStoreStorage.GetNamespace(JobKey.Namespace).ObserverKeyIndexes;
 
@@ -190,7 +187,7 @@ public class CatchUpObserver(
 
         // The keys are registered whichever shape the steps take: live delivery is held back per partition while
         // that partition is catching up, and the observer clears the whole set when it routes again afterwards.
-        var steps = CreateStepsFor(request, keysToCatchUp, (await observer.GetSubscription()).DeliversPartitionPages, exclusions);
+        var steps = CreateStepsFor(request, keysToCatchUp, (await observer.GetSubscription()).DeliversPartitionPages);
         if (steps.Count == 0)
         {
             // The job logs its own "no job steps to start" with no observer in its scope, so say which observer it was.
@@ -212,16 +209,7 @@ public class CatchUpObserver(
         return steps;
     }
 
-    async Task<Key[]> GetExcludedPartitions(Storage.Observation.ObserverState? current)
-    {
-        var outstanding = await storage.GetEventStore(JobKey.Scope).GetNamespace(JobKey.Namespace).Jobs.GetOutstandingJobs();
-        var now = DateTimeOffset.UtcNow;
-        var jobs = outstanding.Match(_ => _, exception => throw exception);
-        var owned = jobs.Where(_ => _.IsLive(now)).PartitionsHeldBy<CatchUpObserverPartitionRequest>(Request.ObserverKey, now, current);
-        return (current?.PendingCatchUpRepairs ?? []).Select(_ => _.Partition).Concat(owned).Distinct().ToArray();
-    }
-
-    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys, bool deliversPartitionPages, IReadOnlyList<Key> exclusions)
+    ImmutableList<JobStepDetails> CreateStepsFor(CatchUpObserverRequest request, IEnumerable<Key> keys, bool deliversPartitionPages)
     {
         // An observer that takes pages spanning partitions is caught up in one walk, like a projection, so its pages are filled.
         if (request.ObserverType == ObserverType.Projection || deliversPartitionPages)
@@ -238,7 +226,6 @@ public class CatchUpObserver(
                         request.EventTypes)
                     {
                         SkipFailedPartitions = true,
-                        ExcludedPartitions = exclusions,
                         ReaderScope = request.ReaderScope
                     })
             ];

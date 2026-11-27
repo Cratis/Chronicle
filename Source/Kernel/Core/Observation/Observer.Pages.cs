@@ -19,6 +19,7 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task HandlePage(IReadOnlyList<ObserverPartitionBatch> batches)
     {
+        if (HoldLiveDeliveryForRepair() || _walkingEveryPartition) return;
         var merged = MergeByPartition(batches);
         if (merged.Count <= 1 || !_subscription.DeliversPartitionPages)
         {
@@ -93,8 +94,11 @@ public partial class Observer
         return [.. pages.Where(_ => _.Count > 1 && !ExceedsLiveBudget(configuration, _.Sum(batch => batch.Events.Count)))];
     }
 
-    EventSequenceNumber CursorAfter(EventSequenceNumber candidate) =>
-        _pageFloor is null || candidate > State.NextEventSequenceNumber ? candidate : State.NextEventSequenceNumber;
+    EventSequenceNumber CursorAfter(EventSequenceNumber candidate)
+    {
+        if (HasCatchUpRepairBarrier) return CursorDuringRepairAcceptance(candidate);
+        return _pageFloor is null || candidate > State.NextEventSequenceNumber ? candidate : State.NextEventSequenceNumber;
+    }
 
     EventSequenceNumber TailAfter(EventSequenceNumber candidate) =>
         _pageFloor is null || State.TailEventSequenceNumber == EventSequenceNumber.Unavailable || candidate > State.TailEventSequenceNumber ? candidate : State.TailEventSequenceNumber;

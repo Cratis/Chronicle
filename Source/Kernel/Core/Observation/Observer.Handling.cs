@@ -90,6 +90,7 @@ public partial class Observer
             return;
         }
 
+        if (HoldLiveDeliveryForRepair() || _walkingEveryPartition) return;
         if (!ShouldHandleEvent(partition))
         {
             RememberHeldBackDeliveries(partition, events);
@@ -374,9 +375,10 @@ public partial class Observer
 
     void RecordInapplicableRun(Key partition, EventSequenceNumber observedTail)
     {
+        var next = CursorBeforePending(partition, CursorAfter(observedTail.Next()));
         State = State with
         {
-            NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(observedTail.Next())),
+            NextEventSequenceNumber = next,
             TailEventSequenceNumber = TailAfter(observedTail)
         };
         RecordedHandlingState();
@@ -519,9 +521,10 @@ public partial class Observer
                     if (numEventsSuccessfullyHandled > 0)
                     {
                         stateChanged = true;
+                        var next = CursorBeforePending(partition, CursorAfter(result.LastSuccessfulObservation.Next()));
                         State = State with
                         {
-                            NextEventSequenceNumber = CursorBeforePending(partition, CursorAfter(result.LastSuccessfulObservation.Next())),
+                            NextEventSequenceNumber = next,
                             TailEventSequenceNumber = TailAfter(observedTailEventSequenceNumber)
                         };
                         var previousLastHandled = State.LastHandledEventSequenceNumber;
@@ -675,7 +678,7 @@ public partial class Observer
         var advancesLastHandled = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
                                   State.LastHandledEventSequenceNumber < lastHandledEvent;
         var newLastHandledEvent = advancesLastHandled ? lastHandledEvent : State.LastHandledEventSequenceNumber;
-        var nextEventSequenceNumber = State.NextEventSequenceNumber <= lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
+        var nextEventSequenceNumber = !HasCatchUpRepairBarrier && State.NextEventSequenceNumber <= lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
         State = State with
         {
             LastHandledEventSequenceNumber = newLastHandledEvent,
