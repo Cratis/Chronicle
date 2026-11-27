@@ -12,6 +12,8 @@ namespace Cratis.Chronicle.Observation;
 /// </summary>
 internal static partial class ClientSubscriptionLogMessages
 {
-    [LoggerMessage(LogLevel.Information, "Observer {ObserverId} does not know client {ConnectionId}, which is still connected. Restoring its subscription")]
+    // Written on every keep-alive the observer turns down too - a client still subscribed in a namespace that was
+    // removed is never restored - so it is Debug. The observer logs a restore it actually performs.
+    [LoggerMessage(LogLevel.Debug, "Observer {ObserverId} does not know client {ConnectionId}, which is still connected. Asking it to restore the subscription")]
     internal static partial void RestoringLostClientSubscription(this ILogger logger, ObserverId observerId, ConnectionId connectionId);
 }
