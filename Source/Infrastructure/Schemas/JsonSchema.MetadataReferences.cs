@@ -9,11 +9,22 @@ public partial class JsonSchema
 {
     const int MaxMetadataReferenceStates = 4096;
 
+    static readonly string[] _metadataItemKeywords = ["items", "additionalProperties"];
+
     JsonObject MetadataOrigin => ReferenceEquals(ResolutionScope.OriginRoot, Root.Node)
         ? Root.ResourceIndex.Origins.GetValueOrDefault(ResolutionScope.Origin, Node)
         : Node;
 
     static bool RecursiveAnchorIsValid(JsonObject node) => !node.ContainsKey("$recursiveAnchor") || IsBooleanSchema(node["$recursiveAnchor"]);
+
+    static IEnumerable<JsonObject> ChargedMetadataObjects(IEnumerable<JsonNode?> nodes, Func<bool> charge)
+    {
+        foreach (var node in nodes)
+        {
+            if (!charge()) yield break;
+            if (node is JsonObject schema) yield return schema;
+        }
+    }
 
     MetadataReach ReachMetadata(bool includeChildren) => new MetadataTraversal(includeChildren).Walk(this);
 
@@ -32,8 +43,13 @@ public partial class JsonSchema
 
     JsonObject? MetadataTarget(string reference, bool scoped)
     {
-        // Ordinary references keep the historical root-pointer precedence, without cloned wrappers.
-        if (!scoped && reference.StartsWith('#') && ResolveResourcePointer(Root.Node, reference[1..]) is { } legacy) return legacy;
+        // Match public $ref resolution: the entered embedded resource wins; root pointers are a fallback.
+        return MetadataResourceTarget(reference) ??
+            (!scoped && reference.StartsWith('#') ? ResolveResourcePointer(Root.Node, reference[1..]) : null);
+    }
+
+    JsonObject? MetadataResourceTarget(string reference)
+    {
         var separator = reference.IndexOf('#');
         var resource = separator < 0 ? reference : reference[..separator];
         var fragment = separator < 0 ? string.Empty : reference[(separator + 1)..];
@@ -43,25 +59,26 @@ public partial class JsonSchema
         return fragment.StartsWith('/') ? ResolveResourcePointer(root, fragment) : index.Anchors.GetValueOrDefault((uri.AbsoluteUri, fragment));
     }
 
-    IEnumerable<JsonObject> MetadataChildren(bool includeChildren, bool contextual)
+    IEnumerable<JsonObject> MetadataChildren(bool includeChildren, bool contextual, Func<bool> charge)
     {
         if (includeChildren && contextual)
         {
-            return SchemaChildren(Node, includeDefinitions: false).Select(child => child.Node).OfType<JsonObject>();
+            return ChargedMetadataObjects(SchemaChildren(Node, includeDefinitions: false).Select(child => child.Node), charge);
         }
-        var compositions = contextual ? CompositionNodes("allOf").Concat(CompositionNodes("anyOf")).Concat(CompositionNodes("oneOf")) : LegacyMetadataCompositions();
+        var compositions = contextual ? CompositionNodes("allOf", charge).Concat(CompositionNodes("anyOf", charge)).Concat(CompositionNodes("oneOf", charge)) : LegacyMetadataCompositions(charge);
         if (!includeChildren) return contextual ? compositions : [];
-        var properties = (Node["properties"] as JsonObject)?.Select(entry => entry.Value).OfType<JsonObject>() ?? [];
-        return properties.Concat(compositions).Concat(new[] { Node["items"], Node["additionalProperties"] }.OfType<JsonObject>());
+        var properties = ChargedMetadataObjects((Node["properties"] as JsonObject)?.Select(entry => entry.Value) ?? [], charge);
+        var items = _metadataItemKeywords.Where(Node.ContainsKey).Select(key => Node[key]);
+        return properties.Concat(compositions).Concat(ChargedMetadataObjects(items, charge));
     }
 
-    IEnumerable<JsonObject> CompositionNodes(string keyword) => (Node[keyword] as JsonArray)?.OfType<JsonObject>() ?? [];
+    IEnumerable<JsonObject> CompositionNodes(string keyword, Func<bool> charge) => ChargedMetadataObjects(Node[keyword] as JsonArray ?? [], charge);
 
-    IEnumerable<JsonObject> LegacyMetadataCompositions()
+    IEnumerable<JsonObject> LegacyMetadataCompositions(Func<bool> charge)
     {
-        var allOf = CompositionNodes("allOf").ToArray();
+        var allOf = CompositionNodes("allOf", charge).ToArray();
         if (allOf.Length > 0) return allOf;
-        return CompositionNodes("anyOf").Where(node =>
+        return CompositionNodes("anyOf", charge).Where(node =>
         {
             var candidate = MetadataView(node);
             if (candidate.Type == JsonObjectType.Null) return false;
@@ -95,6 +112,9 @@ public partial class JsonSchema
         /// </summary>
         internal int UniqueNodes { get; set; }
 
+        /// <summary>Gets or sets examined edges, including resource indexing and edges discarded before deduplication.</summary>
+        internal int ExaminedEdges { get; set; }
+
         /// <summary>
         /// Gets or sets the number of anchor groups expanded, at most once per group.
         /// </summary>
@@ -115,6 +135,7 @@ public partial class JsonSchema
         {
             var index = origin.Root.ResourceIndex;
             _reach.Indeterminate = index.Truncated || index.IndeterminateResources.Count > 0;
+            _reach.ExaminedEdges = index.ExaminedEdges;
             Enqueue(origin, origin.MetadataOrigin, origin);
             while (_pending.TryDequeue(out var step))
             {
@@ -130,7 +151,7 @@ public partial class JsonSchema
         {
             _reach.Schemas.Add(schema);
             _reach.Contextual |= schema.HasContextualReference;
-            AddReference(schema, "$ref", contextualDocument);
+            AddReference(schema, "$ref", scoped: false);
             if (schema.Node.ContainsKey("$dynamicRef")) AddDynamicTargets(schema);
             if (schema.Node.ContainsKey("$recursiveRef")) AddRecursiveTargets(schema);
             AddChildren(schema, contextualDocument);
@@ -138,7 +159,7 @@ public partial class JsonSchema
 
         void AddChildren(JsonSchema schema, bool contextualDocument)
         {
-            var cached = schema.CachedMetadataChildren(includeChildren, contextualDocument);
+            var cached = schema.CachedMetadataChildren(includeChildren, contextualDocument, Charge);
             AddCachedChildren(schema, cached);
             AddUncachedChildren(schema, cached, contextualDocument);
         }
@@ -147,37 +168,49 @@ public partial class JsonSchema
         {
             foreach (var child in cached)
             {
-                if (!Enqueue(schema, child.Key, child.Value)) break;
+                Schedule(schema, child.Key, child.Value);
             }
         }
 
         void AddUncachedChildren(JsonSchema schema, Dictionary<JsonObject, JsonSchema> cached, bool contextualDocument)
         {
-            foreach (var child in schema.MetadataChildren(includeChildren, contextualDocument))
+            foreach (var child in schema.MetadataChildren(includeChildren, contextualDocument, Charge))
             {
                 var origin = schema.MetadataChildOrigin(child);
-                if (!Enqueue(schema, origin, cached.GetValueOrDefault(origin))) break;
+                Schedule(schema, origin, cached.GetValueOrDefault(origin));
             }
         }
 
-        bool Enqueue(JsonSchema parent, JsonObject node, JsonSchema? cached = null)
+        bool Charge()
         {
-            if (!parent.Root.ResourceIndex.Contextual && _nextDepth > MaxResourceTraversalDepth) return true;
-            node = parent.MetadataChildOrigin(node);
-            if (_visited.Contains(node)) return true;
-            if (_visited.Count >= MaxMetadataReferenceStates)
+            if (_reach.ExaminedEdges >= MaxMetadataReferenceStates)
             {
                 _reach.Indeterminate = true;
                 return false;
             }
-            _visited.Add(node);
-            _pending.Enqueue((cached ?? parent.MetadataView(node), _nextDepth));
+
+            _reach.ExaminedEdges++;
             return true;
+        }
+
+        bool Enqueue(JsonSchema parent, JsonObject node, JsonSchema? cached = null)
+        {
+            if (!Charge()) return false;
+            Schedule(parent, node, cached);
+            return true;
+        }
+
+        void Schedule(JsonSchema parent, JsonObject node, JsonSchema? cached = null)
+        {
+            if (!parent.Root.ResourceIndex.Contextual && _nextDepth > MaxResourceTraversalDepth) return;
+            node = parent.MetadataChildOrigin(node);
+            if (!_visited.Add(node)) return;
+            _pending.Enqueue((cached ?? parent.MetadataView(node), _nextDepth));
         }
 
         JsonObject? AddReference(JsonSchema schema, string keyword, bool scoped)
         {
-            if (!schema.Node.ContainsKey(keyword)) return null;
+            if (!schema.Node.ContainsKey(keyword) || !Charge()) return null;
             var reference = StringValue(schema.Node, keyword);
             var target = reference is null ? null : schema.MetadataTarget(reference, scoped);
             if (target is null)
@@ -187,7 +220,7 @@ public partial class JsonSchema
             }
             else
             {
-                Enqueue(schema, target, keyword == "$ref" ? schema._referenceCache?.Value : null);
+                Schedule(schema, target, keyword == "$ref" ? schema._referenceCache?.Value : null);
             }
             return target;
         }
@@ -204,7 +237,10 @@ public partial class JsonSchema
             if (fragment != StringValue(target, "$dynamicAnchor") || !_expandedAnchors.Add(fragment)) return;
             _reach.AnchorExpansions++;
             if (!schema.Root.ResourceIndex.DynamicGroups.TryGetValue(fragment, out var group)) return;
-            foreach (var candidate in group) Enqueue(schema, candidate);
+            foreach (var candidate in group)
+            {
+                if (!Enqueue(schema, candidate)) break;
+            }
         }
 
         void AddRecursiveTargets(JsonSchema schema)
@@ -221,7 +257,10 @@ public partial class JsonSchema
             if (_recursiveExpanded) return;
             _recursiveExpanded = true;
             _reach.AnchorExpansions++;
-            foreach (var candidate in schema.Root.ResourceIndex.RecursiveAnchors) Enqueue(schema, candidate);
+            foreach (var candidate in schema.Root.ResourceIndex.RecursiveAnchors)
+            {
+                if (!Enqueue(schema, candidate)) break;
+            }
         }
     }
 }

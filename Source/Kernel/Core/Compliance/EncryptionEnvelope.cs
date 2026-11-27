@@ -21,6 +21,7 @@ internal sealed record EncryptionEnvelope
     const int SignedHeaderSize = 17;
     const int TypedHeaderSize = SignedHeaderSize + 1;
     static readonly byte[] _magic = "CENV"u8.ToArray();
+    static readonly byte[] _typedMagic = "CEN4"u8.ToArray();
 
     /// <summary>Gets the serialized header.</summary>
     internal required byte[] Header { get; init; }
@@ -64,7 +65,7 @@ internal sealed record EncryptionEnvelope
     /// <summary>Recognizes prefixed values, including malformed or unsupported versions.</summary>
     /// <param name="bytes">The candidate value.</param>
     /// <returns>Whether the value has the envelope prefix.</returns>
-    internal static bool HasMagic(byte[] bytes) => bytes.AsSpan().StartsWith(_magic);
+    internal static bool HasMagic(byte[] bytes) => bytes.AsSpan().StartsWith(_magic) || bytes.AsSpan().StartsWith(_typedMagic);
 
     /// <summary>Creates a v1 or v2 header.</summary>
     /// <param name="version">The envelope version.</param>
@@ -97,7 +98,7 @@ internal sealed record EncryptionEnvelope
     {
         var (publicKey, certificate, signingKey) = identity;
         var header = new byte[kind is null ? SignedHeaderSize : TypedHeaderSize];
-        _magic.CopyTo(header, 0);
+        (kind is null ? _magic : _typedMagic).CopyTo(header, 0);
         header[4] = kind is null ? (byte)3 : (byte)4;
         if (kind is not null)
         {
@@ -122,11 +123,27 @@ internal sealed record EncryptionEnvelope
             throw new CryptographicException("Invalid encryption envelope header.");
         }
 
+        // Distinguish typed framing even if its version byte is damaged, before legacy erasure handling.
+        var typedVersion = bytes[4] == 4;
+        if (typedVersion != bytes.AsSpan().StartsWith(_typedMagic))
+        {
+            throw new CryptographicException("Inconsistent encryption envelope framing.");
+        }
+
         if (bytes[4] is 3 or 4)
         {
             return ReadSigned(bytes);
         }
 
+        return ReadLegacy(bytes);
+    }
+
+    /// <summary>Serializes the complete envelope.</summary>
+    /// <returns>The header and encrypted payload.</returns>
+    internal byte[] Bytes() => [.. Header, .. WrappedKey, .. Nonce, .. Tag, .. Ciphertext, .. Signature ?? []];
+
+    static EncryptionEnvelope ReadLegacy(byte[] bytes)
+    {
         var headerLength = bytes[4] == 2 ? 11 : 7;
         if (bytes.Length < headerLength)
         {
@@ -151,10 +168,6 @@ internal sealed record EncryptionEnvelope
             Revision = ReadRevision(header)
         };
     }
-
-    /// <summary>Serializes the complete envelope.</summary>
-    /// <returns>The header and encrypted payload.</returns>
-    internal byte[] Bytes() => [.. Header, .. WrappedKey, .. Nonce, .. Tag, .. Ciphertext, .. Signature ?? []];
 
     static EncryptionEnvelope ReadSigned(byte[] bytes)
     {

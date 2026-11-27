@@ -21,8 +21,8 @@ public class and_contextual_targets_cannot_be_resolved : given.real_pii_protecti
             {
               "type":"object",
               "properties":{
-                "dynamic":{"$dynamicRef":"https://unavailable.example/personal","type":"string","compliance":[{"metadataType":"PII","details":""}]},
-                "recursive":{"$recursiveRef":"https://unavailable.example/personal","type":"string","compliance":[{"metadataType":"PII","details":""}]},
+                "dynamic":{"$dynamicRef":"https://unavailable.example/personal","compliance":[{"metadataType":"PII","details":""}]},
+                "recursive":{"$recursiveRef":"https://unavailable.example/personal","compliance":[{"metadataType":"PII","details":""}]},
                 "unclassifiedDynamic":{"$dynamicRef":"https://unavailable.example/personal"},
                 "unclassifiedRecursive":{"$recursiveRef":"https://unavailable.example/personal"}
               }

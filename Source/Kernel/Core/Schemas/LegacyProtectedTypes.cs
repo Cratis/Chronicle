@@ -47,7 +47,7 @@ internal sealed class LegacyProtectedTypes
 
             if (active.Contains(current)) return JsonObjectType.None;
             if (!seen.Add(current)) continue;
-            if (seen.Count > MaxSchemas || current.MetadataReferences.Indeterminate) return JsonObjectType.None;
+            if (seen.Count > MaxSchemas) return JsonObjectType.None;
             type |= current.Type;
             active.Add(current);
             pending.Push((current, true));

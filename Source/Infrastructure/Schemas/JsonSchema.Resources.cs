@@ -78,6 +78,7 @@ public partial class JsonSchema
     static void IndexResources(JsonObject root, ResourceIndexContext context)
     {
         var pending = new Queue<(JsonObject Node, Uri Inherited)>();
+        context.ExaminedEdges = 1;
         pending.Enqueue((root, _anonymousResourceBase));
         while (pending.TryDequeue(out var current))
         {
@@ -104,19 +105,27 @@ public partial class JsonSchema
     {
         foreach (var child in SchemaChildren(node))
         {
+            if (!ConsumeResourceEdge(context)) break;
             if (child.Optional || IsBooleanSchema(child.Node)) continue;
             if (child.Node is not JsonObject schema)
             {
                 context.Truncated = true;
                 continue;
             }
-            if (context.Scopes.Count + pending.Count >= MaxMetadataReferenceStates)
-            {
-                context.Truncated = true;
-                break;
-            }
             pending.Enqueue((schema, scope));
         }
+    }
+
+    static bool ConsumeResourceEdge(ResourceIndexContext context)
+    {
+        if (context.ExaminedEdges >= MaxMetadataReferenceStates)
+        {
+            context.Truncated = true;
+            return false;
+        }
+
+        context.ExaminedEdges++;
+        return true;
     }
 
     static void IndexAnchor(JsonObject node, Uri resource, ResourceIndexContext context)
@@ -192,5 +201,6 @@ public partial class JsonSchema
         internal bool Contextual { get; set; }
         internal HashSet<string> IndeterminateResources { get; } = [];
         internal bool Truncated { get; set; }
+        internal int ExaminedEdges { get; set; }
     }
 }

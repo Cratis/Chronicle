@@ -157,11 +157,6 @@ public partial class JsonSchemaMetadataManager(
 
                 var released = await handlers[0].ReleaseWithStatus(eventStore, eventStoreNamespace, subject, value);
                 statuses[path] = released.Status;
-                if (!AuthenticatedProtectedValue.HasKind(released.Value) && !restoration.HasSupportedType(boundarySchema))
-                {
-                    throw new StrictSchemaMetadataReleaseNotSupported();
-                }
-
                 return released.Status == ProtectedValueReleaseStatus.Decrypted
                     ? restoration.TryRestore(boundarySchema, released.Value) ?? throw new StrictSchemaMetadataReleaseNotSupported()
                     : released.Value;
@@ -339,7 +334,7 @@ public partial class JsonSchemaMetadataManager(
     {
         // The strict type probe follows references recursively. Do not turn an unresolved or cyclic
         // definition into a new append failure while deciding whether to extend metadata reach.
-        if (CannotInspectReferencedType(schema, depth)) return false;
+        if (CannotInspectReferencedType(depth)) return false;
         if (schema.HasReference && !CanInspectReference(schema, depth)) return false;
         return schema.AllOf.Concat(schema.AnyOf).Concat(schema.OneOf).All(alternative => CanInspectReferencedType(alternative, depth + 1));
     }

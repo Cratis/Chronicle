@@ -7,16 +7,15 @@ namespace Cratis.Chronicle.Schemas;
 
 public partial class JsonSchemaMetadataManager
 {
-    static bool CannotInspectReferencedType(JsonSchema schema, int depth) =>
-        depth > 64 || schema.HasContextualReference;
+    static bool CannotInspectReferencedType(int depth) =>
+        depth > 64;
 
     static bool HasUnstableClassification(JsonSchema schema, int depth) =>
         depth > 32 || schema.IsDynamic() || schema.HasContextualReference;
 
-    static (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] ClassifyContextualReferences(JsonSchema.MetadataReach reach, SchemaMetadataCategory[] categories)
+    static (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] ClassifyContextualReferences(JsonSchema.MetadataReach reach, SchemaMetadataCategory[] categories, (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] ordinary)
     {
-        var metadata = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
-        CollectMetadata(reach.Schemas[0], categories, metadata);
+        var metadata = ordinary.ToList();
 
         // Discovery is deliberately broader than handler selection. Own annotations already select
         // this boundary; possible bindings must not introduce another operation on that value.
@@ -52,16 +51,16 @@ public partial class JsonSchemaMetadataManager
         (SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)[] metadata,
         string path)
     {
-        if (walk.ActionName != SchemaMetadataActionFailed.ApplyAction || metadata.Length == 0 || !schema.MetadataReferences.Contextual)
+        // Comparison reuses the apply traversal, but must never drop a protected boundary at the write floor.
+        if (walk.Comparing || walk.ActionName != SchemaMetadataActionFailed.ApplyAction || metadata.Length == 0 || !schema.MetadataReferences.Contextual)
         {
             return metadata;
         }
 
-        var own = new List<(SchemaMetadataCategory Category, ComplianceSchemaMetadata Metadata)>();
-        CollectMetadata(schema, _categories, own);
+        var ordinary = ClassifyOrdinaryReferences(schema, _categories).ToList();
         return metadata.Where(entry =>
         {
-            if (ContainsKey(own, entry) || !_propertyValueHandlers.TryGetValue((entry.Category, entry.Metadata.metadataType), out var handler) ||
+            if (ContainsKey(ordinary, entry) || !_propertyValueHandlers.TryGetValue((entry.Category, entry.Metadata.metadataType), out var handler) ||
                 handler.SupportsTypedValues || walk.LegacyTypes.HasSupportedType(schema))
             {
                 return true;
@@ -77,7 +76,7 @@ public partial class JsonSchemaMetadataManager
         var categories = forComparison ? _comparisonCategories : _categories;
         var reach = schema.MetadataReferences;
         return reach.Contextual
-            ? ClassifyContextualReferences(reach, categories)
+            ? ClassifyContextualReferences(reach, categories, ClassifyOrdinaryReferences(schema, categories))
             : ClassifyOrdinaryReferences(schema, categories);
     }
 }

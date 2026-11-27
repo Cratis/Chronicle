@@ -14,33 +14,42 @@ public partial class JsonSchema
         return target is null || candidate.MetadataView(target).Type != JsonObjectType.Null;
     }
 
-    Dictionary<JsonObject, JsonSchema> CachedMetadataChildren(bool includeChildren, bool contextual)
+    static IEnumerable<(JsonObject Node, JsonSchema Schema)> ChargedCachedChildren(IEnumerable<(JsonObject Node, JsonSchema Schema)> children, Func<bool> charge)
+    {
+        foreach (var child in children)
+        {
+            if (!charge()) yield break;
+            yield return child;
+        }
+    }
+
+    Dictionary<JsonObject, JsonSchema> CachedMetadataChildren(bool includeChildren, bool contextual, Func<bool> charge)
     {
         // Facades can be annotated while building a schema without updating their parent's raw JSON.
         // Read those existing facades, but key visitation by their original nodes, not their clones.
         var result = new Dictionary<JsonObject, JsonSchema>(ReferenceEqualityComparer.Instance);
-        foreach (var (node, child) in ExistingMetadataChildren(includeChildren, contextual).Take(MaxMetadataReferenceStates))
+        foreach (var (node, child) in ExistingMetadataChildren(includeChildren, contextual, charge))
         {
             result.TryAdd(MetadataChildOrigin(node), child);
         }
         return result;
     }
 
-    IEnumerable<(JsonObject Node, JsonSchema Schema)> ExistingMetadataChildren(bool includeChildren, bool contextual)
+    IEnumerable<(JsonObject Node, JsonSchema Schema)> ExistingMetadataChildren(bool includeChildren, bool contextual, Func<bool> charge)
     {
-        var compositions = ExistingMetadataCompositions(contextual);
+        var compositions = ExistingMetadataCompositions(contextual, charge);
         if (!includeChildren) return contextual ? compositions : [];
         var nodes = Node["properties"] as JsonObject;
         var properties = _propertiesCache?.Select(entry => (nodes?[entry.Key] as JsonObject ?? entry.Value.Node, (JsonSchema)entry.Value)) ?? [];
         var item = _itemCache?.Value is { } cachedItem ? new[] { (Node["items"] as JsonObject ?? cachedItem.Node, cachedItem) } : [];
-        return properties.Concat(compositions).Concat(item);
+        return ChargedCachedChildren(properties, charge).Concat(compositions).Concat(ChargedCachedChildren(item, charge));
     }
 
-    IEnumerable<(JsonObject Node, JsonSchema Schema)> ExistingMetadataCompositions(bool contextual)
+    IEnumerable<(JsonObject Node, JsonSchema Schema)> ExistingMetadataCompositions(bool contextual, Func<bool> charge)
     {
-        var allOf = CachedMetadataCompositions("allOf", _allOfCache);
-        var anyOf = CachedMetadataCompositions("anyOf", _anyOfCache);
-        if (contextual) return allOf.Concat(anyOf).Concat(CachedMetadataCompositions("oneOf", _oneOfCache));
+        var allOf = ChargedCachedChildren(CachedMetadataCompositions("allOf", _allOfCache), charge);
+        var anyOf = ChargedCachedChildren(CachedMetadataCompositions("anyOf", _anyOfCache), charge);
+        if (contextual) return allOf.Concat(anyOf).Concat(ChargedCachedChildren(CachedMetadataCompositions("oneOf", _oneOfCache), charge));
         if ((_allOfCache?.Count ?? (Node["allOf"] as JsonArray)?.Count ?? 0) > 0) return allOf;
         return anyOf.Where(candidate => IsNonNullMetadataComposition(candidate.Schema)).Take(1);
     }

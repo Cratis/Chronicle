@@ -33,5 +33,6 @@ public class and_contextual_references_exceed_the_traversal_budget : Specificati
     [Fact] void should_treat_unexplored_compliance_as_protected() => _property.HasSchemaMetadata(SchemaMetadataCategory.Compliance, _ => true).ShouldBeTrue();
     [Fact] void should_not_manufacture_a_handler_type() => _property.GetComplianceMetadata().ShouldBeEmpty();
     [Fact] void should_record_budget_exhaustion() => _property.MetadataReferences.Indeterminate.ShouldBeTrue();
-    [Fact] void should_bound_the_number_of_unique_nodes() => _property.MetadataReferences.UniqueNodes.ShouldEqual(4096);
+    [Fact] void should_stop_at_the_work_budget() => _property.MetadataReferences.ExaminedEdges.ShouldEqual(4096);
+    [Fact] void should_bound_the_number_of_unique_nodes() => _property.MetadataReferences.UniqueNodes.ShouldBeLessThanOrEqual(4096);
 }
