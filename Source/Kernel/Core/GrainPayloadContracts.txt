@@ -1481,6 +1481,7 @@ orleans [Alias("Cratis.Chronicle.Storage.Observation.ObserverState")] Cratis.Chr
   [Id(24)] HandledEventCount: Cratis.Chronicle.Concepts.Events.EventCount
   [Id(25)] HandledEventCountPerEventType: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Events.EventTypeId,Cratis.Chronicle.Concepts.Events.EventCount>
   [Id(26)] _nextEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  [Id(27)] PartitionRepairs: Cratis.Chronicle.Storage.Observation.PartitionRepairState[]
   [Id(0,Level=0,Constructor=true)] Identifier: Cratis.Chronicle.Concepts.Observation.ObserverId
   [Id(1,Level=0,Constructor=true)] LastHandledEventSequenceNumber: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(2,Level=0,Constructor=true)] RunningState: Cratis.Chronicle.Concepts.Observation.ObserverRunningState
@@ -1531,6 +1532,23 @@ orleans [Alias("Cratis.Chronicle.Storage.Observation.PartitionClaim")] Cratis.Ch
   [Id(3,Level=0,Constructor=true)] Epoch: Cratis.Chronicle.Storage.Observation.ClaimEpoch
   [Id(4,Level=0,Constructor=true)] ResumePosition: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
   [Id(5,Level=0,Constructor=true)] PendingWork: System.Collections.Generic.IReadOnlyList<Cratis.Chronicle.Storage.Observation.PendingPartitionWork>
+orleans [Alias("Cratis.Chronicle.Storage.Observation.PartitionRepairCoverage")] Cratis.Chronicle.Storage.Observation.PartitionRepairCoverage
+  [Id(0,Level=0,Constructor=true)] Through: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  [Id(1,Level=0,Constructor=true)] RetainOtherCounts: bool
+  [Id(2,Level=0,Constructor=true)] EventTypes: Cratis.Chronicle.Concepts.Events.EventType[]
+orleans [Alias("Cratis.Chronicle.Storage.Observation.PartitionRepairGrant")] Cratis.Chronicle.Storage.Observation.PartitionRepairGrant
+  [Id(0,Level=0,Constructor=true)] Job: Cratis.Choreography.Jobs.JobId
+  [Id(1,Level=0,Constructor=true)] Epoch: Cratis.Chronicle.Storage.Observation.ClaimEpoch
+orleans [Alias("Cratis.Chronicle.Storage.Observation.PartitionRepairState")] Cratis.Chronicle.Storage.Observation.PartitionRepairState
+  [Id(0,Level=0,Constructor=true)] Partition: Cratis.Chronicle.Concepts.Keys.Key
+  [Id(1,Level=0,Constructor=true)] Head: Cratis.Chronicle.Storage.Observation.PartitionRepairCoverage
+  [Id(2,Level=0,Constructor=true)] HeldBackFrom: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  [Id(3,Level=0,Constructor=true)] Active: Cratis.Chronicle.Storage.Observation.PartitionRepairGrant
+  [Id(4,Level=0,Constructor=true)] Retiring: Cratis.Chronicle.Storage.Observation.PartitionRepairGrant
+  [Id(5,Level=0,Constructor=true)] Waiting: Cratis.Chronicle.Storage.Observation.PartitionRepairCoverage[]
+  [Id(6,Level=0,Constructor=true)] CountsPrepared: bool
+  [Id(7,Level=0,Constructor=true)] CatchUpFrom: Cratis.Chronicle.Concepts.Events.EventSequenceNumber
+  [Id(8,Level=0,Constructor=true)] AwaitingLegacyReplay: bool
 orleans [Alias("Cratis.Chronicle.Storage.Observation.PendingPartitionWork")] Cratis.Chronicle.Storage.Observation.PendingPartitionWork
   [Id(0,Level=0,Constructor=true)] Partition: Cratis.Chronicle.Concepts.Keys.Key
   [Id(1,Level=0,Constructor=true)] Holder: Cratis.Chronicle.Storage.Observation.ClaimHolderKind

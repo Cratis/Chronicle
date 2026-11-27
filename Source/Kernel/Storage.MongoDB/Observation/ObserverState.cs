@@ -94,6 +94,10 @@ public class ObserverState
     [BsonIgnoreIfNull]
     public ObserverDurableSubscription? DurableSubscription { get; set; }
 
+    /// <summary>Gets or sets the outstanding partition repairs.</summary>
+    [BsonIgnoreIfNull]
+    public PartitionRepairState[]? PartitionRepairs { get; set; }
+
     /// <summary>
     /// Gets or sets when the running state last changed, absent on legacy state.
     /// </summary>

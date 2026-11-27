@@ -33,6 +33,7 @@ public static class ObserverStateConverters
             QuarantineEpisodeId = definition.QuarantineEpisodeId,
             WebhookProbe = definition.WebhookProbe is null ? null : JsonSerializer.Serialize(definition.WebhookProbe, ObserverStateJson.Options),
             DurableSubscription = definition.DurableSubscription is null ? null : JsonSerializer.Serialize(definition.DurableSubscription, ObserverStateJson.Options),
+            PartitionRepairs = SerializePartitionRepairs(definition.PartitionRepairs),
             LastHandledEventSequenceNumber = definition.LastHandledEventSequenceNumber,
             NextEventSequenceNumber = definition.NextEventSequenceNumber,
             TailEventSequenceNumber = definition.TailEventSequenceNumber,
@@ -123,9 +124,16 @@ public static class ObserverStateConverters
             QuarantineEpisodeId = state.QuarantineEpisodeId,
             WebhookProbe = state.WebhookProbe is null ? null : JsonSerializer.Deserialize<Observation.WebhookProbeState>(state.WebhookProbe, ObserverStateJson.Options),
             DurableSubscription = state.DurableSubscription is null ? null : JsonSerializer.Deserialize<Observation.ObserverDurableSubscription>(state.DurableSubscription, ObserverStateJson.Options),
+            PartitionRepairs = DeserializePartitionRepairs(state.PartitionRepairs),
             NextEventSequenceNumber = state.NextEventSequenceNumber,
             TailEventSequenceNumber = state.TailEventSequenceNumber,
             HandledEventCount = state.HandledEventCount,
             HandledEventCountPerEventType = state.HandledEventCountPerEventType?.ToDictionary(kvp => (Concepts.Events.EventTypeId)kvp.Key, kvp => (Concepts.Events.EventCount)kvp.Value) ?? new Dictionary<Concepts.Events.EventTypeId, Concepts.Events.EventCount>()
         };
+
+    static string? SerializePartitionRepairs(Observation.PartitionRepairState[]? repairs) =>
+        repairs is { Length: > 0 } ? JsonSerializer.Serialize(repairs, ObserverStateJson.Options) : null;
+
+    static Observation.PartitionRepairState[]? DeserializePartitionRepairs(string? json) =>
+        json is null ? null : JsonSerializer.Deserialize<Observation.PartitionRepairState[]>(json, ObserverStateJson.Options);
 }

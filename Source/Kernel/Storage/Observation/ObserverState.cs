@@ -193,6 +193,10 @@ public record ObserverState(
     [Id(25)]
     public IReadOnlyDictionary<EventTypeId, EventCount> HandledEventCountPerEventType { get; set; } = ImmutableDictionary<EventTypeId, EventCount>.Empty;
 
+    /// <summary>Gets the outstanding durable partition repairs, when any are owed.</summary>
+    [Id(27)]
+    public PartitionRepairState[]? PartitionRepairs { get; init; }
+
     /// <summary>
     /// Gets or sets the number of events successfully handled, broken down by event type identifier.
     /// Kept for backwards compatibility with integration tests and benchmarks using the previous property name.

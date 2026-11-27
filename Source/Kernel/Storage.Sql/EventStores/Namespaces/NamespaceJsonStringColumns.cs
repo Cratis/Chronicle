@@ -25,6 +25,7 @@ internal static class NamespaceJsonStringColumns
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.Initialization)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.WebhookProbe)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.DurableSubscription)),
+        (typeof(Observers.ObserverState), nameof(Observers.ObserverState.PartitionRepairs)),
         (typeof(Observers.ObserverState), nameof(Observers.ObserverState.DeliveryFences)),
         (typeof(FailedPartitions.FailedPartition), "StateJson"),
         (typeof(Recommendations.Recommendation), "RequestJson"),
