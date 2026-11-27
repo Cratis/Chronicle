@@ -30,9 +30,6 @@ public class Disconnected : BaseObserverState
     /// <inheritdoc/>
     public override Task<ObserverState> OnEnter(ObserverState state) => Task.FromResult(state);
 
-    /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state) => Task.FromResult(state);
-
     /// <summary>
     /// Quarantines a subscribed observer whose recovery after an earlier quarantine keeps failing, so that an operator
     /// sees it and can clear it again, rather than leaving it disconnected with nothing to show it needs attention.
@@ -50,4 +47,7 @@ public class Disconnected : BaseObserverState
             _quarantiningUnrecoverableSubscription = false;
         }
     }
+
+    /// <inheritdoc/>
+    protected override Task<ObserverState> Leave(ObserverState state) => Task.FromResult(state);
 }

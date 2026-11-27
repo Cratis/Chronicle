@@ -21,4 +21,25 @@ public abstract class BaseObserverState : State<ObserverState>
     /// Gets the <see cref="IObserver"/> the state belongs to.
     /// </summary>
     public IObserver Observer => (StateMachine as IObserver)!;
+
+    /// <inheritdoc/>
+    public sealed override async Task<ObserverState> OnLeave(ObserverState state)
+    {
+        try
+        {
+            return await Leave(state);
+        }
+        catch
+        {
+            if (StateMachine is Observation.Observer observer) observer.StateLeaveFailed();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Leaves the state, notifying the observer if the leave fails.
+    /// </summary>
+    /// <param name="state">The current observer state.</param>
+    /// <returns>The state after leaving.</returns>
+    protected virtual Task<ObserverState> Leave(ObserverState state) => base.OnLeave(state);
 }
