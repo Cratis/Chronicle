@@ -75,31 +75,31 @@ public class ObserverLagResponse
     /// Gets or sets the TailEventSequenceNumber.
     /// </summary>
     [ProtoMember(7)]
-    public global::System.UInt64? TailEventSequenceNumber { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.OptionalUInt64? TailEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the NextEventSequenceNumber.
     /// </summary>
     [ProtoMember(8)]
-    public global::System.UInt64? NextEventSequenceNumber { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.OptionalUInt64? NextEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the LastHandledEventSequenceNumber.
     /// </summary>
     [ProtoMember(9)]
-    public global::System.UInt64? LastHandledEventSequenceNumber { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.OptionalUInt64? LastHandledEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the RelevantPendingEventSequenceNumber.
     /// </summary>
     [ProtoMember(10)]
-    public global::System.UInt64? RelevantPendingEventSequenceNumber { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.OptionalUInt64? RelevantPendingEventSequenceNumber { get; set; }
 
     /// <summary>
     /// Gets or sets the Distance.
     /// </summary>
     [ProtoMember(11)]
-    public global::System.UInt64? Distance { get; set; }
+    public global::Cratis.Chronicle.Contracts.Primitives.OptionalUInt64? Distance { get; set; }
 
     /// <summary>
     /// Gets or sets the SampledAt.

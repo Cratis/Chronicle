@@ -69,6 +69,7 @@ public class ObserverRetryOverride
         PendingGenerationAlertAfter = observers.PendingGenerationAlertAfter,
         ReplayOnDefinitionChange = observers.ReplayOnDefinitionChange,
         WatchdogInterval = observers.WatchdogInterval,
+        StallWindow = observers.StallWindow,
         IdleDeactivationAfter = observers.IdleDeactivationAfter,
         DurableSubscriptions = observers.DurableSubscriptions,
         DormantAfter = observers.DormantAfter,

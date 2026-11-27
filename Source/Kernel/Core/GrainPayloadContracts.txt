@@ -1155,10 +1155,34 @@ orleans [Alias("Cratis.Chronicle.Observation.ObserverDetails")] Cratis.Chronicle
   [Id(0,Level=0,Constructor=true)] Key: Cratis.Chronicle.Concepts.Observation.ObserverKey
   [Id(1,Level=0,Constructor=true)] Type: Cratis.Chronicle.Concepts.Observation.ObserverType
 orleans [Alias("Cratis.Chronicle.Observation.ObserverInformationSnapshot")] Cratis.Chronicle.Observation.ObserverInformationSnapshot
+  [Id(4)] LagSample: Cratis.Chronicle.Observation.ObserverLagSample
   [Id(0,Level=0,Constructor=true)] Definition: Cratis.Chronicle.Storage.Observation.ObserverDefinition
   [Id(1,Level=0,Constructor=true)] State: Cratis.Chronicle.Storage.Observation.ObserverState
   [Id(2,Level=0,Constructor=true)] IsSubscribed: bool
   [Id(3,Level=0,Constructor=true)] RunningStateChangedAt: System.DateTimeOffset?
+enum Cratis.Chronicle.Observation.ObserverLagCause : int
+  Disconnected = 3
+  Inactive = 2
+  NoSample = 6
+  ReplayInProgress = 4
+  TailUnavailable = 5
+  Unknown = 0
+  UnknownState = 1
+orleans [Alias("Cratis.Chronicle.Observation.ObserverLagSample")] Cratis.Chronicle.Observation.ObserverLagSample
+  [Id(0,Level=0,Constructor=true)] Status: Cratis.Chronicle.Observation.ObserverLagStatus
+  [Id(1,Level=0,Constructor=true)] Cause: Cratis.Chronicle.Observation.ObserverLagCause
+  [Id(2,Level=0,Constructor=true)] TailEventSequenceNumber: ulong?
+  [Id(3,Level=0,Constructor=true)] NextEventSequenceNumber: ulong?
+  [Id(4,Level=0,Constructor=true)] LastHandledEventSequenceNumber: ulong?
+  [Id(5,Level=0,Constructor=true)] RelevantPendingEventSequenceNumber: ulong?
+  [Id(6,Level=0,Constructor=true)] Distance: ulong?
+  [Id(7,Level=0,Constructor=true)] SampledAt: System.DateTimeOffset?
+  [Id(8,Level=0,Constructor=true)] ExpiresAt: System.DateTimeOffset?
+enum Cratis.Chronicle.Observation.ObserverLagStatus : int
+  CaughtUp = 1
+  Lagging = 2
+  Stalled = 3
+  Unmeasurable = 0
 orleans [Alias("Cratis.Chronicle.Observation.ObserverPageResult")] Cratis.Chronicle.Observation.ObserverPageResult
   [Id(0,Level=0,Constructor=true)] Results: System.Collections.Generic.IReadOnlyDictionary<Cratis.Chronicle.Concepts.Keys.Key,Cratis.Chronicle.Observation.ObserverSubscriberResult>
 orleans [Alias("Cratis.Chronicle.Observation.ObserverPartitionBatch")] Cratis.Chronicle.Observation.ObserverPartitionBatch

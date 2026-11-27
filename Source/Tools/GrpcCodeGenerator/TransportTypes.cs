@@ -53,6 +53,17 @@ public static class TransportTypes
     ];
 
     /// <summary>
+    /// Gets the opted-in transport type for a read-model field that needs explicit numeric presence.
+    /// </summary>
+    /// <param name="readModel">The Core read model declaring the field.</param>
+    /// <param name="fieldType">The field's declared CLR type.</param>
+    /// <returns>The nullable wrapper type name, or null when the default wire mapping applies.</returns>
+    public static string? OptInReadModelMemberNameFor(Type readModel, Type fieldType) =>
+        readModel.FullName == "Cratis.Chronicle.Observation.ObserverLag" && fieldType == typeof(ulong?)
+            ? $"global::{PrimitivesNamespace}.OptionalUInt64?"
+            : null;
+
+    /// <summary>
     /// Gets the contract type name to use on the wire for a CLR type.
     /// </summary>
     /// <param name="type">The CLR type as the Core artifact declares it.</param>

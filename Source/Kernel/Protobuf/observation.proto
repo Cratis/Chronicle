@@ -165,11 +165,11 @@ message ObserverLagResponse {
    string ObserverId = 4;
    ObserverLagStatus Status = 5;
    ObserverLagCause Cause = 6;
-   uint64 TailEventSequenceNumber = 7;
-   uint64 NextEventSequenceNumber = 8;
-   uint64 LastHandledEventSequenceNumber = 9;
-   uint64 RelevantPendingEventSequenceNumber = 10;
-   uint64 Distance = 11;
+   OptionalUInt64 TailEventSequenceNumber = 7;
+   OptionalUInt64 NextEventSequenceNumber = 8;
+   OptionalUInt64 LastHandledEventSequenceNumber = 9;
+   OptionalUInt64 RelevantPendingEventSequenceNumber = 10;
+   OptionalUInt64 Distance = 11;
    SerializableDateTimeOffset SampledAt = 12;
    SerializableDateTimeOffset ExpiresAt = 13;
 }
@@ -204,6 +204,9 @@ enum ObserverType {
    Projection = 2;
    Reducer = 3;
    External = 4;
+}
+message OptionalUInt64 {
+   uint64 Value = 1;
 }
 enum PartitionRecoveryOutcome {
    Started = 0;

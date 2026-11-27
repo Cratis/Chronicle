@@ -613,9 +613,9 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
                 .WithArgumentList(SyntaxFactory.ArgumentList()));
     }
 
-    static (string PropName, string PropType, bool Initialize) BuildDtoPropertyDefinition(ParameterInfo parameter, string targetNamespace)
+    static (string PropName, string PropType, bool Initialize) BuildDtoPropertyDefinition(ParameterInfo parameter, string targetNamespace, string? transportType = null)
     {
-        var propertyType = NullableAnnotations.For(MemberTypeName(parameter.ParameterType, targetNamespace), parameter);
+        var propertyType = transportType ?? NullableAnnotations.For(MemberTypeName(parameter.ParameterType, targetNamespace), parameter);
         return (parameter.Name ?? "value", propertyType, ShouldInitialize(parameter.ParameterType, propertyType));
     }
 
@@ -838,7 +838,7 @@ public class ServiceInterfaceGenerator(int skipNamespaceSegments, string baseNam
         }
 
         return constructor.GetParameters()
-            .Select(p => BuildDtoPropertyDefinition(p, targetNamespace))
+            .Select(p => BuildDtoPropertyDefinition(p, targetNamespace, TransportTypes.OptInReadModelMemberNameFor(readModelType, p.ParameterType)))
             .ToList();
     }
 

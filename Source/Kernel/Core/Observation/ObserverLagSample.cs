@@ -31,7 +31,7 @@ public record ObserverLagSample(
     /// <summary>
     /// Gets the measurement of an observer that has not been measured.
     /// </summary>
-    public static ObserverLagSample NotSampled { get; } = Unmeasurable(ObserverLagCause.NoSample);
+    internal static ObserverLagSample NotSampled { get; } = Unmeasurable(ObserverLagCause.NoSample);
 
     /// <summary>
     /// Creates a measurement that says nothing can be said.
