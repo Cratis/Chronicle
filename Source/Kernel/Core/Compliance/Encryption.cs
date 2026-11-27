@@ -11,7 +11,8 @@ namespace Cratis.Chronicle.Compliance;
 /// Protects values using fresh AES-256-GCM data keys wrapped with a managed RSA key.
 /// </summary>
 /// <remarks>
-/// Reads v1, revision-aware v2 and signed-identity v3 CENV envelopes, and legacy raw RSA PKCS#1 values.
+/// Reads v1, revision-aware v2, signed-identity v3 and typed v4 CENV envelopes, and legacy raw RSA PKCS#1 values.
+/// Typed writes use v4 locally or after <see cref="TypedProtectedValuesFloor"/>; earlier silos cannot read v4.
 /// A v3 envelope is written only by <see cref="Encrypt(byte[], EncryptionKey, EncryptionKeyRevision, ProtectedValueAddress)"/>, and only once
 /// <see cref="KeyIdentityFloor"/> is reached, so no silo that cannot read v3 is running when it is first written. Every other write is v1.
 /// Downgrade after v3 writes is unsupported: an older reader fails closed on version 3.
@@ -27,7 +28,7 @@ public class Encryption : IEncryption
     readonly EnvelopeSigningKeys _signingKeys;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Encryption"/> class that never writes a signed identity.
+    /// Initializes a local writer: typed values use v4, while untyped overloads retain v1 behavior.
     /// </summary>
     public Encryption()
         : this(null)
@@ -55,6 +56,9 @@ public class Encryption : IEncryption
     }
 
     /// <inheritdoc/>
+    public bool SupportsTypedValues => _releases is null || TypedProtectedValuesFloor.IsReached(_releases);
+
+    /// <inheritdoc/>
     public EncryptionKey GenerateKey() => _reserve.Take();
 
     /// <inheritdoc/>
@@ -65,6 +69,22 @@ public class Encryption : IEncryption
         KeyIdentityFloor.IsReached(_releases)
             ? EncryptSigned(bytes, new(key, revision), address)
             : EncryptEnvelope(bytes, new(key, revision), 1);
+
+    /// <inheritdoc/>
+    public byte[] Encrypt(byte[] bytes, EncryptionKeyAtRevision key, ProtectedValueAddress address, ProtectedValueKind kind)
+    {
+        if (!SupportsTypedValues)
+        {
+            throw new NotSupportedException("The cluster has not reached the authenticated JSON kind write floor.");
+        }
+
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+
+        return EncryptSigned(bytes, key, address, kind);
+    }
 
     /// <inheritdoc/>
     public bool IsEncrypted(byte[] bytes) => EncryptionEnvelope.HasMagic(bytes) || bytes.Length == LegacyCiphertextSizeInBytes;
@@ -161,7 +181,7 @@ public class Encryption : IEncryption
         return new(rsa.ExportRSAPublicKey(), rsa.ExportRSAPrivateKey());
     }
 
-    byte[] EncryptSigned(byte[] bytes, EncryptionKeyAtRevision pair, ProtectedValueAddress address)
+    byte[] EncryptSigned(byte[] bytes, EncryptionKeyAtRevision pair, ProtectedValueAddress address, ProtectedValueKind? kind = null)
     {
         var commitment = EnvelopeSigning.Commit(address);
         using var signing = _signingKeys.Begin(pair.Key, pair.Revision, commitment);
@@ -176,7 +196,7 @@ public class Encryption : IEncryption
                 var signer = signing.Acquire();
                 var envelope = new EncryptionEnvelope
                 {
-                    Header = EncryptionEnvelope.CreateSignedHeader(pair.Revision, (pair.Key.Public, signer.Certificate, signer.SigningKey), wrappedKey.Length),
+                    Header = EncryptionEnvelope.CreateSignedHeader(pair.Revision, (pair.Key.Public, signer.Certificate, signer.SigningKey), wrappedKey.Length, kind),
                     PublicKey = pair.Key.Public,
                     Certificate = signer.Certificate,
                     SigningKey = signer.SigningKey,

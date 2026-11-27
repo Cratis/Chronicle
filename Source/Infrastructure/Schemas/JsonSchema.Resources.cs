@@ -9,11 +9,9 @@ public partial class JsonSchema
 {
     const int MaxResourceTraversalDepth = 64;
     static readonly Uri _anonymousResourceBase = new("urn:cratis:schema:root");
-    static readonly string[] _resourceSchemaMaps = ["$defs", "definitions", "properties"];
-    static readonly string[] _resourceSchemaArrays = ["allOf", "anyOf", "oneOf"];
-    static readonly string[] _resourceSingleSchemas = ["items", "additionalProperties", "not"];
     readonly Uri? _resourceBase;
-    volatile Cached<(Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors, Dictionary<JsonObject, Uri> Scopes)>? _resourceIndex;
+    readonly ResolutionContext? _resolutionContext;
+    volatile Cached<ResourceIndexContext>? _resourceIndex;
     volatile Cached<IReadOnlyList<JsonSchema>>? _referenceChain;
 
     /// <summary>
@@ -21,12 +19,13 @@ public partial class JsonSchema
     /// </summary>
     /// <param name="node">The schema node.</param>
     /// <param name="root">The document root.</param>
-    /// <param name="resourceBase">The effective base, with the node's identifier already applied.</param>
-    internal JsonSchema(JsonObject node, JsonSchema root, Uri resourceBase)
+    /// <param name="context">The origin and entered resource scope, with the node's identifier already applied.</param>
+    internal JsonSchema(JsonObject node, JsonSchema root, ResolutionContext context)
     {
         Node = node;
         _root = root;
-        _resourceBase = resourceBase;
+        _resourceBase = context.ResourceBase;
+        _resolutionContext = context;
     }
 
     /// <summary>
@@ -38,17 +37,15 @@ public partial class JsonSchema
 
     Uri ResourceBase => _resourceBase ?? ResourceId(Root.Node, _anonymousResourceBase);
 
-    (Dictionary<string, JsonObject> Roots, Dictionary<(string Resource, string Anchor), JsonObject> Anchors, Dictionary<JsonObject, Uri> Scopes) ResourceIndex
+    ResourceIndexContext ResourceIndex
     {
         get
         {
             var cached = _resourceIndex;
             if (cached is not null) return cached.Value;
-            var roots = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
-            var anchors = new Dictionary<(string Resource, string Anchor), JsonObject>();
-            var scopes = new Dictionary<JsonObject, Uri>();
-            IndexResources(Node, _anonymousResourceBase, new(roots, anchors, scopes), 0);
-            return (_resourceIndex = new((roots, anchors, scopes))).Value;
+            var index = new ResourceIndexContext();
+            IndexResources(Node, index);
+            return (_resourceIndex = new(index)).Value;
         }
     }
 
@@ -78,31 +75,68 @@ public partial class JsonSchema
     static Uri ResolveResourceId(Uri inherited, string id) =>
         Uri.TryCreate(inherited, id, out var resource) && string.IsNullOrEmpty(resource.Fragment) ? resource : inherited;
 
-    static void IndexResources(JsonObject node, Uri inherited, ResourceIndexContext context, int depth)
+    static void IndexResources(JsonObject root, ResourceIndexContext context)
     {
-        if (depth > MaxResourceTraversalDepth || context.Scopes.ContainsKey(node)) return;
-        var scope = ResourceId(node, inherited);
-        context.Scopes.Add(node, scope);
-        if (depth == 0 || scope != inherited) context.Roots.TryAdd(scope.AbsoluteUri, node);
-        if (node["$anchor"] is JsonValue value && value.TryGetValue<string>(out var anchor))
+        var pending = new Queue<(JsonObject Node, Uri Inherited)>();
+        context.ExaminedEdges = 1;
+        pending.Enqueue((root, _anonymousResourceBase));
+        while (pending.TryDequeue(out var current))
         {
-            context.Anchors.TryAdd((scope.AbsoluteUri, anchor), node);
-        }
-        foreach (var child in ResourceSchemaChildren(node))
-        {
-            IndexResources(child, scope, context, depth + 1);
+            var scope = IndexResourceNode(current.Node, current.Inherited, context);
+            IndexChildren(current.Node, scope, context, pending);
         }
     }
 
-    static IEnumerable<JsonObject> ResourceSchemaChildren(JsonObject node)
+    static Uri IndexResourceNode(JsonObject node, Uri inherited, ResourceIndexContext context)
     {
-        // Do not interpret instance annotations (default, examples, enum, const) as schema declarations.
-        var maps = _resourceSchemaMaps.Select(key => node[key]).OfType<JsonObject>()
-            .SelectMany(map => map.Select(_ => _.Value).OfType<JsonObject>());
-        var arrays = _resourceSchemaArrays.Select(key => node[key]).OfType<JsonArray>()
-            .SelectMany(array => array.OfType<JsonObject>());
-        var singles = _resourceSingleSchemas.Select(key => node[key]).OfType<JsonObject>();
-        return maps.Concat(arrays).Concat(singles);
+        var scope = ResourceId(node, inherited);
+        context.Scopes.Add(node, scope);
+        context.Origins[node.GetPath()] = node;
+        if (context.Scopes.Count == 1 || scope != inherited) context.Roots.TryAdd(scope.AbsoluteUri, node);
+        IndexAnchor(node, scope, context);
+        IndexDynamicAnchor(node, scope, context);
+        context.Contextual |= node.ContainsKey("$dynamicRef") || node.ContainsKey("$recursiveRef");
+        if (!RecursiveAnchorIsValid(node)) context.IndeterminateResources.Add(scope.AbsoluteUri);
+        if (IsRecursiveRoot(node)) context.RecursiveAnchors.Add(node);
+        return scope;
+    }
+
+    static void IndexChildren(JsonObject node, Uri scope, ResourceIndexContext context, Queue<(JsonObject Node, Uri Inherited)> pending)
+    {
+        foreach (var child in SchemaChildren(node))
+        {
+            if (!ConsumeResourceEdge(context)) break;
+            if (child.Optional || IsBooleanSchema(child.Node)) continue;
+            if (child.Node is not JsonObject schema)
+            {
+                context.Truncated = true;
+                continue;
+            }
+            pending.Enqueue((schema, scope));
+        }
+    }
+
+    static bool ConsumeResourceEdge(ResourceIndexContext context)
+    {
+        if (context.ExaminedEdges >= MaxMetadataReferenceStates)
+        {
+            context.Truncated = true;
+            return false;
+        }
+
+        context.ExaminedEdges++;
+        return true;
+    }
+
+    static void IndexAnchor(JsonObject node, Uri resource, ResourceIndexContext context)
+    {
+        if (node["$anchor"] is not JsonValue value || !value.TryGetValue<string>(out var anchor)) return;
+        var key = (resource.AbsoluteUri, anchor);
+        if (context.DynamicAnchors.TryGetValue(key, out var dynamicAnchor) && !ReferenceEquals(dynamicAnchor, node))
+        {
+            context.IndeterminateResources.Add(resource.AbsoluteUri);
+        }
+        context.Anchors.TryAdd(key, node);
     }
 
     JsonSchema ResolveTypeReference(JsonSchema fallback) => HasReference && Reference is null ? fallback : ResolvedReference;
@@ -125,18 +159,19 @@ public partial class JsonSchema
         return target is null ? null : CreateResolvedSchema(target);
     }
 
-    JsonSchema CreateChildSchema(JsonObject node) => new(node, Root, ResourceId(node, ResourceBase));
+    JsonSchema CreateChildSchema(JsonObject node) => new((JsonObject)node.DeepClone(), Root, ChildResolutionContext(node));
 
-    JsonSchemaProperty CreateChildProperty(string name, JsonObject node) => new(name, node, Root, ResourceId(node, ResourceBase));
+    JsonSchemaProperty CreateChildProperty(string name, JsonObject node) => new(name, (JsonObject)node.DeepClone(), Root, ChildResolutionContext(node));
 
     JsonSchema CreateResolvedSchema(JsonObject target) =>
-        new((JsonObject)target.DeepClone(), Root, Root.ResourceIndex.Scopes.GetValueOrDefault(target, Root.ResourceBase));
+        new((JsonObject)target.DeepClone(), Root, EnterResource(Root.ResourceIndex.Scopes.GetValueOrDefault(target, Root.ResourceBase), target.GetPath(), Root.ResolutionScope.OriginRoot));
 
     JsonSchema? ResolveScopedRef(string reference)
     {
         // Preserve the root's legacy fragment precedence; embedded resources get first refusal in their own scope.
         if (ResourceBase != Root.ResourceBase && ResolveResourceRef(reference) is { } scoped) return scoped;
-        return Root.ResolveRootRef(reference) ?? Root.ResolveResourceRef(reference);
+        var target = Root.ResolveRootRef(reference) ?? Root.ResolveResourceRef(reference);
+        return target is null ? null : new((JsonObject)target.Node.DeepClone(), Root, EnterResource(target.ResourceBase, target.ResolutionScope.Origin, target.ResolutionScope.OriginRoot));
     }
 
     List<JsonSchema> BuildReferenceChain()
@@ -146,7 +181,7 @@ public partial class JsonSchema
         var current = this;
         for (var hop = 0; hop < MaxResourceTraversalDepth; hop++)
         {
-            if (current.Node["$ref"]?.GetValue<string>() is not { } reference || !visited.Add((current.ResourceBase, reference))) break;
+            if (current.ReferenceValue is not { } reference || !visited.Add((current.ResourceBase, reference))) break;
             if (current.Reference is not { } target) break;
             chain.Add(target);
             current = target;
@@ -154,8 +189,18 @@ public partial class JsonSchema
         return chain;
     }
 
-    sealed record ResourceIndexContext(
-        Dictionary<string, JsonObject> Roots,
-        Dictionary<(string Resource, string Anchor), JsonObject> Anchors,
-        Dictionary<JsonObject, Uri> Scopes);
+    sealed class ResourceIndexContext
+    {
+        internal Dictionary<string, JsonObject> Roots { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<(string Resource, string Anchor), JsonObject> Anchors { get; } = [];
+        internal Dictionary<(string Resource, string Anchor), JsonObject> DynamicAnchors { get; } = [];
+        internal Dictionary<JsonObject, Uri> Scopes { get; } = [];
+        internal Dictionary<string, JsonObject> Origins { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, List<JsonObject>> DynamicGroups { get; } = new(StringComparer.Ordinal);
+        internal List<JsonObject> RecursiveAnchors { get; } = [];
+        internal bool Contextual { get; set; }
+        internal HashSet<string> IndeterminateResources { get; } = [];
+        internal bool Truncated { get; set; }
+        internal int ExaminedEdges { get; set; }
+    }
 }

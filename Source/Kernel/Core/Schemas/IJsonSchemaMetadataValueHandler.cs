@@ -29,6 +29,9 @@ public interface IJsonSchemaMetadataValueHandler
     /// </summary>
     SchemaMetadataTypeName Type { get; }
 
+    /// <summary>Gets whether newly discovered boundaries can be written with an authenticated JSON kind.</summary>
+    bool SupportsTypedValues => false;
+
     /// <summary>
     /// Locates the key for a value without accessing key storage.
     /// </summary>

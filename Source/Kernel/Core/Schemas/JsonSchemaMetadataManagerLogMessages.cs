@@ -10,6 +10,9 @@ namespace Cratis.Chronicle.Schemas;
 /// </summary>
 internal static partial class JsonSchemaMetadataManagerLogMessages
 {
+    [LoggerMessage(LogLevel.Warning, "Property '{Property}' remains unprotected until every silo reaches the authenticated JSON kind write floor {Floor}")]
+    internal static partial void TypedProtectedValueFloorRequired(this ILogger<JsonSchemaMetadataManager> logger, string property, string floor);
+
     [LoggerMessage(LogLevel.Warning, "Referenced schema metadata has no supported unambiguous type; preserving existing handling")]
     internal static partial void UnsupportedReferencedMetadata(this ILogger<JsonSchemaMetadataManager> logger);
 
