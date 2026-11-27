@@ -21,11 +21,10 @@ public partial class Observer
         if (IsRetired || _removed || !KeyOwnsDefinition || (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)) return;
 
         Skips.Reset();
-        _pendingPartitionReplays.Clear();
         State = State with
         {
             IsReplaying = false,
-            ReplayingPartitions = new HashSet<Key>(),
+            ReplayingPartitions = new HashSet<Key>(_partitionRepairs.Keys),
 
             // Full replay supersedes partition catch-ups. Routing clears these markers too and re-evaluates
             // outstanding work from the retained cursor; refusal must not fabricate any completed coverage.
@@ -71,8 +70,10 @@ public partial class Observer
     /// <inheritdoc/>
     public async Task ReleaseRefusedPartitionReplay(Key partition, EventSequenceNumber heldBackFrom, ulong? ownershipEpoch)
     {
-        if (IgnoresStaleRelease(ClaimHolderKind.PartitionReplay, partition, ownershipEpoch)) return;
+        if (!AcceptsPartitionRepairReport(partition, ownershipEpoch)) return;
         if (IsRetired || _removed || !KeyOwnsDefinition || !State.ReplayingPartitions.Contains(partition)) return;
+
+        if (await AdvancePartitionRepair(partition, heldBackFrom, refused: true)) return;
 
         // Keep ownership until the catch-up decision, but claim no replay coverage or successful delivery.
         Skips.JobStarted(partition);
@@ -85,8 +86,6 @@ public partial class Observer
             {
                 await QuarantineRefusedPartitionWithoutPosition(partition);
             }
-
-            if (await StartPendingPartitionReplay(partition, heldBackFrom)) return;
 
             State.ReplayingPartitions.Remove(partition);
             RecordedHandlingState();

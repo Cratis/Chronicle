@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
@@ -17,7 +18,7 @@ public class when_releasing_a_refused_partition_after_other_partitions_advance :
     void Establish()
     {
         _stateStorage.State = _stateStorage.State with { LastHandledEventSequenceNumber = 44UL, NextEventSequenceNumber = 45UL };
-        _ = _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Do<ReplayObserverPartitionRequest>(request =>
+        _ = _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<JobId>(), Arg.Do<ReplayObserverPartitionRequest>(request =>
         {
             _request = request;
             _markedBeforeAdmission = _stateStorage.State.ReplayingPartitions.Contains("A");
@@ -33,7 +34,7 @@ public class when_releasing_a_refused_partition_after_other_partitions_advance :
         await _observer.Handle("A", [AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, 45UL)]);
         await _observer.Handle("B", Enumerable.Range(46, 5).Select(number => AppendedEvent.EmptyWithEventTypeAndEventSequenceNumber(event_type, (ulong)number)));
         _nextBeforeRelease = _stateStorage.State.NextEventSequenceNumber;
-        await _observer.ReleaseRefusedPartitionReplay("A", _request.HeldBackFrom);
+        await _observer.ReleaseRefusedPartitionReplay("A", _request.HeldBackFrom, _request.OwnershipEpoch);
     }
 
     [Fact] void should_mark_before_starting_the_job() => _markedBeforeAdmission.ShouldBeTrue();

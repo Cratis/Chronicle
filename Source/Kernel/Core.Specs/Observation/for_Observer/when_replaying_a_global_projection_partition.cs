@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Concepts.Projections;
@@ -27,5 +28,5 @@ public class when_replaying_a_global_projection_partition : given.an_observer_wi
     [Fact] void should_refuse_partition_replay() => _error.ShouldBeOfExactType<GlobalProjectionReplayNotSupported>();
     [Fact] void should_preserve_progress() => _stateStorage.State.LastHandledEventSequenceNumber.ShouldEqual((EventSequenceNumber)42UL);
     [Fact] void should_not_write_observer_state() => _storageStats.Writes.ShouldEqual(0);
-    [Fact] async Task should_not_start_a_job() => await _jobsManager.DidNotReceive().Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<ReplayObserverPartitionRequest>());
+    [Fact] async Task should_not_start_a_job() => await _jobsManager.DidNotReceive().Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<JobId>(), Arg.Any<ReplayObserverPartitionRequest>());
 }

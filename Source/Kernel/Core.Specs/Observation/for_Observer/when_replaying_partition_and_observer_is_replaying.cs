@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
@@ -22,6 +23,6 @@ public class when_replaying_partition_and_observer_is_replaying : given.an_obser
     Task Because() => _observer.ReplayPartitionTo(_partition, EventSequenceNumber.Max);
 
     [Fact] void should_not_add_partition_to_replaying_partitions() => _stateStorage.State.ReplayingPartitions.ShouldNotContain(_partition);
-    [Fact] void should_not_start_replay_observer_partition_job() => _jobsManager.DidNotReceive().Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<ReplayObserverPartitionRequest>());
+    [Fact] void should_not_start_replay_observer_partition_job() => _jobsManager.DidNotReceive().Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<JobId>(), Arg.Any<ReplayObserverPartitionRequest>());
     [Fact] void should_not_write_state() => _storageStats.Writes.ShouldEqual(0);
 }

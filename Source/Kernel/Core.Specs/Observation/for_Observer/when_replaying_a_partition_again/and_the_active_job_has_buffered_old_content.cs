@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
@@ -16,7 +17,7 @@ public class and_the_active_job_has_buffered_old_content : given.an_observer
     int _startsBeforeRelease;
     int _startsForAnotherPartition;
 
-    void Establish() => _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Do<ReplayObserverPartitionRequest>(_starts.Add));
+    void Establish() => _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<JobId>(), Arg.Do<ReplayObserverPartitionRequest>(_starts.Add));
 
     async Task Because()
     {

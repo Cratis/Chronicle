@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
@@ -21,7 +22,7 @@ public class and_another_partition_advanced_the_cursor : given.an_observer_with_
     {
         _observer.SetSubscription(subscription with { EventTypes = [event_type, _selectedType] });
         _stateStorage.State = _stateStorage.State with { LastHandledEventSequenceNumber = _lastRead, NextEventSequenceNumber = _lastRead.Next() };
-        _ = _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Do<ReplayObserverPartitionRequest>(_starts.Add));
+        _ = _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<JobId>(), Arg.Do<ReplayObserverPartitionRequest>(_starts.Add));
         _subscriber.OnNext(_otherPartition, Arg.Any<IEnumerable<AppendedEvent>>(), Arg.Any<ObserverSubscriberContext>()).Returns(ObserverSubscriberResult.Ok(50UL));
         _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(_lastRead.Next(), Arg.Any<IEnumerable<EventType>>(), _partition).Returns(_lastRead.Next());
     }

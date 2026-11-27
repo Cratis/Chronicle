@@ -60,6 +60,7 @@ public partial class Observer
 
     bool IsResumableObserverJob(JobState job, DateTimeOffset now) =>
         job.Request is IObserverJobRequest request && request.ObserverKey == _observerKey &&
+        !OwnsPartitionRepairRecovery(request) &&
         !_concludedCatchUpJobs.Contains(job.Id) &&
         !JobLiveness.HasConcludedAllStepsLongAgo(job, now) &&
         (job.Request is not ReplayObserverRequest || State.RunningState == ObserverRunningState.Replaying);

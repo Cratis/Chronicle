@@ -194,6 +194,8 @@ public class an_observer : Specification
         _configurationProvider.GetFor(Arg.Any<string>()).Returns(_observersConfig);
         _subscriber = Substitute.For<IObserverSubscriber>();
         _jobsManager = Substitute.For<IJobsManager>();
+        _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(Arg.Any<JobId>(), Arg.Any<ReplayObserverPartitionRequest>())
+            .Returns(call => Task.FromResult(Result<JobId, StartJobError>.Success(call.Arg<JobId>())));
         _jobsManager.Start<IRetryFailedPartition, RetryFailedPartitionRequest>(Arg.Any<RetryFailedPartitionRequest>())
             .Returns(Task.FromResult(Result<JobId, StartJobError>.Success(JobId.New())));
         _observerAlerts = Substitute.For<IObserverAlerts>();

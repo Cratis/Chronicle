@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Observation.Jobs;
@@ -25,6 +26,7 @@ public class when_replaying_selected_event_types_for_partition : given.an_observ
 
     [Fact]
     void should_only_replay_the_selected_event_type() => _jobsManager.Received(1).Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(
+        Arg.Any<JobId>(),
         Arg.Is<ReplayObserverPartitionRequest>(_ => _.EventTypes.SequenceEqual(new[] { _affectedEventType })));
 
     [Fact]

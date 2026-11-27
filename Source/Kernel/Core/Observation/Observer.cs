@@ -239,6 +239,7 @@ public partial class Observer(
         _observerKeyText = _observerKey.ToString();
         _observerId = _observerKey.ObserverId;
         State = State with { Identifier = _observerId };
+        LoadPartitionRepairs();
         if (!await SeedRunningStateHistory()) return;
         ActivationCheckpoint("seed running state history", cancellationToken);
         SeedSuspectedSkipOwnership();
@@ -272,6 +273,8 @@ public partial class Observer(
         RestoreShadowClaims();
         await InitializeAlertState();
         ActivationCheckpoint("initialize alert state", cancellationToken);
+        await RestorePartitionRepairs();
+        ActivationCheckpoint("fence restored partition repairs", cancellationToken);
         if (!KeyOwnsDefinition)
         {
             logger.ActivatedOnAnotherEventSequence(_observerId, _observerKey.EventSequenceId, Definition.EventSequenceId);
@@ -1451,6 +1454,7 @@ public partial class Observer(
             await TryRecoverAllFailedPartitions();
             SeedSuspectedSkipOwnership();
             await TransitionTo<CatchingUpInFlight>();
+            await RecoverPartitionRepairs();
         }
         finally
         {
@@ -1475,6 +1479,7 @@ public partial class Observer(
         var resumeTasks = unfilteredJobs
             .Where(job => job is { Request: IObserverJobRequest observerJobRequest } &&
                           observerJobRequest is not ReplayObserverRequest &&
+                          !OwnsPartitionRepairRecovery(observerJobRequest) &&
                           ShouldResumeJob(job.Status) &&
                           observerJobRequest.ObserverKey == _subscription.ObserverKey)
             .Select(job => IsRecoverySuperseded(recovery)

@@ -51,6 +51,7 @@ public partial class Observer
         }
 
         // OnEnter may return an earlier record after a job callback advanced source-owned metadata.
+        PreservePartitionRepairHolds();
         var shadowClaims = ShadowClaimsSnapshot();
         State = State with
         {
@@ -61,6 +62,7 @@ public partial class Observer
             WebhookProbe = _webhookProbe,
             DeliveryFences = DeliveryFenceSnapshot(),
             DurableSubscription = DurableSubscriptionToWrite(),
+            PartitionRepairs = _partitionRepairs.Count == 0 ? null : _partitionRepairs.Values.ToArray(),
             PartitionClaims = shadowClaims.Claims,
             ObserverWideClaim = shadowClaims.Wide,
             OwnershipRevision = shadowClaims.Revision

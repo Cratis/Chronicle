@@ -155,7 +155,8 @@ public class Routing(
         var ownedCatchUp = jobs.PartitionsHeldBy<CatchUpObserverPartitionRequest>(observerKey, now, state);
         var ownedReplay = jobs.PartitionsHeldBy<ReplayObserverPartitionRequest>(observerKey, now, state);
         var ownerlessCatchUp = catchingUp.Where(partition => !ownedCatchUp.Contains(partition)).ToArray();
-        var ownerlessReplay = replaying.Where(partition => !ownedReplay.Contains(partition)).ToArray();
+        var repairs = (state.PartitionRepairs ?? []).Select(repair => repair.Partition).ToHashSet();
+        var ownerlessReplay = replaying.Where(partition => !ownedReplay.Contains(partition) && !repairs.Contains(partition)).ToArray();
         var released = ownerlessCatchUp.Count(state.CatchingUpPartitions.Remove) +
             ownerlessReplay.Count(state.ReplayingPartitions.Remove);
 

@@ -10,15 +10,11 @@ using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.States;
 using Cratis.Chronicle.Storage.Observation;
 using Microsoft.Extensions.Logging;
+
 namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    /// <summary>
-    /// Activation-local pending partition replays. Partition replay requests and their release callbacks are non-interleaving grain calls.
-    /// </summary>
-    readonly Dictionary<Key, List<PendingPartitionReplay>> _pendingPartitionReplays = [];
-
     /// <inheritdoc/>
     /// <remarks>
     /// A transition requested while another is in progress is only scheduled, and a later request replaces it. The only
@@ -104,14 +100,14 @@ public partial class Observer
             : CompleteReplay(lastHandledEventSequenceNumber, replayedPartitions, replayedEventTypes, replayStartedAt);
 
     /// <inheritdoc/>
-    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
+    public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => PartitionReplayed(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, [], null);
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventType[] replayedEventTypes) =>
-        CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, EventSequenceNumber.Unavailable);
+        PartitionReplayed(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, replayedEventTypes, null);
 
     /// <inheritdoc/>
-    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => CompletePartitionReplay(partition, lastHandledEventSequenceNumber, [], EventSequenceNumber.Unavailable);
+    public Task PartitionReplayPartiallyCompleted(Key partition, EventSequenceNumber lastHandledEventSequenceNumber) => PartitionReplayed(partition, lastHandledEventSequenceNumber, EventSequenceNumber.Unavailable, [], null);
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes) =>
@@ -119,9 +115,9 @@ public partial class Observer
 
     /// <inheritdoc/>
     public Task PartitionReplayed(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber, EventType[] replayedEventTypes, ulong? ownershipEpoch) =>
-        IgnoresStaleRelease(ClaimHolderKind.PartitionReplay, partition, ownershipEpoch)
-            ? Task.CompletedTask
-            : CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber);
+        AcceptsPartitionRepairReport(partition, ownershipEpoch)
+            ? CompletePartitionReplay(partition, lastHandledEventSequenceNumber, replayedEventTypes, lastScannedEventSequenceNumber)
+            : Task.CompletedTask;
 
     [LoggerMessage(LogLevel.Warning, "Could not flush handled-event counts while completing replay; counts remain pending")]
     static partial void FailedFlushingHandledCountsOnReplay(ILogger logger, Exception exception);
@@ -184,7 +180,7 @@ public partial class Observer
         };
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
-        _pendingPartitionReplays.Clear();
+        PreservePartitionRepairHolds();
         _partitionHoldsVersion++;
         await WriteStateAsync();
         if (!IsQuarantined)
@@ -216,14 +212,6 @@ public partial class Observer
         logger.FinishedReplayForPartition(partition);
         ShadowHandOverPartition(partition, ClaimHolderKind.PartitionReplay);
 
-        // Keep holding live delivery if a fresh rebuild must run before catch-up.
-        var hasFollowUp = State.RunningState != ObserverRunningState.Replaying && _pendingPartitionReplays.ContainsKey(partition);
-        if (!hasFollowUp)
-        {
-            State.ReplayingPartitions.Remove(partition);
-            _partitionHoldsVersion++;
-        }
-
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
@@ -246,12 +234,12 @@ public partial class Observer
         }
 
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
-        await WriteStateAsync();
-
-        // Defer catch-up to the follow-up, but give it this partition's first undelivered position.
-        // The shared cursor can be ahead of it; a selected-type replay cannot vouch for that gap.
         var heldBackFrom = replayReach.IsActualValue ? replayReach.Next() : EventSequenceNumber.First;
-        if (hasFollowUp && await StartPendingPartitionReplay(partition, heldBackFrom)) return;
+        if (await AdvancePartitionRepair(partition, heldBackFrom)) return;
+
+        State.ReplayingPartitions.Remove(partition);
+        _partitionHoldsVersion++;
+        await WriteStateAsync();
 
         // Empty partial replays report the position before held-back delivery when known; otherwise preserve the legacy fallback.
         await StartCatchupJobIfNeeded(partition, replayReach, fromStartWhenNothingRead: true);
@@ -273,20 +261,13 @@ public partial class Observer
             return;
         }
 
-        var request = new PendingPartitionReplay(sequenceNumber, eventTypes.ToArray(), retainOtherCounts);
-        if (State.ReplayingPartitions.Contains(partition))
-        {
-            QueuePartitionReplay(partition, request);
-            return;
-        }
-
-        await StartPartitionReplay(partition, request);
+        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
+        await EnqueuePartitionRepair(partition, new(sequenceNumber, retainOtherCounts, eventTypes.ToArray()));
     }
 
-    async Task StartPartitionReplay(Key partition, PendingPartitionReplay request, EventSequenceNumber? heldBackFromPreviousReplay = null)
+    async Task ResetPartitionReplayCounts(Key partition, PartitionRepairCoverage coverage)
     {
-        var (sequenceNumber, eventTypesToReplay, retainOtherCounts) = request;
-        await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
+        var (sequenceNumber, retainOtherCounts, eventTypesToReplay) = coverage;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
 
@@ -306,63 +287,6 @@ public partial class Observer
         {
             await handledCountsStorage.Increment(_observerId, partition, retainedPartitionCounts);
         }
-
-        // Capture and mark in the same synchronous turn, before awaiting storage or job admission. Live delivery
-        // may interleave those awaits: events below this cursor were already handled or belong to existing
-        // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
-        // The marker, hold and claim are persisted before the job starts, so admission finds the claim the job is stamped with.
-        var heldBackFrom = heldBackFromPreviousReplay ?? State.NextEventSequenceNumber;
-        Skips.JobStarted(partition);
-        RecordedHandlingState();
-        using var start = BeginPartitionJobStart();
-        var epochs = await GrantPartitionsBeforeStart([partition], ClaimHolderKind.PartitionReplay, ShadowResumePosition());
-        try
-        {
-            await _jobsManager.Start<IReplayObserverPartition, ReplayObserverPartitionRequest>(new(_observerKey, Definition.Type, partition, EventSequenceNumber.First, sequenceNumber, eventTypesToReplay)
-            {
-                ReplaysAllEventTypes = !retainOtherCounts,
-                ReaderScope = ReaderScope,
-                HeldBackFrom = heldBackFrom,
-                OwnershipEpoch = epochs[partition]
-            });
-        }
-        catch
-        {
-            // No job owns the marker, so nothing would ever release it. The sink is untouched: hand the partition
-            // back to catch-up from the captured bound, as a refused replay does, and report the failure.
-            await ReleaseRefusedPartitionReplay(partition, heldBackFrom, epochs[partition]);
-            throw;
-        }
-    }
-
-    void QueuePartitionReplay(Key partition, PendingPartitionReplay request)
-    {
-        if (!_pendingPartitionReplays.TryGetValue(partition, out var pending))
-        {
-            pending = [];
-            _pendingPartitionReplays.Add(partition, pending);
-        }
-
-        // Coalesce equivalent work; a bounded or selected-type replay must not absorb a full repair.
-        if (!pending.Exists(_ => _.Through == request.Through && _.RetainOtherCounts == request.RetainOtherCounts && _.EventTypes.SequenceEqual(request.EventTypes)))
-        {
-            pending.Add(request);
-        }
-    }
-
-    async Task<bool> StartPendingPartitionReplay(Key partition, EventSequenceNumber heldBackFrom)
-    {
-        if (State.RunningState == ObserverRunningState.Replaying || !_pendingPartitionReplays.TryGetValue(partition, out var pending)) return false;
-
-        var next = pending[0];
-        pending.RemoveAt(0);
-        if (pending.Count == 0)
-        {
-            _pendingPartitionReplays.Remove(partition);
-        }
-
-        await StartPartitionReplay(partition, next, heldBackFrom);
-        return true;
     }
 
     /// <summary>
@@ -448,6 +372,4 @@ public partial class Observer
         var first = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber.First, addedEventTypes);
         return first.Match(sequenceNumber => sequenceNumber, _ => EventSequenceNumber.Unavailable);
     }
-
-    sealed record PendingPartitionReplay(EventSequenceNumber Through, EventType[] EventTypes, bool RetainOtherCounts);
 }

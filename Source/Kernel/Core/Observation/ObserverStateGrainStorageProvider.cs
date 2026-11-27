@@ -95,5 +95,6 @@ public class ObserverStateGrainStorageProvider(IStorage storage, ILogger<Observe
         || state.ReplayingPartitions.Count > 0
         || state.CatchingUpPartitions.Count > 0
         || state.InFlightPartitions.Count > 0
+        || state.PartitionRepairs is { Length: > 0 }
         || state.FailedPartitions.Any();
 }
