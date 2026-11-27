@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "builtAt": "d62160fcb983f8496fd21f564da20a4d340773e2",
+  "builtAt": "d381b3df75256956d0f4f838dfe5e3ab82d6664c",
   "project": "Source/Clients/DotNET.CodeAnalysis.Specs/DotNET.CodeAnalysis.Specs.csproj",
   "granularity": "class",
   "files": [
