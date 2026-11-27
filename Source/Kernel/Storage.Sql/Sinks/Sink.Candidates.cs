@@ -3,6 +3,7 @@
 
 using System.Linq.Expressions;
 using Cratis.Arc.EntityFrameworkCore;
+using Cratis.Chronicle.Dynamic;
 using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces.ReadModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -49,9 +50,15 @@ public partial class Sink
     IQueryable<DynamicReadModelEntity> JsonCandidates(ReadModelDbContext context, ProjectedColumn column, object value)
     {
         var unwrapped = UnwrapConceptValue(value);
+        var composite = StructuralKeyEquality.IsStructured(unwrapped);
+        if (composite)
+        {
+            var leaf = CompositeKeyCandidate.StringLeaf(unwrapped);
+            if (leaf is null) return context.Entries;
+            value = unwrapped = leaf;
+        }
 
-        // Structural identities cannot safely be narrowed to JSON scalar nodes.
-        // Keep the existing broad handling of null and exotic System.* targets as well.
+        // Keep broad handling when no safe scalar representation is available.
         if (ChildKeyComparison.RequiresJsonScan(unwrapped)) return context.Entries;
         var helper = context.GetService<ISqlGenerationHelper>();
         var name = helper.DelimitIdentifier(column.Name);
@@ -59,18 +66,10 @@ public partial class Sink
         var key = _columns.FirstOrDefault(column => column.IsKey);
         if (key is null) return context.Entries;
         var id = helper.DelimitIdentifier(key.Name);
-        var type = context.Database.GetDatabaseType();
 
-        // Search every descendant, deliberately admitting numeric/boolean nodes regardless of
-        // their text representation. The existing path walker remains the final authority;
-        // this avoids false negatives from numeric widths, culture, concepts, and nested arrays.
-        var sql = type switch
-        {
-            DatabaseType.Sqlite => $"SELECT t.* FROM {table} t WHERE EXISTS (SELECT 1 FROM json_tree(CASE WHEN json_valid(t.{name}) THEN t.{name} ELSE NULL END) j WHERE j.type IN ('integer','real','true','false') OR j.atom = {{0}} OR j.atom = {{1}})",
-            DatabaseType.PostgreSql => $"SELECT t.* FROM {table} t WHERE jsonb_path_exists(t.{name}, '$.** ? (@.type() == \"number\" || @.type() == \"boolean\" || @ == $v || @ == $w)', jsonb_build_object('v', CAST({{0}} AS text), 'w', CAST({{1}} AS text)))",
-            DatabaseType.SqlServer => $"WITH json_nodes AS (SELECT {id} AS row_id, CAST({name} AS nvarchar(max)) AS node, CAST(5 AS int) AS kind FROM {table} WHERE ISJSON({name})=1 UNION ALL SELECT n.row_id, j.value, CAST(j.type AS int) FROM json_nodes n CROSS APPLY OPENJSON(CASE WHEN n.kind IN (4,5) THEN n.node ELSE N'{{{{}}}}' END) j) SELECT t.* FROM {table} t WHERE EXISTS (SELECT 1 FROM json_nodes n WHERE n.row_id=t.{id} AND (n.kind IN (2,3) OR (n.kind=1 AND (n.node={{0}} OR n.node={{1}})))) OPTION (MAXRECURSION 0)",
-            _ => null
-        };
+        // Scalar searches still admit all numeric/boolean representations. Composite searches
+        // constrain only an exact string leaf; the existing path walker remains the final authority.
+        var sql = JsonCandidateSql.Create(context.Database.GetDatabaseType(), table, name, id, composite);
         if (sql is null) return context.Entries;
 #pragma warning disable EF1002 // All identifiers are delimited; values remain SQL parameters.
         return context.Entries.FromSqlRaw(sql, value.ToString() ?? string.Empty, unwrapped.ToString() ?? string.Empty);
