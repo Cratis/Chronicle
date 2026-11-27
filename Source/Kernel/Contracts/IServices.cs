@@ -197,6 +197,12 @@ public interface IServices
     Security.IAdministrators Administrators => throw new NotSupportedException("Administrators are not supported by this service container.");
 
     /// <summary>
+    /// Gets the constraint index rebuild operator when supported by this service container.
+    /// </summary>
+    /// <exception cref="NotSupportedException">The service container does not provide the constraint index rebuild operator.</exception>
+    Events.Constraints.Operator.IConstraintIndexes ConstraintIndexes => throw new NotSupportedException("Constraint indexes are not supported by this service container.");
+
+    /// <summary>
     /// Gets the federation service when supported by this service container: hosted federation enrollments, redeeming an enrollment code and the enrollment status.
     /// </summary>
     /// <exception cref="NotSupportedException">This container predates federation support.</exception>
