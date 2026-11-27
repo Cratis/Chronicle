@@ -57,7 +57,11 @@ public class a_catch_up_observer_job : Specification
         await _silo.TimerRegistry.FireAllAsync();
     }
 
-    async Task Establish()
+    /// <summary>
+    /// Creates the grain and its dependencies for specifications that compose multiple activations.
+    /// </summary>
+    /// <returns>The task representing the operation.</returns>
+    protected async Task SetUpJob()
     {
         _jobId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         _jobKey = new("event-store", "namespace");
@@ -120,4 +124,6 @@ public class a_catch_up_observer_job : Specification
     }
 
     protected virtual async Task CreateJob() => _job = await _silo.CreateGrainAsync<TestableCatchUpObserver>(_jobId, _jobKey);
+
+    Task Establish() => SetUpJob();
 }

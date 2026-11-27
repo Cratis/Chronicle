@@ -65,7 +65,11 @@ public class a_performing_job_step : Specification
         return storage;
     }
 
-    async Task Establish()
+    /// <summary>
+    /// Creates the grain and its dependencies for specifications that compose multiple activations.
+    /// </summary>
+    /// <returns>The task representing the operation.</returns>
+    protected async Task SetUpJob()
     {
         var eventStoreStorage = Substitute.For<Storage.IEventStoreStorage>();
         var namespaceStorage = Substitute.For<Storage.IEventStoreNamespaceStorage>();
@@ -175,4 +179,6 @@ public class a_performing_job_step : Specification
         _jobStep.SetupForTesting(_observer, subscription);
         _jobStep.GuardStateAccess = true;
     }
+
+    Task Establish() => SetUpJob();
 }
