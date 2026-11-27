@@ -2,11 +2,14 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json.Nodes;
+using Cratis.Chronicle.Compliance;
 
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager.when_strictly_releasing;
 
 public class and_the_protected_type_has_alternative_types : given.real_pii_protection
 {
+    protected override IEncryption CreateEncryption() => LegacyEncryption.Create();
+
     async Task Establish()
     {
         _schema = await JsonSchema.FromJsonAsync("""{"type":"object","properties":{"value":{"oneOf":[{"type":"number"},{"type":"string"}]}}} """);

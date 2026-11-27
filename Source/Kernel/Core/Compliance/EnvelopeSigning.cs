@@ -98,7 +98,7 @@ internal static class EnvelopeSigning
     }
 
     static bool CarriesSignedIdentity(EncryptionEnvelope envelope) =>
-        envelope.Version == 3 && new object?[] { envelope.PublicKey, envelope.Certificate, envelope.SigningKey, envelope.Signature, envelope.Revision }.All(_ => _ is not null);
+        envelope.Version is 3 or 4 && new object?[] { envelope.PublicKey, envelope.Certificate, envelope.SigningKey, envelope.Signature, envelope.Revision }.All(_ => _ is not null);
 
     static void VerifyCertificate(EncryptionEnvelope envelope, byte[] commitment)
     {

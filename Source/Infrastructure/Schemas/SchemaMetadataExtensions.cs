@@ -21,8 +21,6 @@ namespace Cratis.Chronicle.Schemas;
 /// </remarks>
 public static class SchemaMetadataExtensions
 {
-    const int MaxSchemaMetadataTraversalDepth = 64;
-
     /// <summary>
     /// Ensure the schema metadata for a given category on the schema node itself is typed rather than raw JSON.
     /// </summary>
@@ -97,7 +95,8 @@ public static class SchemaMetadataExtensions
         }
 
         var key = KeyFor(category);
-        var result = WalkSchemaMetadata(schema, new(candidate => candidate.ExtensionData?.ContainsKey(key) ?? false, []), 0);
+        var reach = schema.MetadataGraph;
+        var result = reach.Indeterminate || reach.Schemas.Exists(candidate => candidate.ExtensionData?.ContainsKey(key) ?? false);
         if (category == SchemaMetadataCategory.Compliance)
         {
             schema.CachedHasComplianceMetadata = result;
@@ -126,16 +125,21 @@ public static class SchemaMetadataExtensions
     /// <param name="schema"><see cref="JsonSchema"/> to check.</param>
     /// <param name="category">The <see cref="SchemaMetadataCategory"/> to check for.</param>
     /// <param name="predicate">Predicate over each candidate entry's metadata type.</param>
-    /// <returns>True if a matching entry exists anywhere in the schema, false if not.</returns>
+    /// <returns>True if a matching entry exists or compliance classification is indeterminate, false if not.</returns>
     /// <remarks>
     /// Unlike <see cref="HasSchemaMetadata(JsonSchema, SchemaMetadataCategory)"/>, this reads and tests every
     /// entry rather than stopping at "the extension key exists", and is not memoized - it exists for a caller
     /// that needs to distinguish between different metadata types within one category (for example, a
     /// namespace-/global-scoped security entry from a subject-scoped one), not merely whether the category is
-    /// present at all.
+    /// present at all. Indeterminate compliance reach is conservatively protected without inventing entries;
+    /// security predicates still require a concrete matching entry.
     /// </remarks>
-    public static bool HasSchemaMetadata(this JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate) =>
-        WalkSchemaMetadata(schema, new(candidate => candidate.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)), []), 0);
+    public static bool HasSchemaMetadata(this JsonSchema schema, SchemaMetadataCategory category, Func<string, bool> predicate)
+    {
+        var reach = schema.MetadataGraph;
+        return (category == SchemaMetadataCategory.Compliance && reach.Indeterminate) ||
+            reach.Schemas.Exists(candidate => candidate.GetSchemaMetadata(category).Any(metadata => predicate(metadata.metadataType)));
+    }
 
     /// <summary>
     /// Check recursively whether the schema has metadata for any known category.
@@ -157,30 +161,6 @@ public static class SchemaMetadataExtensions
     /// <returns>The extension data key.</returns>
     internal static string KeyFor(SchemaMetadataCategory category) =>
         category == SchemaMetadataCategory.Compliance ? ComplianceJsonSchemaExtensions.ComplianceKey : SecurityJsonSchemaExtensions.SecurityKey;
-
-    static bool WalkSchemaMetadata(JsonSchema schema, MetadataTraversal context, int depth)
-    {
-        // Inspect every reference hop, including annotations beside $ref. Count hops against the same
-        // depth budget as child schemas, so recursive child/reference graphs cannot restart the limit.
-        var chain = schema.ReferenceChain;
-        for (var hop = 0; hop < chain.Count && depth + hop <= MaxSchemaMetadataTraversalDepth; hop++)
-        {
-            var candidate = chain[hop];
-            if (!context.Visited.Add(candidate)) continue;
-            if (context.Matches(candidate)) return true;
-            if (MetadataChildren(candidate).Any(child => WalkSchemaMetadata(child, context, depth + hop + 1))) return true;
-        }
-        return false;
-    }
-
-    static IEnumerable<JsonSchema> MetadataChildren(JsonSchema schema) =>
-        schema.Properties.Values.Concat(MetadataCompositions(schema))
-            .Concat(new[] { schema.Item, schema.AdditionalPropertiesSchema }.OfType<JsonSchema>());
-
-    static IEnumerable<JsonSchema> MetadataCompositions(JsonSchema schema) => schema.AllOf.Count > 0
-        ? schema.AllOf
-        : schema.AnyOf.Where(candidate => candidate.Type != JsonObjectType.Null &&
-            !(candidate.HasReference && candidate.Reference?.Type == JsonObjectType.Null)).Take(1);
 
     static void ConvertIfNeeded(JsonSchema schema, string key)
     {
@@ -210,6 +190,4 @@ public static class SchemaMetadataExtensions
             .Select(x => new ComplianceSchemaMetadata(x.MetadataTypeStr!, x.Details!))
             .ToList();
     }
-
-    sealed record MetadataTraversal(Func<JsonSchema, bool> Matches, HashSet<JsonSchema> Visited);
 }

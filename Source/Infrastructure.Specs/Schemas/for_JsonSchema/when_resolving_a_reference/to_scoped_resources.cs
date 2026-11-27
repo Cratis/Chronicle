@@ -77,7 +77,7 @@ public class to_scoped_resources
     }
 
     [Fact]
-    public void should_bound_the_resource_index_depth()
+    public void should_index_resources_beyond_the_former_depth_limit()
     {
         var schema = Create("too-deep");
         var node = schema.Node;
@@ -89,7 +89,7 @@ public class to_scoped_resources
         }
         node["$id"] = "too-deep";
         node["type"] = "string";
-        schema.Properties["value"].Reference.ShouldBeNull();
+        schema.Properties["value"].Reference.ShouldNotBeNull();
     }
 
     static JsonSchema Create(string reference)

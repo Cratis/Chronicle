@@ -23,11 +23,13 @@ public class a_manager : Specification
 
     void Establish()
     {
-        var encryption = new Encryption();
+        var encryption = CreateEncryption();
         _keys = new();
         var provisioner = new ManagedEncryptionKeyProvisioner(_keys, encryption);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(new PIICompliancePropertyValueHandler(provisioner, _keys, encryption), new EncryptedGlobalValueHandler(provisioner, _keys, encryption)), NullLogger<JsonSchemaMetadataManager>.Instance);
     }
+
+    protected virtual IEncryption CreateEncryption() => new Encryption();
 
     protected async Task ProtectAndErase()
     {

@@ -22,16 +22,19 @@ public class real_pii_protection : Specification
 
     void Establish()
     {
-        var encryption = new Encryption();
+        var encryption = CreateEncryption();
         var key = encryption.GenerateKey();
         _keys = Substitute.For<IEncryptionKeyStorage>();
         _keys.TryGetFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(key);
         _keys.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
+        _keys.TryGetAtRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), EncryptionKeyRevision.Initial).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         var provisioner = Substitute.For<IManagedEncryptionKeyProvisioner>();
         provisioner.EnsureKeyWithRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>()).Returns(new EncryptionKeyAtRevision(key, EncryptionKeyRevision.Initial));
         var handler = new PIICompliancePropertyValueHandler(provisioner, _keys, encryption);
         _manager = new(new KnownInstancesOf<IJsonSchemaMetadataValueHandler>(handler), NullLogger<JsonSchemaMetadataManager>.Instance);
     }
+
+    protected virtual IEncryption CreateEncryption() => new Encryption();
 
     protected static void Mark(JsonSchema schema) => schema.ExtensionData = new Dictionary<string, object?>
     {

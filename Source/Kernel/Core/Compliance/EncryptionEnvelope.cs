@@ -19,7 +19,9 @@ internal sealed record EncryptionEnvelope
     internal const int SignatureSize = 64;
     const int RevisionOffset = 5;
     const int SignedHeaderSize = 17;
+    const int TypedHeaderSize = SignedHeaderSize + 1;
     static readonly byte[] _magic = "CENV"u8.ToArray();
+    static readonly byte[] _typedMagic = "CEN4"u8.ToArray();
 
     /// <summary>Gets the serialized header.</summary>
     internal required byte[] Header { get; init; }
@@ -51,6 +53,9 @@ internal sealed record EncryptionEnvelope
     /// <summary>Gets the ECDSA signature over the whole envelope, present in v3 only.</summary>
     internal byte[]? Signature { get; init; }
 
+    /// <summary>Gets the authenticated JSON kind, present only in v4.</summary>
+    internal ProtectedValueKind? Kind => Version == 4 ? (ProtectedValueKind)Header[SignedHeaderSize] : null;
+
     /// <summary>Gets the recorded key revision, if present.</summary>
     internal EncryptionKeyRevision? Revision { get; init; }
 
@@ -60,7 +65,7 @@ internal sealed record EncryptionEnvelope
     /// <summary>Recognizes prefixed values, including malformed or unsupported versions.</summary>
     /// <param name="bytes">The candidate value.</param>
     /// <returns>Whether the value has the envelope prefix.</returns>
-    internal static bool HasMagic(byte[] bytes) => bytes.AsSpan().StartsWith(_magic);
+    internal static bool HasMagic(byte[] bytes) => bytes.AsSpan().StartsWith(_magic) || bytes.AsSpan().StartsWith(_typedMagic);
 
     /// <summary>Creates a v1 or v2 header.</summary>
     /// <param name="version">The envelope version.</param>
@@ -87,13 +92,18 @@ internal sealed record EncryptionEnvelope
     /// <param name="revision">The concrete managed-key revision.</param>
     /// <param name="identity">The managed key public part, the certificate over the signing key and the ephemeral signing public key.</param>
     /// <param name="wrappedKeyLength">The size of the wrapped data key.</param>
+    /// <param name="kind">The authenticated JSON kind, or null for a v3 header.</param>
     /// <returns>The serialized header, which is the AES-GCM associated data.</returns>
-    internal static byte[] CreateSignedHeader(EncryptionKeyRevision revision, (byte[] PublicKey, byte[] Certificate, byte[] SigningKey) identity, int wrappedKeyLength)
+    internal static byte[] CreateSignedHeader(EncryptionKeyRevision revision, (byte[] PublicKey, byte[] Certificate, byte[] SigningKey) identity, int wrappedKeyLength, ProtectedValueKind? kind = null)
     {
         var (publicKey, certificate, signingKey) = identity;
-        var header = new byte[SignedHeaderSize];
-        _magic.CopyTo(header, 0);
-        header[4] = 3;
+        var header = new byte[kind is null ? SignedHeaderSize : TypedHeaderSize];
+        (kind is null ? _magic : _typedMagic).CopyTo(header, 0);
+        header[4] = kind is null ? (byte)3 : (byte)4;
+        if (kind is not null)
+        {
+            header[SignedHeaderSize] = (byte)kind;
+        }
         BinaryPrimitives.WriteUInt32BigEndian(header.AsSpan(RevisionOffset), revision.Value);
         BinaryPrimitives.WriteUInt16BigEndian(header.AsSpan(9), checked((ushort)publicKey.Length));
         BinaryPrimitives.WriteUInt16BigEndian(header.AsSpan(11), checked((ushort)certificate.Length));
@@ -108,16 +118,32 @@ internal sealed record EncryptionEnvelope
     /// <exception cref="CryptographicException">The envelope header, payload, or key revision is invalid.</exception>
     internal static EncryptionEnvelope Read(byte[] bytes)
     {
-        if (bytes.Length < 7 || bytes[4] is not (1 or 2 or 3))
+        if (bytes.Length < 7 || bytes[4] is not (1 or 2 or 3 or 4))
         {
             throw new CryptographicException("Invalid encryption envelope header.");
         }
 
-        if (bytes[4] == 3)
+        // Distinguish typed framing even if its version byte is damaged, before legacy erasure handling.
+        var typedVersion = bytes[4] == 4;
+        if (typedVersion != bytes.AsSpan().StartsWith(_typedMagic))
+        {
+            throw new CryptographicException("Inconsistent encryption envelope framing.");
+        }
+
+        if (bytes[4] is 3 or 4)
         {
             return ReadSigned(bytes);
         }
 
+        return ReadLegacy(bytes);
+    }
+
+    /// <summary>Serializes the complete envelope.</summary>
+    /// <returns>The header and encrypted payload.</returns>
+    internal byte[] Bytes() => [.. Header, .. WrappedKey, .. Nonce, .. Tag, .. Ciphertext, .. Signature ?? []];
+
+    static EncryptionEnvelope ReadLegacy(byte[] bytes)
+    {
         var headerLength = bytes[4] == 2 ? 11 : 7;
         if (bytes.Length < headerLength)
         {
@@ -143,15 +169,17 @@ internal sealed record EncryptionEnvelope
         };
     }
 
-    /// <summary>Serializes the complete envelope.</summary>
-    /// <returns>The header and encrypted payload.</returns>
-    internal byte[] Bytes() => [.. Header, .. WrappedKey, .. Nonce, .. Tag, .. Ciphertext, .. Signature ?? []];
-
     static EncryptionEnvelope ReadSigned(byte[] bytes)
     {
-        if (bytes.Length < SignedHeaderSize)
+        var headerSize = bytes[4] == 4 ? TypedHeaderSize : SignedHeaderSize;
+        if (bytes.Length < headerSize)
         {
             throw new CryptographicException("Truncated encryption envelope header.");
+        }
+
+        if (bytes[4] == 4 && !Enum.IsDefined((ProtectedValueKind)bytes[SignedHeaderSize]))
+        {
+            throw new CryptographicException("Invalid encryption envelope JSON kind.");
         }
 
         var publicKeyLength = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(9));
@@ -163,7 +191,7 @@ internal sealed record EncryptionEnvelope
             throw new CryptographicException("Invalid encryption envelope component length.");
         }
 
-        const int publicKeyOffset = SignedHeaderSize;
+        var publicKeyOffset = headerSize;
         var certificateOffset = publicKeyOffset + publicKeyLength;
         var signingKeyOffset = certificateOffset + certificateLength;
         var wrappedKeyOffset = signingKeyOffset + signingKeyLength;
