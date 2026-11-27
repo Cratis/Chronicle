@@ -16,6 +16,7 @@ using Cratis.Chronicle.EventSequences.Migrations;
 using Cratis.Chronicle.EventSequences.Placement;
 using Cratis.Chronicle.EventTypes;
 using Cratis.Chronicle.Json;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Observation;
 using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Observation.Placement;
@@ -72,6 +73,9 @@ public static class ChronicleServerSiloBuilderExtensions
         builder.Services.TryAddSingleton<Cratis.Chronicle.ReadModels.ISinkChangeReplays, Cratis.Chronicle.ReadModels.SinkChangeReplays>();
         builder.Services.TryAddSingleton<IEventTypeMigrations, EventTypeMigrations>();
         builder.Services.TryAddSingleton<IObserverSubscriberSelector, ObserverSubscriberSelector>();
+        builder.Services.Replace(ServiceDescriptor.Singleton<NamespaceRemover, NamespaceRemover>());
+        builder.Services.Replace(ServiceDescriptor.Singleton<INamespaceRemover>(services => services.GetRequiredService<NamespaceRemover>()));
+        builder.Services.TryAddSingleton<INamespaceRemovalSteps>(services => services.GetRequiredService<NamespaceRemover>());
         builder
             .AddChronicleServicesAsInMemory()
             .AddPlacementDirector<ConnectedClientsPlacementStrategy, ConnectedClientsPlacementDirector>()
