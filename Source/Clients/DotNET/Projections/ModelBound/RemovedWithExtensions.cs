@@ -36,7 +36,9 @@ static class RemovedWithExtensions
 
         targetRemovedWith[eventTypeId] = new RemovedWithDefinition
         {
-            Key = ApplyNamingPolicy(namingPolicy, key),
+            Key = ModelBoundCompositeKey.Read(attr) is { } compositeKey
+                ? ModelBoundCompositeKey.Build(eventType, compositeKey, namingPolicy)
+                : ApplyNamingPolicy(namingPolicy, key),
             ParentKey = ApplyNamingPolicy(namingPolicy, parentKey)
         };
     }
