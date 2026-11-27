@@ -249,8 +249,9 @@ class for_batched_namespaces(unittest.TestCase):
         # it waits minutes for observers to be released, which is longer than any batch may take. And so does
         # for_UnseenObserverRemoval: its three kernels start one after the other, and it waits out periods of its own.
         # for_PatternCapture and EventTypeResolution are new and unmeasured, so each runs alone until hosted
-        # timings justify a batch (a new namespace never joins a batch silently).
-        self.assertEqual(10, len(_run("--suite", "kernel")))
+        # timings justify a batch (a new namespace never joins a batch silently). NamespaceFencing is new as well and
+        # runs alone for the same reason.
+        self.assertEqual(11, len(_run("--suite", "kernel")))
         # The shared batch, for_Occurrences and seven namespaces added with the all-in-on-Orleans program
         # (client observer serving, client registration, event type registry, many client observers,
         # multiplexed observation, observer definition registry, silo supervisor), each alone until timed.
