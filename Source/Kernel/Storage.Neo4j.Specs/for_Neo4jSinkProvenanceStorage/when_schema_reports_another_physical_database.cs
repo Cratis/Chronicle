@@ -11,7 +11,7 @@ public class when_schema_reports_another_physical_database : given.a_graph_datab
 
     void Establish() => SetIdentity(_schema, "another-identity");
 
-    async Task Because() => _failure = await Catch.Exception(async () => await _provenance.ReadState());
+    async Task Because() => _failure = await Catch.Exception(_provenance.ReadState);
 
     [Fact] void should_deny_admission() => _failure.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] async Task should_not_provision_a_constraint_in_the_other_database() => await _schema.DidNotReceive().RunAsync(CreateConstraint, Arg.Any<object>());

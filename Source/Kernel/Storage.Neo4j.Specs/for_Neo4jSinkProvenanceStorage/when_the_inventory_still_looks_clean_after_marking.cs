@@ -14,7 +14,7 @@ public class when_the_inventory_still_looks_clean_after_marking : given.a_graph_
     void Establish()
     {
         _runtime.RunAsync(Read).Returns(_ => Cursor(Inventory(_databaseId, SinkProvenanceState.CurrentInventoryVersion)));
-        _runtime.RunAsync(Lock, Arg.Any<object>()).Returns(_ => Cursor());
+        _runtime.RunAsync(LockInventory, Arg.Any<object>()).Returns(_ => Cursor());
         _runtime.RunAsync(Mark, Arg.Any<object>()).Returns(_ => Cursor());
         _runtime.RunAsync(LatchRestriction, Arg.Any<object>()).Returns(_ => Cursor());
     }

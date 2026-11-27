@@ -47,12 +47,6 @@ public static class GraphBookkeeping
     /// </summary>
     public const string ProvenanceLabel = "__cratis_sink_inventory";
 
-    internal static void EnsureApplicationLabel(string label)
-    {
-        GraphCypher.ValidateIdentifier(label);
-        if (label == ProvenanceLabel) throw new ReservedGraphPropertyName(label);
-    }
-
     /// <summary>
     /// Ensure a property name does not collide with the bookkeeping.
     /// </summary>
@@ -66,5 +60,17 @@ public static class GraphBookkeeping
         {
             throw new ReservedGraphPropertyName(name);
         }
+    }
+
+    /// <summary>
+    /// Validates that an application label cannot address provenance metadata.
+    /// </summary>
+    /// <param name="label">The application label.</param>
+    /// <exception cref="ArgumentException">Thrown when the label contains a backslash.</exception>
+    /// <exception cref="ReservedGraphPropertyName">Thrown when the label is reserved for provenance.</exception>
+    internal static void EnsureApplicationLabel(string label)
+    {
+        GraphCypher.ValidateIdentifier(label);
+        if (label == ProvenanceLabel) throw new ReservedGraphPropertyName(label);
     }
 }

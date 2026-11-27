@@ -26,7 +26,7 @@ public class when_an_identifier_contains_a_backslash : Specification
             null);
         var person = new NodeReference("Person", "person");
         _labelError = Catch.Exception(() => cypher.ReadNode(new NodeReference(Label, "other")));
-        _typeError = Catch.Exception(() => cypher.SweepEdges("owner", 1).ToArray());
+        _typeError = Catch.Exception(() => _ = cypher.SweepEdges("owner", 1).ToArray());
         _propertyError = Catch.Exception(() => cypher.ReadNode(person));
     }
 

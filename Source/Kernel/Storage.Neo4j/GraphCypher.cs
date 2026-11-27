@@ -42,12 +42,6 @@ public class GraphCypher(GraphDefinition definition, string? @namespace)
         return $"`{identifier.Replace("`", "``", StringComparison.Ordinal)}`";
     }
 
-    internal static void ValidateIdentifier(string identifier)
-    {
-        // Cypher can expand Unicode escapes before interpreting backtick quoting.
-        if (identifier.Contains('\\')) throw new ArgumentException("Cypher identifiers cannot contain backslashes.", nameof(identifier));
-    }
-
     /// <summary>
     /// Create the statement that creates the uniqueness constraint of a node label.
     /// </summary>
@@ -340,6 +334,16 @@ public class GraphCypher(GraphDefinition definition, string? @namespace)
                 $"{pattern}{where} RETURN properties(r) AS properties, s.{Escape(source.KeyProperty)} AS source, t.{Escape(target.KeyProperty)} AS target " +
                 $"ORDER BY toString(s.{Escape(source.KeyProperty)}), toString(t.{Escape(target.KeyProperty)}), {identity} SKIP $skip LIMIT $take",
                 parameters));
+    }
+
+    /// <summary>
+    /// Rejects backslashes because Cypher can expand Unicode escapes before interpreting backtick quoting.
+    /// </summary>
+    /// <param name="identifier">The identifier to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when the identifier contains a backslash.</exception>
+    internal static void ValidateIdentifier(string identifier)
+    {
+        if (identifier.Contains('\\')) throw new ArgumentException("Cypher identifiers cannot contain backslashes.", nameof(identifier));
     }
 
     static void AddWrite(Dictionary<string, object?> parameters, IReadOnlyDictionary<string, object?> properties, string owner, long sequence, long generation)

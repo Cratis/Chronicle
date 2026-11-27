@@ -43,6 +43,7 @@ public partial class Neo4jGraphSink
         await session.ExecuteWriteAsync(async transaction =>
         {
             await _target.EnsureDatabase(transaction);
+
             // Edges go first. A stale node that edges of other owners still point at is kept as the bare node an edge
             // would have created, because an edge cannot exist without its end nodes. The rest is deleted.
             foreach (var statement in _cypher.SweepEdges(owner.Value, generation)) await Run(transaction, statement);

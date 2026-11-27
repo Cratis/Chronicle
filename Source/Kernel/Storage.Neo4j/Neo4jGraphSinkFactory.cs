@@ -67,7 +67,8 @@ public class Neo4jGraphSinkFactory(IServiceProvider serviceProvider) : IGraphSin
         lock (_pairing)
         {
             Neo4jSinkProvenanceStorage? created = null;
-            var cached = _cache.Value.Bind((typeof(Neo4jGraphSinkFactory), name, eventStore, scope),
+            var cached = _cache.Value.Bind(
+                (typeof(Neo4jGraphSinkFactory), name, eventStore, scope),
                 () => created = new Neo4jSinkProvenanceStorage(new Neo4jGraphTarget(connections, eventStore, scope)));
             if (created is not null) _admitted.AddOrUpdate(cached, created);
             return _admitted.TryGetValue(cached, out var raw) ? (cached, raw) : throw Neo4jGraphTarget.Unavailable();

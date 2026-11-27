@@ -10,19 +10,25 @@ namespace Cratis.Chronicle.Storage.Neo4j;
 /// <summary>
 /// Stores a monotonic provenance marker in the Runtime graph database, outside application labels.
 /// </summary>
-internal sealed class Neo4jSinkProvenanceStorage(Neo4jGraphTarget target) : ISinkProvenanceStorage
+/// <param name="target">The graph route shared with the payload sink.</param>
+internal sealed class Neo4jSinkProvenanceStorage(Neo4jGraphTarget target) : ISinkProvenanceStorage, IDisposable
 {
     readonly SemaphoreSlim _schema = new(1, 1);
     bool _schemaReady;
 
+    /// <summary>
+    /// Gets the route shared with the payload sink.
+    /// </summary>
     internal Neo4jGraphTarget Target => target;
 
+    /// <inheritdoc/>
     public Task<SinkProvenanceState> ReadState() => Execute(GetOrSeed);
 
+    /// <inheritdoc/>
     public Task<SinkProvenanceState> CompleteInventory(bool restrictedEvidence) => Execute(async transaction =>
     {
         await GetOrSeed(transaction);
-        await Run(transaction, Lock);
+        await Run(transaction, LockInventory);
         var state = await RequireState(transaction);
         if (state.IsComplete) return state;
 
@@ -30,17 +36,22 @@ internal sealed class Neo4jSinkProvenanceStorage(Neo4jGraphTarget target) : ISin
         return await RequireState(transaction);
     });
 
+    /// <inheritdoc/>
     public async Task MarkQuarantined() => await Execute(async transaction =>
     {
         await GetOrSeed(transaction);
-        await Run(transaction, Lock);
+        await Run(transaction, LockInventory);
         await Run(transaction, Mark);
         await Run(transaction, LatchRestriction);
         var state = await RequireState(transaction);
         return state.Restricted ? state : throw Neo4jGraphTarget.Unavailable();
     });
 
+    /// <inheritdoc/>
     public async Task<bool> IsQuarantined() => (await ReadState()).Restricted;
+
+    /// <inheritdoc/>
+    public void Dispose() => _schema.Dispose();
 
     static async Task<SinkProvenanceState> GetOrSeed(IAsyncQueryRunner transaction)
     {

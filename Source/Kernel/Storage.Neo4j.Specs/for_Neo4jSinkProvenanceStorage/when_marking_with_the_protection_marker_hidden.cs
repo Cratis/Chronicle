@@ -15,7 +15,7 @@ public class when_marking_with_the_protection_marker_hidden : given.a_graph_data
     void Establish()
     {
         _runtime.RunAsync(Read).Returns(_ => Cursor(Inventory(_databaseId, SinkProvenanceState.CurrentInventoryVersion, _latched)));
-        _runtime.RunAsync(Lock, Arg.Any<object>()).Returns(_ => Cursor());
+        _runtime.RunAsync(LockInventory, Arg.Any<object>()).Returns(_ => Cursor());
         _runtime.RunAsync(Mark, Arg.Any<object>()).Returns(_ => Cursor());
         _runtime.RunAsync(LatchRestriction, Arg.Any<object>()).Returns(_ =>
         {

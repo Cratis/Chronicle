@@ -46,6 +46,14 @@ public partial class Neo4jGraphSink(
 
     readonly ConcurrentDictionary<ProjectionId, long> _replayGenerations = new();
 
+    /// <summary>
+    /// Initializes a graph sink that shares its route with provenance storage.
+    /// </summary>
+    /// <param name="definition">The graph definition.</param>
+    /// <param name="eventStore">The event store of the graph.</param>
+    /// <param name="scope">The event store namespace of the graph.</param>
+    /// <param name="connections">The resolver for the graph route.</param>
+    /// <param name="target">The route shared with provenance storage.</param>
     internal Neo4jGraphSink(GraphDefinition definition, EventStoreName eventStore, EventStoreNamespaceName scope, INeo4jConnections connections, Neo4jGraphTarget target)
         : this(definition, eventStore, scope, connections) => _target = target;
 
@@ -122,14 +130,6 @@ public partial class Neo4jGraphSink(
         foreach (var property in schema.Properties.Keys) GraphBookkeeping.EnsureNotReserved(property);
     }
 
-    async Task<long> ReadGeneration(IAsyncQueryRunner transaction, string owner)
-    {
-        var statement = _cypher.ReadGeneration(owner);
-        var cursor = await transaction.RunAsync(statement.Text, statement.ToDriverParameters());
-        var records = await cursor.ToListAsync();
-        return records.Count == 0 || records[0]["generation"] is null ? 0 : records[0]["generation"].As<long>();
-    }
-
     static GraphDefinition ValidateLabels(GraphDefinition graph)
     {
         foreach (var node in graph.Nodes) GraphBookkeeping.EnsureApplicationLabel(node.Label);
@@ -139,5 +139,13 @@ public partial class Neo4jGraphSink(
             GraphBookkeeping.EnsureApplicationLabel(edge.TargetLabel);
         }
         return graph;
+    }
+
+    async Task<long> ReadGeneration(IAsyncQueryRunner transaction, string owner)
+    {
+        var statement = _cypher.ReadGeneration(owner);
+        var cursor = await transaction.RunAsync(statement.Text, statement.ToDriverParameters());
+        var records = await cursor.ToListAsync();
+        return records.Count == 0 || records[0]["generation"] is null ? 0 : records[0]["generation"].As<long>();
     }
 }

@@ -26,7 +26,7 @@ public class when_schema_points_to_another_database : Specification
         _provenance = new(new Neo4jGraphTarget(connections, "store", "scope"));
     }
 
-    async Task Because() => _failure = await Catch.Exception(async () => await _provenance.ReadState());
+    async Task Because() => _failure = await Catch.Exception(_provenance.ReadState);
 
     [Fact] void should_refuse_split_placement() => _failure.ShouldBeOfExactType<InvalidOperationException>();
     [Fact] void should_not_touch_the_runtime_database() => _runtimeDriver.DidNotReceive().AsyncSession(Arg.Any<Action<SessionConfigBuilder>>());
