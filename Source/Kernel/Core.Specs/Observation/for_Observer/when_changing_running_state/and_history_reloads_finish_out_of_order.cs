@@ -8,7 +8,14 @@ public class and_history_reloads_finish_out_of_order : given.an_observer_with_co
     readonly given.held_storage_operation<DateTimeOffset?> _olderRead = new();
     DateTimeOffset? _observedTimestamp;
 
-    async Task Because()
+    Task Because()
+    {
+        // Grain calls can interleave at awaits, but their continuations cannot run simultaneously.
+        var grainTurns = new ConcurrentExclusiveSchedulerPair().ExclusiveScheduler;
+        return Task.Factory.StartNew(PerformScenario, CancellationToken.None, TaskCreationOptions.None, grainTurns).Unwrap();
+    }
+
+    async Task PerformScenario()
     {
         var first = true;
         _eventStoreNamespaceStorage.Observers.GetRunningStateChangedAt(_observerId).Returns(_ =>
