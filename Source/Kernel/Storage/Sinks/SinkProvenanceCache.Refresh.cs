@@ -217,9 +217,7 @@ public sealed partial class SinkProvenanceCache
             {
                 await owner._refreshSlots.WaitAsync().ConfigureAwait(false);
                 acquired = true;
-                var snapshot = SnapshotRoutes(owner._time);
-                var state = await ReadRoutes(snapshot).ConfigureAwait(false);
-                PublishRefresh(snapshot, state);
+                await ReadAndPublish().ConfigureAwait(false);
             }
             catch (Exception exception)
             {

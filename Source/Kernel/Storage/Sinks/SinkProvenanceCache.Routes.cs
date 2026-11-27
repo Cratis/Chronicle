@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Runtime.ExceptionServices;
-
 namespace Cratis.Chronicle.Storage.Sinks;
 
 public sealed partial class SinkProvenanceCache
 {
     internal sealed partial class Entry
     {
+        const int MaximumRefreshAttempts = 3;
+
         readonly HashSet<ISinkProvenanceStorage> _stores = new(ReferenceEqualityComparer.Instance);
         long _revision;
 
@@ -62,15 +62,28 @@ public sealed partial class SinkProvenanceCache
             _revision++;
             if (state.DatabaseId != _databaseId)
             {
-                Invalidate();
+                InvalidateLocked();
                 return false;
             }
 
             if (state.Restricted) LatchRestriction();
             var accepted = state.InventoryVersion >= _state.InventoryVersion;
             if (accepted && _stores.Count == 1) PublishState(state, started);
-            else Invalidate();
+            else InvalidateLocked();
             return accepted;
+        }
+
+        async Task ReadAndPublish()
+        {
+            // A route that joins or completes mid-pass moves the revision; read again instead of failing waiters.
+            for (var attempt = 0; attempt < MaximumRefreshAttempts; attempt++)
+            {
+                var snapshot = SnapshotRoutes(owner._time);
+                var state = await ReadRoutes(snapshot).ConfigureAwait(false);
+                if (PublishRefresh(snapshot, state)) return;
+            }
+
+            throw SinkProvenanceLease.UnavailableError();
         }
 
         RefreshSnapshot SnapshotRoutes(TimeProvider clock)
@@ -84,24 +97,33 @@ public sealed partial class SinkProvenanceCache
 
         async Task<SinkProvenanceState> ReadRoutes(RefreshSnapshot snapshot)
         {
-            SinkProvenanceState? observation = null;
-            Exception? failure = null;
-            foreach (var store in snapshot.Stores)
+            // Routes are read concurrently so a pass costs the slowest route rather than the sum of all routes.
+            var reads = new Task<SinkProvenanceState>[snapshot.Stores.Length];
+            for (var index = 0; index < reads.Length; index++) reads[index] = ReadRoute(snapshot.Stores[index]);
+
+            SinkProvenanceState[] states;
+            try
             {
-                try
-                {
-                    var state = await ReadRoute(store).ConfigureAwait(false);
-                    if (!HasConsistentInventory(state, observation, snapshot.InventoryVersion)) throw SinkProvenanceLease.UnavailableError();
-                    observation ??= state;
-                }
-                catch (Exception exception)
-                {
-                    InvalidateRefresh(snapshot.Revision);
-                    failure ??= exception;
-                }
+                states = await Task.WhenAll(reads).ConfigureAwait(false);
+            }
+            catch
+            {
+                Invalidate();
+                throw;
             }
 
-            if (failure is not null) ExceptionDispatchInfo.Throw(failure);
+            SinkProvenanceState? observation = null;
+            foreach (var state in states)
+            {
+                if (!HasConsistentInventory(state, observation, snapshot.InventoryVersion))
+                {
+                    Invalidate();
+                    throw SinkProvenanceLease.UnavailableError();
+                }
+
+                observation ??= state;
+            }
+
             return observation ?? throw SinkProvenanceLease.UnavailableError();
         }
 
@@ -113,21 +135,19 @@ public sealed partial class SinkProvenanceCache
             return state;
         }
 
-        void PublishRefresh(RefreshSnapshot snapshot, SinkProvenanceState state)
+        bool PublishRefresh(RefreshSnapshot snapshot, SinkProvenanceState state)
         {
             lock (_gate)
             {
-                if (!IsCurrent(snapshot.Revision)) throw SinkProvenanceLease.UnavailableError();
+                if (!IsCurrent(snapshot.Revision)) return false;
                 PublishState(state, snapshot.Started);
+                return true;
             }
         }
 
-        void InvalidateRefresh(long revision)
+        void Invalidate()
         {
-            lock (_gate)
-            {
-                if (IsCurrent(revision)) Invalidate();
-            }
+            lock (_gate) InvalidateLocked();
         }
 
         bool IsCurrent(long revision) => !_disposed && _revision == revision;
@@ -140,7 +160,7 @@ public sealed partial class SinkProvenanceCache
             Pulse();
         }
 
-        void Invalidate()
+        void InvalidateLocked()
         {
             _valid = false;
             Pulse();
