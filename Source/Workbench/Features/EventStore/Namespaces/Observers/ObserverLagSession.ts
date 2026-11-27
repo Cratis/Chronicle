@@ -47,6 +47,7 @@ export class ObserverLagSession {
     private selected: ObserverLagTarget | undefined;
     private detachFromPage: (() => void) | undefined;
     private timer: ReturnType<typeof setTimeout> | undefined;
+    private armedFor = Number.POSITIVE_INFINITY;
     private dirty = false;
     private selectionDirty = false;
     private lastBatchAt = Number.NEGATIVE_INFINITY;
@@ -91,8 +92,7 @@ export class ObserverLagSession {
     detach() {
         this.detachFromPage?.();
         this.detachFromPage = undefined;
-        clearTimeout(this.timer);
-        this.timer = undefined;
+        this.disarm();
         this.controller?.dispose();
         this.controller = undefined;
         this.dirty = false;
@@ -146,11 +146,23 @@ export class ObserverLagSession {
         this.schedule();
     }
 
-    /** Sets the one timer. It waits for the earliest of what is due, never closer than the minimum interval to the last batch. */
-    private schedule() {
+    private disarm() {
         clearTimeout(this.timer);
         this.timer = undefined;
-        if (!this.controller || this.isHidden) return;
+        this.armedFor = Number.POSITIVE_INFINITY;
+    }
+
+    /**
+     * Arms the one timer for the earliest of what is due, never closer than the minimum interval to the last batch.
+     * A trigger can only move an armed wake earlier, never later, so steady triggers such as scrolling cannot starve the
+     * poll or an expiry. Expiries are found from the last judged time, so one the view has not processed yet still wakes,
+     * and the delay is measured from a fresh reading of the clock.
+     */
+    private schedule() {
+        if (!this.controller || this.isHidden) {
+            this.disarm();
+            return;
+        }
 
         const due = [this.nextPollAt, this.nextClockAt];
         if (this.dirty) due.push(this.lastBatchAt + minBatchIntervalMs);
@@ -158,19 +170,26 @@ export class ObserverLagSession {
         const expiry = this.controller.nextExpiryAfter(this.now);
         if (expiry !== undefined) due.push(expiry + 1);
 
-        this.timer = setTimeout(() => this.pump(), boundedDelay(due, this.now));
+        const wake = Math.min(...due);
+        if (this.timer !== undefined && this.armedFor <= wake) return;
+
+        clearTimeout(this.timer);
+        this.armedFor = wake;
+        this.timer = setTimeout(() => this.pump(), boundedDelay([wake], Date.now()));
     }
 
     private pump() {
         this.timer = undefined;
+        this.armedFor = Number.POSITIVE_INFINITY;
         const controller = this.controller;
         if (!controller || this.isHidden) return;
 
         this.now = Date.now();
         const batchDue = this.dirty && this.now >= this.lastBatchAt + minBatchIntervalMs;
         if (batchDue || this.now >= this.nextPollAt) {
-            controller.refresh();
+            // The selection is applied first so it has the first claim on free slots.
             if (this.selectionDirty) controller.select(this.selected);
+            controller.refresh();
             this.selectionDirty = false;
             this.dirty = false;
             this.lastBatchAt = this.now;
