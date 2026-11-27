@@ -6,7 +6,6 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
-using SequenceId = Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -57,8 +56,9 @@ public record ObserverLag(
     /// <returns>The <see cref="ObserverLag"/>, which says nothing can be measured rather than guessing.</returns>
     /// <remarks>
     /// Reading never starts or resets a stall window. The cluster directory is checked before calling the observer, so
-    /// polling does not normally activate idle observers. If the observer deactivates between lookup and call, the call
-    /// can reactivate it, and idle release can reclaim that activation. The resident observer checks sample validity.
+    /// polling does not normally activate idle observers. A failed directory lookup returns no sample. If the observer
+    /// deactivates between lookup and call, the call can reactivate it, and idle release can reclaim that activation.
+    /// The resident observer checks sample validity.
     /// </remarks>
     public static async Task<ObserverLag> GetObserverLag(
         EventStoreName eventStore,
@@ -71,17 +71,16 @@ public record ObserverLag(
     {
         var eventStoreStorage = storage.GetEventStore(eventStore);
         var definition = await eventStoreStorage.Observers.Get(observerId);
-        var sequence = ResolveSequence(eventSequenceId, definition?.EventSequenceId);
+        var sequence = ObserverEventSequenceResolver.Resolve(eventSequenceId, definition?.EventSequenceId);
         var key = new ObserverKey(observerId, eventStore, @namespace, sequence);
 
-        if (definition?.EventSequenceId != sequence || definition.Identifier != observerId)
+        if (definition is null || definition.Identifier != observerId || !definition.IsOwnedBy(sequence))
         {
             return key.ToLag(ObserverLagSample.Unmeasurable(ObserverLagCause.UnknownState));
         }
 
         var observer = grainFactory.GetGrain<IObserver>(key);
-        var directory = grainFactory.GetGrain<IManagementGrain>(0);
-        if (await directory.GetActivationAddress(observer) is null || await dormantObservers.Find(key) is not null)
+        if (!await IsRegistered(grainFactory, observer) || await dormantObservers.Find(key) is not null)
         {
             return key.ToLag(ObserverLagSample.NotSampled);
         }
@@ -96,15 +95,17 @@ public record ObserverLag(
         return key.ToLag(information.LagSample ?? ObserverLagSample.NotSampled);
     }
 
-    static SequenceId ResolveSequence(string requested, SequenceId? stored)
+    static async Task<bool> IsRegistered(IGrainFactory grainFactory, IObserver observer)
     {
-        if (!string.IsNullOrEmpty(requested))
+        try
         {
-            return requested;
+            var directory = grainFactory.GetGrain<IManagementGrain>(0);
+            return await directory.GetActivationAddress(observer) is not null;
         }
-
-        return stored is null || stored == SequenceId.Unspecified || string.IsNullOrEmpty(stored.Value)
-            ? SequenceId.Log
-            : stored;
+        catch (Exception)
+        {
+            // Without a directory answer, do not risk waking the observer.
+            return false;
+        }
     }
 }

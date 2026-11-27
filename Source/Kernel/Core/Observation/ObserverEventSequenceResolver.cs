@@ -29,9 +29,24 @@ internal static class ObserverEventSequenceResolver
         }
 
         var definition = await storage.GetEventStore(eventStore).Observers.Get(observerId);
-        var sequence = definition?.EventSequenceId;
-        return sequence is null || sequence == EventSequenceId.Unspecified || string.IsNullOrEmpty(sequence.Value)
+        return Resolve(eventSequenceId, definition?.EventSequenceId);
+    }
+
+    /// <summary>
+    /// Resolves the sequence when the stored definition has already been read.
+    /// </summary>
+    /// <param name="requested">The explicitly requested sequence, or an empty value.</param>
+    /// <param name="stored">The sequence from the stored definition, if known.</param>
+    /// <returns>The sequence to address.</returns>
+    public static EventSequenceId Resolve(string requested, EventSequenceId? stored)
+    {
+        if (!string.IsNullOrEmpty(requested))
+        {
+            return requested;
+        }
+
+        return stored is null || stored == EventSequenceId.Unspecified || string.IsNullOrEmpty(stored.Value)
             ? EventSequenceId.Log
-            : sequence;
+            : stored;
     }
 }
