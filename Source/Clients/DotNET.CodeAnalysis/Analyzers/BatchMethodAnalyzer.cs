@@ -104,7 +104,7 @@ public class BatchMethodAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (BatchObservers.Observed(method, symbols).Any())
+        if (!BatchObservers.Observed(method, symbols).Any())
         {
             context.ReportDiagnostic(Diagnostic.Create(MustObserveRule, method.Locations.FirstOrDefault(), method.Name));
         }
