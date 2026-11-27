@@ -58,17 +58,15 @@ public partial class Observer
     {
         _catchUpContinuationPending = true;
         _catchUpContinuationVersion++;
-        EnsureCatchUpContinuationTimer();
+        _catchUpContinuationTimer ??= this.RegisterGrainTimer(
+            async _ =>
+            {
+                _catchUpContinuationTimer?.Dispose();
+                _catchUpContinuationTimer = null;
+                await ContinueAcceptedCatchUp();
+            },
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan, Interleave = false });
     }
-
-    void EnsureCatchUpContinuationTimer() => _catchUpContinuationTimer ??= this.RegisterGrainTimer(
-        async _ =>
-        {
-            _catchUpContinuationTimer?.Dispose();
-            _catchUpContinuationTimer = null;
-            await ContinueAcceptedCatchUp();
-        },
-        new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan, Interleave = false });
 
     async Task ContinueAcceptedCatchUp()
     {
