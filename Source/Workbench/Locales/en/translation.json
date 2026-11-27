@@ -777,6 +777,27 @@
                     "notAccepted": "Replay request was not accepted. Please try again.",
                     "accepted": "Replay request accepted. This does not mean the replay has completed."
                 },
+                "lag": {
+                    "column": "Sampled lag",
+                    "loading": "Loading…",
+                    "unavailable": "Unavailable",
+                    "distance": "{distance} slots",
+                    "age": "sampled {age} ago",
+                    "states": {
+                        "caughtUp": "Caught up",
+                        "lagging": "Lagging",
+                        "stalled": "Stalled",
+                        "noSample": "No sample yet",
+                        "expired": "Sample expired",
+                        "unknownState": "State unknown",
+                        "inactive": "Not active",
+                        "disconnected": "Disconnected",
+                        "replaying": "Replaying",
+                        "tailUnavailable": "End of sequence not readable",
+                        "unrecognized": "Not recognized"
+                    },
+                    "notShown": "Not available"
+                },
                 "columns": {
                     "id": "Identifier",
                     "sequence": "Sequence",
@@ -828,6 +849,16 @@
                     "nextEventSequenceNumber": "Next event sequence number",
                     "lastHandledEventSequenceNumber": "Last handled event sequence number",
                     "handledEventCount": "Handled events",
+                    "sampled": {
+                        "title": "Sampled progress",
+                        "state": "Sampled state",
+                        "distance": "Distance to the end of the sequence",
+                        "age": "Sample age",
+                        "tail": "Sampled end of the sequence",
+                        "next": "Sampled next event sequence number",
+                        "lastHandled": "Sampled last handled event sequence number",
+                        "relevantPending": "Sampled next relevant event"
+                    },
                     "connectedClients": {
                         "title": "Connected Clients",
                         "empty": "No clients are connected to this observer",

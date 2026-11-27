@@ -127,6 +127,34 @@ administration, federation between instances, managed operations, or support
 and SLA commitments.
 :::
 
+### Read an observer's sampled progress
+
+The observer list shows each observer's persisted next event sequence number
+and a sampled progress column. Selecting an observer shows the same sample in
+its summary, with the sampled end of the sequence, next, last handled and next
+relevant positions. Workbench reads the sample for the observers on screen and
+the selected one, a few at a time, and stops while the page is hidden.
+
+Read the sample for what it is:
+
+- The sample is the kernel watchdog's own measurement. Its age says when it was
+  taken, not how far behind the observer is.
+- The distance counts event sequence slots between the observer's position and
+  the end of the sequence. Those slots can belong to event types the observer
+  never handles, so the distance is not a count of events to process.
+- Caught up is a measurement. "No sample yet", "Sample expired" and a reason
+  such as disconnected or replaying mean the kernel has no current measurement,
+  which is not the same as caught up. "Unavailable" means Workbench could not
+  read the sample.
+- Failed partitions are reported separately and are not part of the sample.
+- Positions Workbench cannot show exactly are shown as "Not available" rather
+  than rounded. The persisted position and the sampled positions can differ,
+  because they are read at different times.
+
+For the meaning of stalled and the telemetry that publishes the same sample,
+see [Observer settings](../hosting/configuration/observers.md) and
+[OpenTelemetry](../hosting/configuration/open-telemetry.md).
+
 ### Inspect an event from a failed attempt
 
 In **Failed partitions**, select a partition and follow an attempt's sequence

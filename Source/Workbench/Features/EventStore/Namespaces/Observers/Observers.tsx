@@ -22,6 +22,10 @@ import { getObserverRunningStateAsText } from './getObserverRunningStateAsText';
 import { getObserverTypeAsText } from './getObserverTypeAsText';
 import { getObserverOwnerAsText } from './getObserverOwnerAsText';
 import { ObserverDetails } from './ObserverDetails';
+import { ObserverLagCell } from './ObserverLagCell';
+import { type ObserverLagTarget } from './ObserverLagController';
+import { useObserverLag } from './useObserverLag';
+import { formatPosition, presentObserverLag } from './observerLagPresentation';
 import { ObserverSequenceType } from './ObserverSequenceType';
 import { useRelativePath } from '../../../../Utils/useRelativePath';
 import {
@@ -66,6 +70,10 @@ const runningState = (observer: ObserverInformation) => {
     return getObserverRunningStateAsText(observer.runningState);
 };
 
+// The position the observer last persisted, not what the watchdog sampled. Sorting stays on the number.
+const nextEventSequenceNumber = (observer: ObserverRow) =>
+    formatPosition(observer.nextEventSequenceNumber) ?? strings.eventStore.namespaces.observers.lag.notShown;
+
 // Nothing at all in the cell when there is nothing to report - a column of blanks and ticks is scannable
 // in a way that a column of 'no' is not.
 const quarantined = (observer: ObserverRow) => observer.isQuarantined
@@ -90,6 +98,15 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const [observers] = AllObservers.when(!!params.namespace).use(queryArgs);
     const [failedPartitions] = AllFailedPartitions.when(!!params.namespace).use(queryArgs);
     const failedPartitionCounts = countFailedPartitionsByObserver(failedPartitions.data);
+
+    const lagTarget = (observer: ObserverInformation): ObserverLagTarget => ({
+        eventStore: params.eventStore!,
+        namespace: params.namespace!,
+        eventSequenceId: observer.eventSequenceId,
+        observerId: observer.id
+    });
+    const selectedLagTarget = viewModel.selectedObserver ? lagTarget(viewModel.selectedObserver) : undefined;
+    const lagView = useObserverLag(params.eventStore!, params.namespace!, selectedLagTarget);
 
     const searchTerm = searchText.trim().toLowerCase();
 
@@ -222,7 +239,11 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                                 field='nextEventSequenceNumber'
                                 dataType='numeric'
                                 header={strings.eventStore.namespaces.observers.columns.nextEventSequenceNumber}
-                                sortable />
+                                sortable
+                                body={nextEventSequenceNumber} />
+                            <Column
+                                header={strings.eventStore.namespaces.observers.lag.column}
+                                body={(observer: ObserverRow) => <ObserverLagCell target={lagTarget(observer)} view={lagView} />} />
                             <Column
                                 field='handledEventCount'
                                 dataType='numeric'
@@ -256,7 +277,9 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
                             <ObserverDetails
                                 observer={viewModel.selectedObserver}
                                 eventStore={params.eventStore!}
-                                namespace={params.namespace!} />
+                                namespace={params.namespace!}
+                                lag={presentObserverLag(lagView.lagFor(selectedLagTarget!), lagView.now)}
+                                isLagLoaded={lagView.hasResult(selectedLagTarget!)} />
                         </Allotment.Pane>}
                 </Allotment>
             </div>

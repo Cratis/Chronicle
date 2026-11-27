@@ -16,6 +16,43 @@
                 }
             }
         },
+        "namespaces": {
+            "observers": {
+                "lag": {
+                    "column": "Målt etterslep",
+                    "loading": "Laster …",
+                    "unavailable": "Utilgjengelig",
+                    "distance": "{distance} posisjoner",
+                    "age": "målt for {age} siden",
+                    "states": {
+                        "caughtUp": "À jour",
+                        "lagging": "På etterskudd",
+                        "stalled": "Står fast",
+                        "noSample": "Ingen måling ennå",
+                        "expired": "Målingen er utløpt",
+                        "unknownState": "Ukjent tilstand",
+                        "inactive": "Ikke aktiv",
+                        "disconnected": "Frakoblet",
+                        "replaying": "Spiller på nytt",
+                        "tailUnavailable": "Slutten av sekvensen kan ikke leses",
+                        "unrecognized": "Ikke gjenkjent"
+                    },
+                    "notShown": "Ikke tilgjengelig"
+                },
+                "details": {
+                    "sampled": {
+                        "title": "Målt fremdrift",
+                        "state": "Målt tilstand",
+                        "distance": "Avstand til slutten av sekvensen",
+                        "age": "Målingens alder",
+                        "tail": "Målt slutt på sekvensen",
+                        "next": "Målt neste hendelsessekvensnummer",
+                        "lastHandled": "Målt sist håndterte hendelsessekvensnummer",
+                        "relevantPending": "Målt neste relevante hendelse"
+                    }
+                }
+            }
+        },
         "dashboard": {
             "unavailable": "Utilgjengelig akkurat nå",
             "stale": "Utdatert — siste oppdatering mislyktes"
