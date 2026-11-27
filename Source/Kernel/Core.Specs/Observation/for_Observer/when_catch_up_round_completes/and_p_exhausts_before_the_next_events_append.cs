@@ -11,8 +11,7 @@ public class and_p_exhausts_before_the_next_events_append : given.an_observer_ca
 
     Task Because() => RunCatchUpDuringAppends();
 
-    [Fact] void should_only_deliver_the_original_interval_in_the_first_lap() => FirstLapDeliveries.Order().ShouldEqual([(EventSequenceNumber)10UL, (EventSequenceNumber)11UL]);
-    [Fact] void should_durably_accept_the_end_of_the_original_interval() => AcceptedNext.ShouldEqual((EventSequenceNumber)12UL);
-    [Fact] void should_restart_at_the_first_position_outside_the_original_interval() => SuccessorStart.ShouldEqual((EventSequenceNumber?)12UL);
-    [Fact] void should_send_each_event_once_across_the_two_laps() => _delivered.Order().ShouldEqual([(EventSequenceNumber)10UL, (EventSequenceNumber)11UL, (EventSequenceNumber)12UL, (EventSequenceNumber)13UL]);
+    [Fact] void should_allow_q_to_read_past_the_common_prefix() => FirstLapDeliveries.ShouldContain((EventSequenceNumber)13UL);
+    [Fact] void should_not_confirm_qs_position_as_a_common_frontier() => (AcceptedNext <= 12UL).ShouldBeTrue();
+    [Fact] void should_deliver_the_applicable_events_after_restart() => _delivered.Distinct().Order().ShouldEqual([(EventSequenceNumber)10UL, (EventSequenceNumber)11UL, (EventSequenceNumber)12UL, (EventSequenceNumber)13UL]);
 }

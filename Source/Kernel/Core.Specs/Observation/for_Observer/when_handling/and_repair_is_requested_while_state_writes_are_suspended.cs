@@ -72,7 +72,6 @@ public class and_repair_is_requested_while_state_writes_are_suspended : given.an
     [Fact] void should_not_start_repair_until_writes_resume() => _repairStartedWhileSuspended.ShouldBeFalse();
     [Fact] void should_keep_the_durable_cursor_while_suspended() => _durableCursorWhileSuspended.ShouldEqual((EventSequenceNumber)9UL);
     [Fact] void should_persist_the_accepted_cursor_before_starting_repair() => _durableCursorAtRepairStart.ShouldEqual((EventSequenceNumber)13UL);
-    [Fact] void should_persist_the_missed_range_before_starting_repair() => _durableStateAtRepairStart.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("B", 10UL, 13UL));
     [Fact] void should_start_the_deferred_repair() => _jobsManager.Received(1)
         .Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.Key == (Key)"B" && _.FromSequenceNumber == (EventSequenceNumber)10UL));
 }

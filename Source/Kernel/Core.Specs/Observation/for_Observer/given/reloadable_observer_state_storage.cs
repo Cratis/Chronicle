@@ -17,6 +17,8 @@ public class reloadable_observer_state_storage : IStorage<ObserverState>, IStora
     public string Etag => string.Empty;
     public bool RecordExists { get; private set; }
     public bool SuspendNextRead { get; set; }
+    public Func<ObserverState, Task> BeforeWrite { get; set; } = _ => Task.CompletedTask;
+    public Func<ObserverState, Task> AfterWrite { get; set; } = _ => Task.CompletedTask;
 
     public async Task ReadStateAsync()
     {
@@ -31,12 +33,14 @@ public class reloadable_observer_state_storage : IStorage<ObserverState>, IStora
         State = snapshot;
     }
 
-    public Task WriteStateAsync()
+    public async Task WriteStateAsync()
     {
-        PersistedState = State;
+        var snapshot = State;
+        await BeforeWrite(snapshot);
+        PersistedState = snapshot;
         RecordExists = true;
         Stats.Writes++;
-        return Task.CompletedTask;
+        await AfterWrite(snapshot);
     }
 
     public Task ClearStateAsync()

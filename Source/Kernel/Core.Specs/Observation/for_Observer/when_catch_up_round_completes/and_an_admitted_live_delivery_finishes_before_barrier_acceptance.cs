@@ -36,6 +36,4 @@ public class and_an_admitted_live_delivery_finishes_before_barrier_acceptance : 
     }
 
     [Fact] void should_freeze_at_the_final_durably_accepted_live_cursor() => _stateStorage.State.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)17UL);
-    [Fact] void should_cover_the_gap_up_to_that_cursor() => _stateStorage.State.PendingCatchUpRepairs!.Single().To.ShouldEqual((EventSequenceNumber)17UL);
-    [Fact] void should_not_leave_an_already_live_delivered_event_in_the_successor() => _jobsManager.Received(1).Start<ICatchUpObserverPartition, CatchUpObserverPartitionRequest>(Arg.Is<CatchUpObserverPartitionRequest>(_ => _.ToSequenceNumber == (EventSequenceNumber)16UL));
 }

@@ -22,8 +22,7 @@ public abstract class an_observer_catching_up_during_appends : an_observer_with_
 
     protected abstract bool AppendBeforePReads { get; }
     protected EventSequenceNumber AcceptedNext { get; private set; }
-    protected IReadOnlyList<EventSequenceNumber> FirstLapDeliveries { get; private set; }
-    protected EventSequenceNumber? SuccessorStart { get; private set; }
+    protected IReadOnlyList<EventSequenceNumber> FirstLapDeliveries { get; private set; } = [];
 
     protected async Task RunCatchUpDuringAppends()
     {
@@ -39,14 +38,9 @@ public abstract class an_observer_catching_up_during_appends : an_observer_with_
         FirstLapDeliveries = [.. _delivered];
         AcceptedNext = PersistedObserverState.NextEventSequenceNumber;
 
-        await Reactivate();
+        await Crash();
         _observer.SetSubscription(subscription);
-        _wide = null;
-        await _observer.CatchUp();
-        if (_wide is not { } suffix) return;
-        SuccessorStart = suffix.FromEventSequenceNumber;
-        var after = new ReaderRound(_startedJob);
-        foreach (var step in await after.Prepare(suffix, _observer, _keys)) await Read(step);
+        await _silo.RunCatchUpContinuation();
     }
 
     void Establish()

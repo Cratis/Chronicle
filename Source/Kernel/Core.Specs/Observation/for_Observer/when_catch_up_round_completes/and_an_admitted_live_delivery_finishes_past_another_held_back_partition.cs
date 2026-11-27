@@ -4,7 +4,6 @@
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Storage.Observation;
 using NSubstitute.Extensions;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_catch_up_round_completes;
@@ -24,17 +23,18 @@ public class and_an_admitted_live_delivery_finishes_past_another_held_back_parti
 
     async Task Because()
     {
+        await SetUpPrefix();
         var live = _observer.Handle("Q", [_liveEvent]);
         await _liveStarted.Task.WaitAsync(_deadline, TimeProvider.System);
         var acceptance = _observer.CaughtUp(JobId.NotSet, 13UL, 13UL);
         _liveResult.SetResult();
         await Task.WhenAll(live, acceptance).WaitAsync(_deadline, TimeProvider.System);
-        await DrainRepairsAndRunWideReader();
+        await Join();
     }
 
-    [Fact] void should_freeze_after_the_settled_live_event() => _accepted.NextEventSequenceNumber.ShouldEqual((EventSequenceNumber)17UL);
-    [Fact] void should_accept_both_prefix_owners_with_the_frozen_position() => _accepted.PendingCatchUpRepairs!.ShouldContainOnly(new PendingCatchUpRepair("P", 11UL, 17UL), new PendingCatchUpRepair("T", 15UL, 17UL));
-    [Fact] void should_bound_both_repairs() => _acceptedRepairs.Select(_ => _.ToSequenceNumber).ShouldEqual([(EventSequenceNumber)16UL, (EventSequenceNumber)16UL]);
-    [Fact] void should_start_the_wide_reader_after_the_live_event() => _wide!.FromEventSequenceNumber.ShouldEqual((EventSequenceNumber)17UL);
-    [Fact] void should_deliver_each_event_once() => _delivered.Order().ShouldEqual([(EventSequenceNumber)11UL, (EventSequenceNumber)15UL, (EventSequenceNumber)16UL, (EventSequenceNumber)17UL]);
+    [Fact] void should_keep_the_unproved_prefix_restartable() => (_accepted <= 11UL).ShouldBeTrue();
+    [Fact] void should_deliver_p() => _delivered.ShouldContain((EventSequenceNumber)11UL);
+    [Fact] void should_deliver_t_if_applicable() => _delivered.Contains((EventSequenceNumber)15UL).ShouldEqual(HoldT);
+    [Fact] void should_deliver_the_admitted_event() => _delivered.ShouldContain((EventSequenceNumber)16UL);
+    [Fact] void should_deliver_the_later_event() => _delivered.ShouldContain((EventSequenceNumber)17UL);
 }

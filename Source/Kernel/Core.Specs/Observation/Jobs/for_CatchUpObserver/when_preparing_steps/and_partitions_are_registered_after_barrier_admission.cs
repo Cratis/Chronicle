@@ -12,7 +12,7 @@ public class and_partitions_are_registered_after_barrier_admission : given.a_cat
     void Establish()
     {
         _keyIndex.GetKeys(Arg.Any<EventSequenceNumber>()).Returns(CreateKeys("A", "B"));
-        _observer.GetState().Returns(ObserverState.Empty with { PendingCatchUpRepairs = [new("B", 10UL, 13UL)], NextEventSequenceNumber = 13UL });
+        _observer.GetState().Returns(ObserverState.Empty with { NextEventSequenceNumber = 13UL });
     }
 
     async Task Because() => await StartAndLetTheStepsCome();
