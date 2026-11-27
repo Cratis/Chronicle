@@ -9,7 +9,7 @@ public class when_schema_reports_another_physical_database : given.a_graph_datab
 {
     Exception? _failure;
 
-    void Establish() => SetIdentity(_schema, "another-identity");
+    protected override string SchemaDatabaseId => "another-identity";
 
     async Task Because() => _failure = await Catch.Exception(_provenance.ReadState);
 

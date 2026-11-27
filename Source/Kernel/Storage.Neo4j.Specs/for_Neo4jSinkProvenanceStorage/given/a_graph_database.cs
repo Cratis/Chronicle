@@ -15,13 +15,17 @@ public class a_graph_database : Specification
     protected readonly IAsyncQueryRunner _schema = Substitute.For<IAsyncQueryRunner>();
     protected ISinkProvenanceStorage _provenance;
 
+    protected virtual string SchemaDatabaseId => "physical";
+
     void Establish()
     {
         var connections = Substitute.For<INeo4jConnections>();
-        connections.Resolve("store", "scope", ConnectionPurpose.Runtime).Returns(new Neo4jConnection(DriverFor(_runtime), "neo4j", false) { Endpoint = Endpoint });
-        connections.Resolve("store", "scope", ConnectionPurpose.Schema).Returns(new Neo4jConnection(DriverFor(_schema), "neo4j", false) { Endpoint = Endpoint });
+        var runtime = new Neo4jConnection(DriverFor(_runtime), "neo4j", false) { Endpoint = Endpoint };
+        var schema = new Neo4jConnection(DriverFor(_schema), "neo4j", false) { Endpoint = Endpoint };
+        connections.Resolve("store", "scope", ConnectionPurpose.Runtime).Returns(runtime);
+        connections.Resolve("store", "scope", ConnectionPurpose.Schema).Returns(schema);
         SetIdentity(_runtime, "physical");
-        SetIdentity(_schema, "physical");
+        SetIdentity(_schema, SchemaDatabaseId);
         _schema.RunAsync(CreateConstraint, Arg.Any<object>()).Returns(_ => Cursor());
         _schema.RunAsync(VerifyConstraint).Returns(_ => Cursor(Substitute.For<IRecord>()));
         _provenance = new Neo4jSinkProvenanceStorage(new Neo4jGraphTarget(connections, "store", "scope"));
@@ -50,7 +54,7 @@ public class a_graph_database : Specification
         return cursor;
     }
 
-    protected static void SetIdentity(IAsyncQueryRunner runner, string id)
+    static void SetIdentity(IAsyncQueryRunner runner, string id)
     {
         var record = Substitute.For<IRecord>();
         record["id"].Returns(id);
