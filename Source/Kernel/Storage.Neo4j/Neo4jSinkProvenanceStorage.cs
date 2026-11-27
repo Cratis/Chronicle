@@ -32,7 +32,9 @@ internal sealed class Neo4jSinkProvenanceStorage(Neo4jGraphTarget target) : ISin
         var state = await RequireState(transaction);
         if (state.IsComplete) return state;
 
-        await Run(transaction, Complete, new { version = SinkProvenanceState.CurrentInventoryVersion, restricted = state.Restricted || restrictedEvidence });
+        var restricted = restrictedEvidence || state.Restricted;
+        if (restricted) await Run(transaction, Mark);
+        await Run(transaction, Complete, new { version = SinkProvenanceState.CurrentInventoryVersion, restricted });
         return await RequireState(transaction);
     });
 
