@@ -38,6 +38,9 @@ public class GraphProjectionPipeline(
     bool _sessionOpen;
     Action? _sessionOpened;
 
+    /// <summary>
+    /// Gets the callback that verifies the provenance of the graph payload route before the pipeline writes to it.
+    /// </summary>
     internal Func<Task> VerifyProvenance { get; init; } = () => Task.CompletedTask;
 
     /// <inheritdoc/>
