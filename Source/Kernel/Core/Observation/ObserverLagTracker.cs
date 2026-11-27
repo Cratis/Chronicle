@@ -32,16 +32,10 @@ public sealed class ObserverLagTracker
     public ObserverLagSample Measure(ObserverLagReading reading, DateTimeOffset now, TimeSpan stallWindow, TimeSpan validity)
     {
         var expiresAt = now + validity;
-        if (!reading.Tail.IsActualValue)
+        if (GetUnmeasurableCause(reading) is { } cause)
         {
             Reset();
-            return ObserverLagSample.Unmeasurable(ObserverLagCause.TailUnavailable, now, expiresAt);
-        }
-
-        if (!reading.Next.IsActualValue)
-        {
-            Reset();
-            return ObserverLagSample.Unmeasurable(ObserverLagCause.UnknownState, now, expiresAt);
+            return ObserverLagSample.Unmeasurable(cause, now, expiresAt);
         }
 
         var tail = reading.Tail.Value;
@@ -53,52 +47,55 @@ public sealed class ObserverLagTracker
         ObserverLagSample Sample(ObserverLagStatus status) =>
             new(status, ObserverLagCause.Unknown, tail, next, lastHandled, pending, distance, now, expiresAt);
 
-        var gapTooLong = _lastReadingAt != default && now - _lastReadingAt > validity;
-        _lastReadingAt = now;
-        if (gapTooLong) Reset();
-
+        RecordReadingTime(now, validity);
         if (distance == 0)
         {
             Reset();
             return Sample(ObserverLagStatus.CaughtUp);
         }
 
-        switch (reading.Relevance.Kind)
+        return Sample(EvaluateLaggingReading(reading, now, stallWindow));
+    }
+
+    static ObserverLagCause? GetUnmeasurableCause(ObserverLagReading reading)
+    {
+        if (!reading.Tail.IsActualValue)
         {
-            case ObserverLagRelevanceKind.None:
-                Reset();
-                return Sample(ObserverLagStatus.Lagging);
-            case ObserverLagRelevanceKind.Pending:
-                break;
-            default:
-                Reset();
-                return Sample(ObserverLagStatus.Lagging);
+            return ObserverLagCause.TailUnavailable;
         }
 
-        // A catch-up moves the cursor only after a scan, so its progress cannot be judged from the cursor.
-        if (reading.IsCatchingUp)
+        return reading.Next.IsActualValue ? null : ObserverLagCause.UnknownState;
+    }
+
+    void RecordReadingTime(DateTimeOffset now, TimeSpan validity)
+    {
+        var gapTooLong = _lastReadingAt != default && now - _lastReadingAt > validity;
+        _lastReadingAt = now;
+        if (gapTooLong)
         {
             Reset();
-            return Sample(ObserverLagStatus.Lagging);
+        }
+    }
+
+    ObserverLagStatus EvaluateLaggingReading(ObserverLagReading reading, DateTimeOffset now, TimeSpan stallWindow)
+    {
+        // A catch-up moves the cursor only after a scan, so its progress cannot be judged from the cursor.
+        if (reading.Relevance.Kind != ObserverLagRelevanceKind.Pending || reading.IsCatchingUp)
+        {
+            Reset();
+            return ObserverLagStatus.Lagging;
         }
 
-        return IsStalled(reading, now, stallWindow)
-            ? Sample(ObserverLagStatus.Stalled)
-            : Sample(ObserverLagStatus.Lagging);
+        return IsStalled(reading, now, stallWindow) ? ObserverLagStatus.Stalled : ObserverLagStatus.Lagging;
     }
 
     bool IsStalled(ObserverLagReading reading, DateTimeOffset now, TimeSpan stallWindow)
     {
-        var pending = reading.Relevance.Position;
+        var progress = new Progress(reading.Next, reading.Relevance.Position, reading.LastHandled, reading.HandledEventCount);
         var baseline = _baseline;
-        if (baseline is null ||
-            baseline.Next != reading.Next ||
-            baseline.Pending != pending ||
-            baseline.LastHandled != reading.LastHandled ||
-            baseline.HandledEventCount != reading.HandledEventCount ||
-            reading.Tail < baseline.Tail)
+        if (baseline?.ShouldRestart(progress, reading.Tail) != false)
         {
-            _baseline = new Baseline(now, reading.Tail, reading.Next, pending, reading.LastHandled, reading.HandledEventCount);
+            _baseline = new Baseline(now, reading.Tail, progress);
             return false;
         }
 
@@ -106,5 +103,10 @@ public sealed class ObserverLagTracker
         return now - baseline.At >= stallWindow && reading.Tail > baseline.Tail;
     }
 
-    record Baseline(DateTimeOffset At, EventSequenceNumber Tail, EventSequenceNumber Next, EventSequenceNumber Pending, EventSequenceNumber LastHandled, ulong HandledEventCount);
+    readonly record struct Progress(EventSequenceNumber Next, EventSequenceNumber Pending, EventSequenceNumber LastHandled, ulong HandledEventCount);
+
+    sealed record Baseline(DateTimeOffset At, EventSequenceNumber Tail, Progress Progress)
+    {
+        public bool ShouldRestart(Progress current, EventSequenceNumber tail) => Progress != current || tail < Tail;
+    }
 }
