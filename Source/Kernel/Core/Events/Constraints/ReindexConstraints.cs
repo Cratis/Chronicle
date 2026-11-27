@@ -14,6 +14,10 @@ namespace Cratis.Chronicle.Events.Constraints;
 public class ReindexConstraints : Job<ReindexConstraintsRequest, JobState>, IReindexConstraints
 {
     /// <inheritdoc/>
+    /// <remarks>A waiter may first query the job after it has already finished.</remarks>
+    protected override bool KeepAfterCompleted => true;
+
+    /// <inheritdoc/>
     protected override Task<IImmutableList<JobStepDetails>> PrepareSteps(ReindexConstraintsRequest request) =>
         Task.FromResult<IImmutableList<JobStepDetails>>(
             request.Changes.Count == 0

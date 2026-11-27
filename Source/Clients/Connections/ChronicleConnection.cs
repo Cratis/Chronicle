@@ -849,6 +849,7 @@ public sealed class ChronicleConnection : IChronicleConnection, IChronicleServic
             callInvoker.CreateGrpcService<IEventSources>(clientFactory))
         {
             Administrators = callInvoker.CreateGrpcService<Contracts.Security.IAdministrators>(clientFactory),
+            ConstraintIndexes = callInvoker.CreateGrpcService<Contracts.Events.Constraints.Operator.IConstraintIndexes>(clientFactory),
             Occurrences = callInvoker.CreateGrpcService<Contracts.Occurrences.IOccurrences>(clientFactory),
             Imports = callInvoker.CreateGrpcService<Contracts.Imports.IImports>(clientFactory),
             Federation = callInvoker.CreateGrpcService<Contracts.Federation.IFederation>(clientFactory)

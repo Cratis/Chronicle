@@ -89,6 +89,7 @@ public sealed record Services(
     IEventSources EventSources) : IServices
 {
     Security.IAdministrators? _administrators;
+    Events.Constraints.Operator.IConstraintIndexes? _constraintIndexes;
     Occurrences.IOccurrences? _occurrences;
     Imports.IImports? _imports;
     Observation.Multiplexed.IMultiplexedObservation? _multiplexedObservation;
@@ -99,6 +100,13 @@ public sealed record Services(
     {
         get => _administrators ?? throw new NotSupportedException("Administrators are not supported by this service container.");
         init => _administrators = value;
+    }
+
+    /// <inheritdoc/>
+    public Events.Constraints.Operator.IConstraintIndexes ConstraintIndexes
+    {
+        get => _constraintIndexes ?? throw new NotSupportedException("Constraint indexes are not supported by this service container.");
+        init => _constraintIndexes = value;
     }
 
     /// <inheritdoc/>
