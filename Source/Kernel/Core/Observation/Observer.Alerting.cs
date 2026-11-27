@@ -89,6 +89,7 @@ public partial class Observer
         _metrics?.Dispose();
         _coalescedWriteTimer?.Dispose();
         _shortCatchUpRetryTimer?.Dispose();
+        _subscriptionRecoveryAfterLeaveTimer?.Dispose();
         GC.SuppressFinalize(this);
     }
 

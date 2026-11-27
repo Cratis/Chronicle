@@ -96,7 +96,7 @@ public class Observing(
     }
 
     /// <inheritdoc/>
-    public override async Task<ObserverState> OnLeave(ObserverState state)
+    protected override async Task<ObserverState> Leave(ObserverState state)
     {
         if (_subscription is not null)
         {

@@ -56,20 +56,6 @@ public class Routing(
     }.ToImmutableList();
 
     /// <inheritdoc/>
-    public override Task<ObserverState> OnLeave(ObserverState state)
-    {
-        if (_subscription.IsSubscribed)
-        {
-            definitionState.State = definitionState.State with
-            {
-                EventTypes = _subscription.EventTypes,
-            };
-        }
-
-        return base.OnLeave(state);
-    }
-
-    /// <inheritdoc/>
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         using var logScope = logger.BeginRoutingScope(state.Identifier, observerKey);
@@ -110,6 +96,20 @@ public class Routing(
         state = await KeepOwnedPartitionHolds(state);
 
         return await EvaluateState(state);
+    }
+
+    /// <inheritdoc/>
+    protected override Task<ObserverState> Leave(ObserverState state)
+    {
+        if (_subscription.IsSubscribed)
+        {
+            definitionState.State = definitionState.State with
+            {
+                EventTypes = _subscription.EventTypes,
+            };
+        }
+
+        return base.Leave(state);
     }
 
     async Task<ObserverState> KeepOwnedPartitionHolds(ObserverState state)

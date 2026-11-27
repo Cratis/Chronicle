@@ -810,6 +810,7 @@ public partial class Observer(
         _stateTransitionInProgress = false;
         KeepWhatWasRecordedDuringTransitionHook();
         PublishRunningStateGauge();
+        await RecoverSubscriptionAfterLeaving();
         if (state is States.Replay { StartRefusal: { } refusal })
         {
             // Nothing drives this replay forward, so it settles no owed recovery; routing decides that afresh.
@@ -1365,6 +1366,15 @@ public partial class Observer(
             return;
         }
 
+        // A subscription can finish while the preceding transition is still unsubscribing its queue.
+        // Choreography only admits nested transitions during entry, so recover after the leave completes.
+        if (_leavingState)
+        {
+            _recoverSubscriptionAfterLeaving = true;
+            return;
+        }
+
+        _recoverSubscriptionAfterLeaving = false;
         await RecoverSubscribedObserver();
     }
 

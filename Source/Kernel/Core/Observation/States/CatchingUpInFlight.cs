@@ -150,7 +150,7 @@ public class CatchingUpInFlight(
     /// recorded directly on <see cref="ObserverState"/> and persist across the transition. This hook is
     /// kept as the explicit place to clean up state-specific bookkeeping should any be introduced later.
     /// </remarks>
-    public override Task<ObserverState> OnLeave(ObserverState state) => Task.FromResult(state);
+    protected override Task<ObserverState> Leave(ObserverState state) => Task.FromResult(state);
 
     /// <summary>
     /// Finds which outstanding catch-up job owns each in-flight partition already held for catch-up.
