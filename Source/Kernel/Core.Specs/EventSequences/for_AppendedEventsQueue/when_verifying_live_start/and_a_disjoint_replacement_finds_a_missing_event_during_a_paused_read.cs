@@ -7,6 +7,8 @@ namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.when_verifying
 
 public class and_a_disjoint_replacement_finds_a_missing_event_during_a_paused_read : given.a_queue_with_a_paused_gap_read
 {
+    void Establish() => _history = [MatchingAt(102)];
+
     static AppendedEvent OldFilterOnly() => MatchingAt(105);
 
     static AppendedEvent ReplacementAt(ulong sequence)
@@ -27,4 +29,5 @@ public class and_a_disjoint_replacement_finds_a_missing_event_during_a_paused_re
 
     [Fact] void should_not_deliver_the_live_event_past_the_missing_event() => _handledEvents.ShouldEqual(0);
     [Fact] void should_spill_the_replacement_subscription_to_catch_up() => _observer.Received(1).CatchUp();
+    [Fact] void should_warn_only_about_the_replacement_gap() => LiveStartGapWarnings.Single()["MissingEventSequenceNumber"].ShouldEqual((EventSequenceNumber)103UL);
 }

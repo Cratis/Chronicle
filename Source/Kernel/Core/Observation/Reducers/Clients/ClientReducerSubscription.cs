@@ -105,7 +105,7 @@ public sealed class ClientReducerSubscription(
         try
         {
             // Anything that needs the definition - a registration waiting for a webhook to leave, an observer served by a
-            // webhook, a client the observer has lost - answers false, and the full check handles it. So does a client the
+            // webhook, a client the observer has lost, or failed setup - answers false, and the full check handles it. So does a client the
             // observer only knows as a superseded registration: it is not receiving anything, and a promotion that fails
             // when the client that replaced it leaves would otherwise go unnoticed until the safety net.
             if (_deferredDefinition is not null)
@@ -114,7 +114,7 @@ public sealed class ClientReducerSubscription(
             }
 
             _observer ??= grainFactory.GetGrain<IObserver>(new ObserverKey(observerKey.ObserverId, observerKey.EventStore, observerKey.Namespace, observerKey.EventSequenceId));
-            if (!await _observer.IsClientTarget(observerKey.ConnectionId))
+            if (!await _observer.IsClientTarget(observerKey.ConnectionId) || !await _observer.IsSubscriptionEstablished())
             {
                 return false;
             }
@@ -220,7 +220,7 @@ public sealed class ClientReducerSubscription(
             return;
         }
 
-        if (!await _observer.KnowsClient(observerKey.ConnectionId))
+        if (await NeedsRestoration())
         {
             var owner = await FindConnectionOwner();
             if (owner is null)
@@ -263,6 +263,9 @@ public sealed class ClientReducerSubscription(
 
         _subscribed = true;
     }
+
+    async Task<bool> NeedsRestoration() =>
+        !await _observer!.KnowsClient(observerKey.ConnectionId) || !await _observer.IsSubscriptionEstablished();
 
     async Task<bool> DeferRegistrationIfServedByWebhook(ReducerDefinition definition)
     {

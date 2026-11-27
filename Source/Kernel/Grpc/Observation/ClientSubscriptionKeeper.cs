@@ -185,15 +185,14 @@ internal static class ClientSubscriptionKeeper
     /// <param name="isIntact">The check that asks the observer's client grain, used whenever the observer does not know the client.</param>
     /// <param name="observer">The <see cref="IObserver"/> served by the stream.</param>
     /// <param name="connectionId">The <see cref="ConnectionId"/> of the client the stream belongs to.</param>
-    /// <returns>A check that is true when the observer knows the client, as a subscription target or as a superseded registration.</returns>
+    /// <returns>A check that is true when the observer knows the client and its subscription setup is established.</returns>
     /// <remarks>
     /// <para>
     /// A client grain exists per stream, and every call to it keeps its activation resident. A keeper that goes through it on every
     /// check therefore keeps one activation per stream alive for as long as the client is connected, which for a service with several
     /// replicas is several activations per observer. Whether the observer holds the client is the observer's own knowledge: when it
-    /// does, there is nothing to restore, so the client grain is not called and goes idle until it is needed. An observer that does
-    /// not know the client, a webhook-served observer, a failing call or an older silo all fall back to the call, which restores
-    /// whatever was lost.
+    /// does and setup is established, there is nothing to restore, so the client grain is not called and goes idle until needed.
+    /// Unknown clients, failed setup, a webhook-served observer, a failing call or an older silo fall back to the client grain.
     /// </para>
     /// <para>
     /// A superseded registration counts as known. It receives nothing until it is promoted; when a promotion fails, the registration
@@ -206,7 +205,7 @@ internal static class ClientSubscriptionKeeper
         {
             try
             {
-                if (await observer.KnowsClient(connectionId))
+                if (await observer.KnowsClient(connectionId) && await observer.IsSubscriptionEstablished())
                 {
                     return true;
                 }

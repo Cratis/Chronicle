@@ -46,6 +46,8 @@ public class a_queue_with_an_unsubscribed_instance : all_dependencies
 
     protected virtual int SafetyNetSeconds => 900;
 
+    protected virtual ILogger<AppendedEventsQueue> Logger => Substitute.For<ILogger<AppendedEventsQueue>>();
+
     internal virtual AppendedEventsQueueMetrics? CreateMetrics() => null;
 
     protected static AppendedEvent EventAt(ulong sequenceNumber, string partition = "partition") =>
@@ -79,7 +81,7 @@ public class a_queue_with_an_unsubscribed_instance : all_dependencies
             _grainFactory,
             Substitute.For<IMeter<AppendedEventsQueue>>(),
             Options.Create(options),
-            Substitute.For<ILogger<AppendedEventsQueue>>(),
+            Logger,
             storage: _storage,
             wakeAdmission: new WakeAdmission(0, Environment.ProcessorCount),
             routing: new TableOf(this))

@@ -6,14 +6,21 @@ using Cratis.Chronicle.Concepts.Keys;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.Observation;
+using Microsoft.Extensions.Logging;
 
 namespace Cratis.Chronicle.EventSequences.for_AppendedEventsQueue.given;
 
 public class a_queue_verifying_live_gaps : a_queue_with_an_unsubscribed_instance
 {
+    protected readonly RecordingQueueLogger _recordedLogs = new();
     protected IEventSequenceStorage _events;
     protected AppendedEvent[] _history = [];
     protected int _handledEvents;
+
+    protected override ILogger<AppendedEventsQueue> Logger => _recordedLogs;
+
+    protected IEnumerable<IReadOnlyDictionary<string, object?>> LiveStartGapWarnings => _recordedLogs.StructuredMessages(LogLevel.Warning, "LiveStartDeliveryGap");
+
     protected virtual ObserverFilters? LiveFilters => new(["included"]);
 
     protected static AppendedEvent MatchingAt(ulong sequence, string partition = "partition")
