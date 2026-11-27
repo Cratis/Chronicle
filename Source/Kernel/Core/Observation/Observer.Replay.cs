@@ -182,6 +182,7 @@ public partial class Observer
         };
         State.CatchingUpPartitions.Clear();
         State.ReplayingPartitions.Clear();
+        _pendingPartitionReplays.Clear();
         _partitionHoldsVersion++;
         await WriteStateAsync();
         if (!IsQuarantined)
@@ -208,12 +209,14 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        var replayReach = FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
+        Skips.Completing(partition, replayReach);
         logger.FinishedReplayForPartition(partition);
         ShadowHandOverPartition(partition, ClaimHolderKind.PartitionReplay);
 
         // Keep holding live delivery if a fresh rebuild must run before catch-up.
-        if (!_pendingPartitionReplays.ContainsKey(partition))
+        var hasFollowUp = State.RunningState != ObserverRunningState.Replaying && _pendingPartitionReplays.ContainsKey(partition);
+        if (!hasFollowUp)
         {
             State.ReplayingPartitions.Remove(partition);
             _partitionHoldsVersion++;
@@ -242,10 +245,14 @@ public partial class Observer
 
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
-        if (await StartPendingPartitionReplay(partition)) return;
+
+        // Defer catch-up to the follow-up, but give it this partition's first undelivered position.
+        // The shared cursor can be ahead of it; a selected-type replay cannot vouch for that gap.
+        var heldBackFrom = replayReach.IsActualValue ? replayReach.Next() : EventSequenceNumber.First;
+        if (hasFollowUp && await StartPendingPartitionReplay(partition, heldBackFrom)) return;
 
         // Empty partial replays report the position before held-back delivery when known; otherwise preserve the legacy fallback.
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
+        await StartCatchupJobIfNeeded(partition, replayReach, fromStartWhenNothingRead: true);
         EvaluateSuspectedSkips();
     }
 
@@ -341,9 +348,9 @@ public partial class Observer
         }
     }
 
-    async Task<bool> StartPendingPartitionReplay(Key partition, EventSequenceNumber? heldBackFrom = null)
+    async Task<bool> StartPendingPartitionReplay(Key partition, EventSequenceNumber heldBackFrom)
     {
-        if (!_pendingPartitionReplays.TryGetValue(partition, out var pending)) return false;
+        if (State.RunningState == ObserverRunningState.Replaying || !_pendingPartitionReplays.TryGetValue(partition, out var pending)) return false;
 
         var next = pending[0];
         pending.RemoveAt(0);

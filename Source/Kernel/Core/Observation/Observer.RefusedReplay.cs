@@ -21,6 +21,7 @@ public partial class Observer
         if (IsRetired || _removed || !KeyOwnsDefinition || (!State.IsReplaying && State.RunningState != ObserverRunningState.Replaying)) return;
 
         Skips.Reset();
+        _pendingPartitionReplays.Clear();
         State = State with
         {
             IsReplaying = false,
