@@ -52,3 +52,11 @@ jobs:
           # request, where secrets are not exposed - the build still succeeds, the bundle just carries no
           # key. See https://primeui.dev/licenses/community
           PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}
+
+      # Consumes the packed @cratis/chronicle-ui tarball from a project outside the checkout. Deliberately
+      # without PRIMEUI_LICENSE: the package must build and resolve without any application secret.
+      - name: Check packed Chronicle UI consumers
+        working-directory: ./Source/Workbench
+        run: |
+          node --test packages/chronicle-ui/inspect-pack.test.mjs
+          yarn workspace @cratis/chronicle-ui check:consumers

@@ -126,38 +126,7 @@ jobs:
       - name: Check npm for the exact package version
         id: npm-version
         working-directory: ./Source/Clients/TypeScript
-        run: |
-          node --input-type=module <<'NODE'
-          import { spawnSync } from 'node:child_process';
-          import { appendFileSync, readFileSync } from 'node:fs';
-
-          const { name, version } = JSON.parse(readFileSync('package.json', 'utf8'));
-          const spec = `${name}@${version}`;
-          const { error, status, stdout } = spawnSync(
-            'npm', ['view', spec, 'version', '--json', '--loglevel=silent', '--prefer-online'],
-            { encoding: 'utf8' });
-
-          function fail(reason) {
-            console.error(`::error::npm version lookup for ${spec} ${reason}`);
-            process.exit(1);
-          }
-
-          if (error || status === null) fail('could not complete');
-          let response;
-          try {
-            response = stdout.trim() ? JSON.parse(stdout) : [];
-          } catch {
-            fail(`returned invalid JSON (exit ${status})`);
-          }
-          if (status !== 0 && response?.error?.code !== 'E404') fail(`failed (exit ${status})`);
-
-          // npm can return multiple versions with the same SemVer precedence.
-          const versions = [response].flat();
-          if (status === 0 && versions.some(value => typeof value !== 'string')) fail('returned an unexpected response');
-          const exists = status === 0 && versions.includes(version);
-          if (exists) console.log(`::notice::${spec} already exists on npm; skipping publish.`);
-          appendFileSync(process.env.GITHUB_OUTPUT, `exists=${exists}\n`);
-          NODE
+        run: node "$GITHUB_WORKSPACE/.github/scripts/npm-version-exists.mjs" .
 
       # --tag latest is explicit rather than implied. On 2026-08-25 a release accident published 17.0.0, and
       # deleting the tag and the GitHub release put the series back on 16.x without taking the npm version with
@@ -169,4 +138,82 @@ jobs:
       - name: Publish to npm
         if: steps.npm-version.outputs.exists == 'false'
         working-directory: ./Source/Clients/TypeScript
+        run: npm publish --provenance --access public --tag latest
+
+  # The Workbench UI package is a second package of the same release. It is not built from protobuf, so it has
+  # its own job: rerunning it neither rebuilds the contracts nor depends on their publish result.
+  publish-chronicle-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Validate version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "::error::Invalid version '$VERSION': expected a SemVer version such as 1.2.3 or 1.2.3-rc.1"
+            exit 1
+          fi
+          if [[ "$VERSION" == "0.0.0" ]]; then
+            echo "::error::0.0.0 is the manifest placeholder, not a release; refusing to publish @cratis/chronicle-ui as 0.0.0"
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.x'
+          package-manager-cache: false
+
+      - name: Upgrade npm for trusted publishing (requires >= 11.5.1)
+        run: |
+          npm install -g npm@11
+          NPM_VER="$(npm --version)"
+          echo "Installed npm $NPM_VER"
+          node -e "
+            const v = '$NPM_VER'.split('.').map(Number);
+            if (v[0] < 11 || (v[0] === 11 && (v[1] < 5 || (v[1] === 5 && v[2] < 1)))) {
+              console.error('npm >= 11.5.1 is required for trusted publishing, got $NPM_VER');
+              process.exit(1);
+            }
+          "
+
+      - name: Install Workbench dependencies
+        working-directory: ./Source/Workbench
+        run: yarn install --ignore-scripts
+
+      - name: Build Chronicle UI package
+        working-directory: ./Source/Workbench
+        run: yarn build:ui
+
+      # Stamp and publish a copy outside the Yarn workspace: the private Workbench manifest and its lock stay
+      # untouched, and npm sees a standalone package.
+      - name: Stage publishable package
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          STAGED="$RUNNER_TEMP/chronicle-ui-package"
+          mkdir -p "$STAGED"
+          PACKAGE=Source/Workbench/packages/chronicle-ui
+          cp -R "$PACKAGE/dist" "$PACKAGE/package.json" "$PACKAGE/README.md" "$PACKAGE/LICENSE" "$STAGED/"
+          cd "$STAGED"
+          npm version "$VERSION" --no-git-tag-version
+
+      - name: Check packed UI consumers
+        run: node Source/Workbench/packages/chronicle-ui/check-consumers.mjs "$RUNNER_TEMP/chronicle-ui-package"
+
+      - name: Check npm for the exact package version
+        id: npm-version
+        run: node "$GITHUB_WORKSPACE/.github/scripts/npm-version-exists.mjs" "$RUNNER_TEMP/chronicle-ui-package"
+
+      - name: Publish to npm
+        if: steps.npm-version.outputs.exists == 'false'
+        working-directory: ${{ runner.temp }}/chronicle-ui-package
         run: npm publish --provenance --access public --tag latest
