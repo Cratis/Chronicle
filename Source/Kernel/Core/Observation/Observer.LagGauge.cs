@@ -13,6 +13,17 @@ namespace Cratis.Chronicle.Observation;
 /// </remarks>
 public partial class Observer
 {
+    bool _lagGaugeWithdrawn;
+
+    /// <summary>
+    /// Withdraws the published sample for good, because the observer is being torn down and what it says must not outlive it while the teardown awaits.
+    /// </summary>
+    void WithdrawLagGauge()
+    {
+        _lagGaugeWithdrawn = true;
+        InvalidateLagGauge();
+    }
+
     /// <summary>
     /// Publishes the sample as the observer reads it now, after the watchdog recorded a reading.
     /// </summary>
@@ -45,5 +56,5 @@ public partial class Observer
     /// </summary>
     /// <returns>The sample, or null when none should be published.</returns>
     ObserverLagSample? EffectiveLagSample() =>
-        _lagSample.Status == ObserverLagStatus.Stalled && IsCatchingUpForLag ? null : CurrentLagSample();
+        _lagGaugeWithdrawn || (_lagSample.Status == ObserverLagStatus.Stalled && IsCatchingUpForLag) ? null : CurrentLagSample();
 }

@@ -26,7 +26,6 @@ import { ObserverLagCell } from './ObserverLagCell';
 import { type ObserverLagTarget } from './ObserverLagController';
 import { useObserverLag } from './useObserverLag';
 import { formatPosition, presentObserverLag } from './observerLagPresentation';
-import { ObserverSequenceType } from './ObserverSequenceType';
 import { useRelativePath } from '../../../../Utils/useRelativePath';
 import {
     type ObserverRow,
@@ -36,31 +35,8 @@ import {
     observerTypeFilterOptions,
     runningStateFilterOptions,
     sequenceTypeFilterOptions,
-    toObserverRow
+    toObserverRows
 } from './observerRows';
-
-const legacyEventLogSequenceId = '00000000-0000-0000-0000-000000000000';
-
-const getObserverSequenceType = (eventSequenceId: string) => {
-    switch (eventSequenceId) {
-        case '':
-        case 'event-log':
-        case legacyEventLogSequenceId:
-            return ObserverSequenceType.eventLog;
-        case 'system':
-            return ObserverSequenceType.system;
-        case 'outbox':
-            return ObserverSequenceType.outbox;
-        case 'inbox':
-            return ObserverSequenceType.inbox;
-    }
-
-    if (eventSequenceId.startsWith('inbox-')) {
-        return ObserverSequenceType.inbox;
-    }
-
-    return ObserverSequenceType.custom;
-};
 
 const observerType = (observer: ObserverInformation) => getObserverTypeAsText(observer.type);
 
@@ -108,13 +84,8 @@ export const Observers = withViewModel(ObserversViewModel, ({ viewModel }) => {
     const selectedLagTarget = viewModel.selectedObserver ? lagTarget(viewModel.selectedObserver) : undefined;
     const lagView = useObserverLag(params.eventStore!, params.namespace!, selectedLagTarget);
 
-    const searchTerm = searchText.trim().toLowerCase();
 
-    const observerRows = (observers.data ?? [])
-        .map(observer => toObserverRow(observer, getObserverSequenceType(observer.eventSequenceId), failedPartitionCounts))
-        .filter(observer => searchTerm === ''
-            || observer.id.toLowerCase().includes(searchTerm)
-            || observer.eventSequenceId.toLowerCase().includes(searchTerm));
+    const observerRows = toObserverRows(observers.data, failedPartitionCounts, searchText);
 
     const menuItems: ActionMenuItem[] = [
         {

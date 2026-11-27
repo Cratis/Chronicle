@@ -43,6 +43,9 @@ const toTime = (value: unknown): number => {
     return Number.NaN;
 };
 
+/** When the measurement stops describing the observer, in milliseconds since the epoch; NaN when it carries no valid expiry. */
+export const expiryOf = (lag: ObserverLag): number => toTime(lag.expiresAt);
+
 const unmeasurableStates = new Map<ObserverLagCause, ObserverLagState>([
     [ObserverLagCause.unknownState, 'unknownState'],
     [ObserverLagCause.inactive, 'inactive'],

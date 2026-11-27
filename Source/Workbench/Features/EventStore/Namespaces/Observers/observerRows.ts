@@ -36,6 +36,42 @@ export const toObserverRow = (
     failedPartitionCount: failedPartitionCounts.get(observer.id) ?? 0
 });
 
+const legacyEventLogSequenceId = '00000000-0000-0000-0000-000000000000';
+
+const getObserverSequenceType = (eventSequenceId: string) => {
+    switch (eventSequenceId) {
+        case '':
+        case 'event-log':
+        case legacyEventLogSequenceId:
+            return ObserverSequenceType.eventLog;
+        case 'system':
+            return ObserverSequenceType.system;
+        case 'outbox':
+            return ObserverSequenceType.outbox;
+        case 'inbox':
+            return ObserverSequenceType.inbox;
+    }
+
+    if (eventSequenceId.startsWith('inbox-')) {
+        return ObserverSequenceType.inbox;
+    }
+
+    return ObserverSequenceType.custom;
+};
+
+/** Maps observers to rows and keeps those whose identifier or event sequence contains the search term, ignoring case. */
+export const toObserverRows = (
+    observers: ObserverInformation[] | undefined,
+    failedPartitionCounts: Map<string, number>,
+    searchTerm: string): ObserverRow[] => {
+    const term = searchTerm.trim().toLowerCase();
+    return (observers ?? [])
+        .map(observer => toObserverRow(observer, getObserverSequenceType(observer.eventSequenceId), failedPartitionCounts))
+        .filter(row => term === ''
+            || row.id.toLowerCase().includes(term)
+            || row.eventSequenceId.toLowerCase().includes(term));
+};
+
 /** The failed partitions page, narrowed to one observer. */
 export const getFailedPartitionsPathForObserver = (namespacePath: string, observerId: string) =>
     `${namespacePath}/failed-partitions?observerId=${encodeURIComponent(observerId)}`;

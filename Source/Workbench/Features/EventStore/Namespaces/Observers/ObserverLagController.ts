@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { type ObserverLag } from 'Features/Observation';
+import { expiryOf } from './observerLagPresentation';
 
 /** Identifies one observer by everything that scopes it; an observer id alone is not unique. */
 export interface ObserverLagTarget {
@@ -53,6 +54,7 @@ export class ObserverLagController {
     private selectedKey: string | undefined;
     private outstanding = 0;
     private cursor = 0;
+    private cycleReads = 0;
     private generation = 0;
     private paused = false;
     private disposed = false;
@@ -103,7 +105,8 @@ export class ObserverLagController {
         if (!target || this.disposed) return;
 
         this.targets.set(this.selectedKey!, target);
-        this.queue = [this.selectedKey!, ...this.queue.filter(key => key !== this.selectedKey)];
+        this.beginCycleWhenIdle();
+        this.prioritise(this.selectedKey!);
         this.pump();
     }
 
@@ -120,20 +123,29 @@ export class ObserverLagController {
     }
 
     /**
-     * Starts a cycle: the selected target and up to the cycle limit of visible ones, rotating through the visible
-     * ones fairly. While a cycle is under way it only adds visible targets that were never read.
+     * Reads the selected target and the visible ones, rotating through the visible ones fairly. A cycle has one budget
+     * of reads that every refresh and selection until it has drained draws on, so refreshing again while it is under
+     * way adds only what is left of it.
      */
     refresh() {
         if (this.disposed || this.paused) return;
 
         const candidates = [...this.visible].filter(key => key !== this.selectedKey);
-        if (this.isBusy) {
-            this.queue.push(...candidates.filter(key => this.isUnread(key)));
+        if (this.beginCycleWhenIdle()) {
+            if (this.selectedKey) this.enqueue(this.selectedKey);
+            this.nextCycle(candidates).forEach(key => this.enqueue(key));
         } else {
-            if (this.selectedKey) this.queue.push(this.selectedKey);
-            this.queue.push(...this.nextCycle(candidates));
+            candidates.filter(key => this.isUnread(key)).forEach(key => this.enqueue(key));
         }
         this.pump();
+    }
+
+    /** The measurement expiries not yet passed, earliest first, so a view can wake when one stops describing the observer. */
+    nextExpiryAfter(nowMs: number): number | undefined {
+        const expiries = [...this.cache.values()]
+            .map(lag => (lag ? expiryOf(lag) : Number.NaN))
+            .filter(expiry => expiry >= nowMs);
+        return expiries.length === 0 ? undefined : Math.min(...expiries);
     }
 
     /** Aborts what is outstanding and forgets everything; nothing that finishes afterwards is kept. */
@@ -151,9 +163,30 @@ export class ObserverLagController {
         return !this.cache.has(key) && !this.inFlight.has(key) && !this.queue.includes(key);
     }
 
+    /** Starts a new budget when nothing is queued or outstanding. Returns whether it did. */
+    private beginCycleWhenIdle() {
+        if (this.isBusy) return false;
+        this.cycleReads = 0;
+        return true;
+    }
+
+    /** Queues a read if the cycle has budget left and it is not queued already. Returns whether the read is queued. */
+    private enqueue(key: string) {
+        if (this.queue.includes(key)) return true;
+        if (this.cycleReads >= this.maxPerCycle) return false;
+        this.cycleReads++;
+        this.queue.push(key);
+        return true;
+    }
+
+    private prioritise(key: string) {
+        if (!this.enqueue(key)) return;
+        this.queue = [key, ...this.queue.filter(queued => queued !== key)];
+    }
+
     /** Takes the next slice of the visible targets, continuing where the last cycle stopped. */
     private nextCycle(candidates: string[]) {
-        const count = Math.min(this.maxPerCycle, candidates.length);
+        const count = Math.min(this.maxPerCycle - this.cycleReads, candidates.length);
         const picks = Array.from({ length: count }, (_, offset) => candidates[(this.cursor + offset) % candidates.length]);
         this.cursor = count === 0 ? 0 : (this.cursor + count) % candidates.length;
         return picks;
@@ -203,7 +236,7 @@ export class ObserverLagController {
         if (this.isCurrent(key, generation, controller)) {
             this.cache.delete(key);
             this.cache.set(key, lag);
-            this.evict();
+            this.evict(key);
             this.onChange();
         }
 
@@ -214,10 +247,13 @@ export class ObserverLagController {
         return generation === this.generation && !controller.signal.aborted && this.isWanted(key);
     }
 
-    private evict() {
-        for (const key of this.cache.keys()) {
+    /** Keeps the cache within its cap: the least recently read go first, those not on screen before those that are. */
+    private evict(newest: string) {
+        const evictable = [...this.cache.keys()].filter(key => key !== newest);
+        const order = [...evictable.filter(key => !this.isWanted(key)), ...evictable.filter(key => this.isWanted(key))];
+        for (const key of order) {
             if (this.cache.size <= this.maxEntries) return;
-            if (!this.isWanted(key)) this.cache.delete(key);
+            this.cache.delete(key);
         }
     }
 }

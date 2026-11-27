@@ -3,18 +3,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type ObserverLag } from 'Features/Observation';
-import { ObserverLagController, type ObserverLagReader, type ObserverLagTarget, observerLagKey } from './ObserverLagController';
+import { type ObserverLagReader, type ObserverLagTarget, observerLagKey } from './ObserverLagController';
+import { ObserverLagSession, type PageVisibility } from './ObserverLagSession';
 import { readObserverLag } from './readObserverLag';
 
-const refreshIntervalMs = 30_000;
-const visibilityDebounceMs = 250;
-const clockIntervalMs = 5_000;
+const pageVisibility: PageVisibility = {
+    isHidden: () => document.hidden,
+    subscribe: onChange => {
+        document.addEventListener('visibilitychange', onChange);
+        return () => document.removeEventListener('visibilitychange', onChange);
+    }
+};
 
 /** What a view needs to show sampled lag: the measurement per observer, the moment to judge it at, and how to report what is on screen. */
 export interface ObserverLagView {
     lagFor: (target: ObserverLagTarget) => ObserverLag | undefined;
     hasResult: (target: ObserverLagTarget) => boolean;
     now: number;
+
     /** Reports a rendered cell as on screen while it is intersecting; returns what stops reporting it. */
     trackCell: (element: HTMLElement, target: ObserverLagTarget) => () => void;
 }
@@ -33,69 +39,48 @@ export const useObserverLag = (
     selected: ObserverLagTarget | undefined,
     reader: ObserverLagReader = readObserverLag): ObserverLagView => {
     const [, setVersion] = useState(0);
-    const [now, setNow] = useState(() => Date.now());
     const elements = useRef(new Map<Element, ObserverLagTarget>());
-    const observer = useRef<IntersectionObserver | null>(null);
-    const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const intersection = useRef<IntersectionObserver | null>(null);
 
-    const controller = useMemo(
-        () => new ObserverLagController({ reader, onChange: () => { setNow(Date.now()); setVersion(version => version + 1); } }),
-        // A new store or namespace is a new controller: nothing read for the old scope can be shown in the new one.
+    // A new store or namespace is a new session: nothing read for the old scope can be shown in the new one.
+    const session = useMemo(
+        () => new ObserverLagSession({ reader, visibility: pageVisibility, onChange: () => setVersion(version => version + 1) }),
         [eventStore, namespace, reader]);
 
     useEffect(() => {
-        const refreshSoon = () => {
-            clearTimeout(debounce.current);
-            debounce.current = setTimeout(() => controller.refresh(), visibilityDebounceMs);
-        };
-
-        observer.current = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                const target = elements.current.get(entry.target);
-                if (target) controller.setVisible(target, entry.isIntersecting);
-            });
-            refreshSoon();
-        });
-        elements.current.forEach((_, element) => observer.current?.observe(element));
-
-        const onVisibilityChange = () => controller.setPaused(document.hidden);
-        document.addEventListener('visibilitychange', onVisibilityChange);
-        controller.setPaused(document.hidden);
-
-        const refreshTimer = setInterval(() => controller.refresh(), refreshIntervalMs);
-        const clockTimer = setInterval(() => { if (!document.hidden) setNow(Date.now()); }, clockIntervalMs);
+        const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+            const target = elements.current.get(entry.target);
+            if (target) session.setVisible(target, entry.isIntersecting);
+        }));
+        intersection.current = observer;
+        elements.current.forEach((_, element) => observer.observe(element));
+        session.attach();
 
         return () => {
-            clearTimeout(debounce.current);
-            clearInterval(refreshTimer);
-            clearInterval(clockTimer);
-            document.removeEventListener('visibilitychange', onVisibilityChange);
-            observer.current?.disconnect();
-            observer.current = null;
-            controller.dispose();
+            observer.disconnect();
+            intersection.current = null;
+            session.detach();
         };
-    }, [controller]);
+    }, [session]);
 
     const selectedKey = selected ? observerLagKey(selected) : undefined;
     useEffect(() => {
-        controller.select(selected);
-        // The key is what identifies the selection; a new object for the same observer is not a new selection.
-    }, [controller, selectedKey]);
+        session.select(selected);
+    }, [session, selectedKey]);
 
     const trackCell = useCallback((element: HTMLElement, target: ObserverLagTarget) => {
         elements.current.set(element, target);
-        observer.current?.observe(element);
+        intersection.current?.observe(element);
 
         return () => {
             elements.current.delete(element);
-            observer.current?.unobserve(element);
-            controller.setVisible(target, false);
+            intersection.current?.unobserve(element);
+            session.setVisible(target, false);
         };
-    }, [controller]);
+    }, [session]);
 
-    const lagFor = useCallback((target: ObserverLagTarget) => controller.get(target), [controller]);
+    const lagFor = useCallback((target: ObserverLagTarget) => session.lagFor(target), [session]);
+    const hasResult = useCallback((target: ObserverLagTarget) => session.hasResult(target), [session]);
 
-    const hasResult = useCallback((target: ObserverLagTarget) => controller.hasResult(target), [controller]);
-
-    return { lagFor, hasResult, now, trackCell };
+    return { lagFor, hasResult, now: session.now, trackCell };
 };

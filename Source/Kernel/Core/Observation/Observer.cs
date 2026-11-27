@@ -888,6 +888,7 @@ public partial class Observer(
     {
         try
         {
+            WithdrawLagGauge();
             if (_removed || !_observerExists)
             {
                 await base.OnDeactivateAsync(reason, cancellationToken);
