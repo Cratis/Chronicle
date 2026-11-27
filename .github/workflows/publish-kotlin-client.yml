@@ -86,7 +86,30 @@ jobs:
         with:
           gradle-version: '9.9.2'
 
+      - name: Check whether the version already exists on Maven Central
+        id: maven-version
+        run: |
+          status=$(curl --disable --silent --show-error --globoff --output /dev/null --write-out '%{http_code}' \
+            --max-time 30 "https://repo1.maven.org/maven2/${MAVEN_GROUP//.//}/$MAVEN_ARTIFACT/$VERSION/$MAVEN_ARTIFACT-$VERSION.pom")
+          case "$status" in
+            200)
+              echo "::notice::$MAVEN_GROUP:$MAVEN_ARTIFACT:$VERSION already exists on Maven Central; skipping publish."
+              echo 'exists=true' >> "$GITHUB_OUTPUT"
+              ;;
+            404) echo 'exists=false' >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::Maven Central version lookup for $MAVEN_GROUP:$MAVEN_ARTIFACT:$VERSION returned HTTP $status."
+              exit 1
+              ;;
+          esac
+        env:
+          VERSION: ${{ inputs.version }}
+          # Must match the coordinates in Source/Clients/Kotlin/build.gradle.kts
+          MAVEN_GROUP: io.cratis
+          MAVEN_ARTIFACT: chronicle-contracts
+
       - name: Publish to Maven Central
+        if: steps.maven-version.outputs.exists == 'false'
         working-directory: ./Source/Clients/Kotlin
         run: gradle publishAndReleaseToMavenCentral --no-configuration-cache "-Pversion=$VERSION"
         env:
