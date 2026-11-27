@@ -143,15 +143,18 @@ jobs:
   # The Workbench UI package is a second package of the same release. It is not built from protobuf, so it has
   # its own jobs: rerunning them neither rebuilds the contracts nor depends on their publish result.
   #
-  # Two jobs on purpose. The build job installs and runs third-party code (Yarn dependencies, the registry-resolved
-  # peers of the consumer check) and has no OIDC token. The publish job holds id-token: write and runs nothing but
-  # setup-node and npm against the tarball the build job verified.
-  build-chronicle-ui:
+  # Three jobs on purpose. pack installs the locked Yarn dependencies, packs once and records the tarball's
+  # sha256. verify runs the consumer check, which resolves registry peers and executes them, so anything
+  # compromised there cannot change what pack produced. publish holds id-token: write, runs nothing but
+  # setup-node and npm, and publishes only a tarball whose sha256 equals the one pack recorded.
+  pack-chronicle-ui:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
+    outputs:
+      sha256: ${{ steps.digest.outputs.sha256 }}
 
     steps:
       - name: Validate version
@@ -200,10 +203,15 @@ jobs:
           npm version "$VERSION" --no-git-tag-version
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/chronicle-ui-tarball"
 
-      - name: Check packed UI consumers
-        run: node Source/Workbench/packages/chronicle-ui/check-consumers.mjs "$RUNNER_TEMP"/chronicle-ui-tarball/cratis-chronicle-ui-*.tgz
+      - name: Record tarball digest
+        id: digest
+        run: |
+          set -e
+          cd "$RUNNER_TEMP/chronicle-ui-tarball"
+          test "$(ls -1 | wc -l)" -eq 1
+          echo "sha256=$(sha256sum cratis-chronicle-ui-*.tgz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
-      - name: Upload verified package
+      - name: Upload packed package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: chronicle-ui-package
@@ -211,9 +219,38 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  verify-chronicle-ui:
+    if: github.ref == 'refs/heads/main'
+    needs: pack-chronicle-ui
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.x'
+          package-manager-cache: false
+
+      - name: Download packed package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chronicle-ui-package
+          path: ${{ runner.temp }}/chronicle-ui-tarball
+
+      - name: Check packed UI consumers
+        run: node Source/Workbench/packages/chronicle-ui/check-consumers.mjs "$RUNNER_TEMP"/chronicle-ui-tarball/cratis-chronicle-ui-*.tgz
+
   publish-chronicle-ui:
     if: github.ref == 'refs/heads/main'
-    needs: build-chronicle-ui
+    needs: [pack-chronicle-ui, verify-chronicle-ui]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -221,6 +258,11 @@ jobs:
       id-token: write
 
     steps:
+      - name: Require the main branch
+        env:
+          REF: ${{ github.ref }}
+        run: '[ "$REF" = "refs/heads/main" ] || { echo "::error::Refusing to publish from $REF"; exit 1; }'
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -233,24 +275,38 @@ jobs:
           node-version: '24.x'
           package-manager-cache: false
 
-      - name: Upgrade npm for trusted publishing (requires >= 11.5.1)
+      # The npm bundled with the pinned Node line must support trusted publishing; nothing is installed
+      # over it, so no floating registry code runs where the OIDC token exists.
+      - name: Assert npm supports trusted publishing (>= 11.5.1)
         run: |
-          npm install -g npm@11
           NPM_VER="$(npm --version)"
-          echo "Installed npm $NPM_VER"
+          echo "Bundled npm $NPM_VER"
           node -e "
-            const v = '$NPM_VER'.split('.').map(Number);
+            const v = process.argv[1].split('.').map(Number);
             if (v[0] < 11 || (v[0] === 11 && (v[1] < 5 || (v[1] === 5 && v[2] < 1)))) {
-              console.error('npm >= 11.5.1 is required for trusted publishing, got $NPM_VER');
+              console.error('npm >= 11.5.1 is required for trusted publishing, got ' + process.argv[1]);
               process.exit(1);
             }
-          "
+          " "$NPM_VER"
 
-      - name: Download verified package
+      - name: Download packed package
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: chronicle-ui-package
           path: ${{ runner.temp }}/chronicle-ui-tarball
+
+      - name: Verify tarball digest
+        env:
+          EXPECTED: ${{ needs.pack-chronicle-ui.outputs.sha256 }}
+        run: |
+          set -e
+          cd "$RUNNER_TEMP/chronicle-ui-tarball"
+          test "$(ls -1 | wc -l)" -eq 1
+          ACTUAL="$(sha256sum cratis-chronicle-ui-*.tgz | cut -d' ' -f1)"
+          if [ -z "$EXPECTED" ] || [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Tarball digest $ACTUAL does not match the packed digest '$EXPECTED'"
+            exit 1
+          fi
 
       - name: Check npm for the exact package version
         id: npm-version

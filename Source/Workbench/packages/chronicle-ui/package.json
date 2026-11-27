@@ -17,6 +17,7 @@
     ],
     "files": [
         "dist",
+        "!dist/styles.js",
         "README.md",
         "LICENSE"
     ],
