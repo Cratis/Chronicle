@@ -16,6 +16,11 @@ public sealed class ManualTimeProvider : TimeProvider
     /// </summary>
     public List<TimeSpan> TimerDueTimes { get; } = [];
 
+    /// <summary>
+    /// Gets or sets the callback invoked after a timer has been registered.
+    /// </summary>
+    public Action? TimerCreated { get; set; }
+
     public override long TimestampFrequency => TimeSpan.TicksPerSecond;
     public override long GetTimestamp() => _ticks;
     public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch.AddTicks(_ticks);
@@ -31,7 +36,7 @@ public sealed class ManualTimeProvider : TimeProvider
             }
 
             _nextTimer = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            return _nextTimer.Task.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
+            return _nextTimer.Task.WaitAsync(TimeSpan.FromSeconds(5), System);
         }
     }
 
@@ -50,6 +55,7 @@ public sealed class ManualTimeProvider : TimeProvider
 
             _nextTimer?.TrySetResult();
             _nextTimer = null;
+            TimerCreated?.Invoke();
             return timer;
         }
     }

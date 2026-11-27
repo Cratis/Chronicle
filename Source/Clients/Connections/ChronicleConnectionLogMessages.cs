@@ -55,6 +55,12 @@ internal static partial class ChronicleConnectionLogMessages
     [LoggerMessage(LogLevel.Debug, "Using client certificate from {Path}")]
     internal static partial void UsingClientCertificate(this ILogger<ChronicleConnection> logger, string path);
 
+    [LoggerMessage(LogLevel.Information, "Attempting Chronicle server {Server}")]
+    internal static partial void AttemptingEndpoint(this ILogger<ChronicleConnection> logger, string server);
+
+    [LoggerMessage(LogLevel.Warning, "Gave up waiting {TimeoutSeconds} seconds for the connect attempt already in progress ({Attempt}); no new endpoint was attempted by this caller")]
+    internal static partial void WaitingForConnectAttemptTimedOut(this ILogger<ChronicleConnection> logger, string attempt, int timeoutSeconds);
+
     [LoggerMessage(LogLevel.Debug, "Grpc channel created for address {Address}")]
     internal static partial void ChannelCreated(this ILogger<ChronicleConnection> logger, string address);
 }
