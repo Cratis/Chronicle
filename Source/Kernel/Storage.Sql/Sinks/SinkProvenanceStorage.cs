@@ -74,11 +74,14 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
     {
         var state = await ReadState();
         if (state.IsComplete) return state;
+        var restricted = restrictedEvidence || state.Restricted;
+        if (restricted) await RecordMarker();
+
         await using var scope = await OpenInventory();
         var context = scope.DbContext;
         var type = context.Database.GetDatabaseType();
         var complete = $"{SinkProvenanceSchema.Quote(type, "InventoryVersion")} = {{0}}";
-        if (restrictedEvidence || state.Restricted) complete += $", {SinkProvenanceSchema.Quote(type, "Restricted")} = {{1}}";
+        if (restricted) complete += $", {SinkProvenanceSchema.Quote(type, "Restricted")} = {{1}}";
         var sql = $"UPDATE {SinkProvenanceSchema.Qualified(context, SinkProvenanceNames.Inventory)} SET {complete} WHERE {SinkProvenanceSchema.Quote(type, "Id")} = {{2}} AND {SinkProvenanceSchema.Quote(type, "Version")} = 1 AND {SinkProvenanceSchema.Quote(type, "InventoryVersion")} = 0";
         await context.Database.ExecuteSqlRawAsync(sql, SinkProvenanceState.CurrentInventoryVersion, true, "inventory");
         var committed = await ReadState();
@@ -93,8 +96,7 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
     public async Task MarkQuarantined()
     {
         await ReadState();
-        await using var scope = await Open();
-        await RecordMarker(scope.DbContext);
+        await RecordMarker();
 
         await using var inventory = await OpenInventory();
         var stateContext = inventory.DbContext;
@@ -187,6 +189,12 @@ public class SinkProvenanceStorage(IDatabase database, EventStoreName eventStore
     }
 
     static InvalidOperationException Unavailable() => new("Read-model storage is not available.");
+
+    async Task RecordMarker()
+    {
+        await using var scope = await Open();
+        await RecordMarker(scope.DbContext);
+    }
 
     Task<DbContextScope<ReadModelDbContext>> OpenInventory() => database.ReadModelTable(
         eventStore,

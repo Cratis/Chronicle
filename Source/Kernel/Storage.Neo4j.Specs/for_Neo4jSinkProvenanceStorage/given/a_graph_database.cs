@@ -4,6 +4,7 @@
 using Cratis.Arc.Connections;
 using Cratis.Chronicle.Storage.Sinks;
 using Neo4j.Driver;
+using NSubstitute.Extensions;
 using static Cratis.Chronicle.Storage.Neo4j.Neo4jSinkProvenanceStatements;
 
 namespace Cratis.Chronicle.Storage.Neo4j.for_Neo4jSinkProvenanceStorage.given;
@@ -17,18 +18,18 @@ public class a_graph_database : Specification
 
     protected virtual string SchemaDatabaseId => "physical";
 
-    void Establish()
+    void Establish() => _provenance = StorageFor(_runtime, _schema, "physical", SchemaDatabaseId);
+
+    protected static ISinkProvenanceStorage StorageFor(
+        IAsyncQueryRunner runtimeRunner,
+        IAsyncQueryRunner schemaRunner,
+        string physicalId) => StorageFor(runtimeRunner, schemaRunner, physicalId, physicalId);
+
+    protected static IRecord Protection()
     {
-        var connections = Substitute.For<INeo4jConnections>();
-        var runtime = new Neo4jConnection(DriverFor(_runtime), "neo4j", false) { Endpoint = Endpoint };
-        var schema = new Neo4jConnection(DriverFor(_schema), "neo4j", false) { Endpoint = Endpoint };
-        connections.Resolve("store", "scope", ConnectionPurpose.Runtime).Returns(runtime);
-        connections.Resolve("store", "scope", ConnectionPurpose.Schema).Returns(schema);
-        SetIdentity(_runtime, "physical");
-        SetIdentity(_schema, SchemaDatabaseId);
-        _schema.RunAsync(CreateConstraint, Arg.Any<object>()).Returns(_ => Cursor());
-        _schema.RunAsync(VerifyConstraint).Returns(_ => Cursor(Substitute.For<IRecord>()));
-        _provenance = new Neo4jSinkProvenanceStorage(new Neo4jGraphTarget(connections, "store", "scope"));
+        var record = Substitute.For<IRecord>();
+        record["state"].Returns(new Dictionary<string, object> { ["_key"] = "protected", ["_format"] = 1L });
+        return record;
     }
 
     protected static IRecord Inventory(Guid id, long version = 0L, bool restricted = false)
@@ -54,11 +55,29 @@ public class a_graph_database : Specification
         return cursor;
     }
 
+    static Neo4jSinkProvenanceStorage StorageFor(
+        IAsyncQueryRunner runtimeRunner,
+        IAsyncQueryRunner schemaRunner,
+        string physicalId,
+        string schemaId)
+    {
+        var connections = Substitute.For<INeo4jConnections>();
+        var runtime = new Neo4jConnection(DriverFor(runtimeRunner), "neo4j", false) { Endpoint = Endpoint };
+        var schema = new Neo4jConnection(DriverFor(schemaRunner), "neo4j", false) { Endpoint = Endpoint };
+        connections.Resolve("store", "scope", ConnectionPurpose.Runtime).Returns(runtime);
+        connections.Resolve("store", "scope", ConnectionPurpose.Schema).Returns(schema);
+        SetIdentity(runtimeRunner, physicalId);
+        SetIdentity(schemaRunner, schemaId);
+        schemaRunner.Configure().RunAsync(CreateConstraint, Arg.Any<object>()).Returns(_ => Cursor());
+        schemaRunner.Configure().RunAsync(VerifyConstraint).Returns(_ => Cursor(Substitute.For<IRecord>()));
+        return new(new Neo4jGraphTarget(connections, "store", "scope"));
+    }
+
     static void SetIdentity(IAsyncQueryRunner runner, string id)
     {
         var record = Substitute.For<IRecord>();
         record["id"].Returns(id);
-        runner.RunAsync("CALL db.info() YIELD id RETURN id").Returns(_ => Cursor(record));
+        runner.Configure().RunAsync("CALL db.info() YIELD id RETURN id").Returns(_ => Cursor(record));
     }
 
     static IDriver DriverFor(IAsyncQueryRunner runner)

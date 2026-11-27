@@ -45,7 +45,12 @@ public class SinkProvenanceStorage(IMongoDatabase database) : ISinkProvenanceSto
         var state = await ReadState();
         if (state.IsComplete) return state;
         var update = Builders<BsonDocument>.Update.Set("inventoryVersion", SinkProvenanceState.CurrentInventoryVersion);
-        if (restrictedEvidence || state.Restricted) update = update.Set("restricted", true);
+        var restricted = restrictedEvidence || state.Restricted;
+        if (restricted)
+        {
+            await RecordMarker();
+            update = update.Set("restricted", true);
+        }
         await _collection.UpdateOneAsync(
             new BsonDocument { { "_id", State }, { "version", 1 }, { "inventoryVersion", 0 } }, update);
         var committed = await ReadState();
@@ -61,17 +66,7 @@ public class SinkProvenanceStorage(IMongoDatabase database) : ISinkProvenanceSto
     {
         await ReadState();
         await _collection.UpdateOneAsync(new BsonDocument("_id", State), Builders<BsonDocument>.Update.Set("restricted", true));
-        try
-        {
-            await _collection.UpdateOneAsync(
-                new BsonDocument("_id", Marker),
-                Builders<BsonDocument>.Update.SetOnInsert("restricted", true).SetOnInsert("version", 1),
-                new UpdateOptions { IsUpsert = true });
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            // The read-back validates the concurrently committed marker.
-        }
+        await RecordMarker();
         if (!(await ReadState()).Restricted) throw Unavailable();
     }
 
@@ -92,6 +87,22 @@ public class SinkProvenanceStorage(IMongoDatabase database) : ISinkProvenanceSto
         record.GetValue("restricted", BsonNull.Value) is BsonBoolean { Value: true };
 
     static InvalidOperationException Unavailable() => new("Read-model storage is not available.");
+
+    async Task RecordMarker()
+    {
+        try
+        {
+            await _collection.UpdateOneAsync(
+                new BsonDocument("_id", Marker),
+                Builders<BsonDocument>.Update.SetOnInsert("restricted", true).SetOnInsert("version", 1),
+                new UpdateOptions { IsUpsert = true });
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // The read-back validates the concurrently committed marker.
+        }
+        if (!(await Read()).Marked) throw Unavailable();
+    }
 
     async Task Bootstrap()
     {
