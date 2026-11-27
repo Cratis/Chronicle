@@ -22,31 +22,10 @@ public abstract class an_observer_catching_up_during_appends : an_observer_with_
 
     protected abstract bool AppendBeforePReads { get; }
     protected EventSequenceNumber AcceptedNext { get; private set; }
-    protected EventSequenceNumber[] FirstLapDeliveries { get; private set; }
+    protected IReadOnlyList<EventSequenceNumber> FirstLapDeliveries { get; private set; }
     protected EventSequenceNumber? SuccessorStart { get; private set; }
 
-    void Establish()
-    {
-        _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 10UL };
-        _definitionStorage.State = _definitionStorage.State with { Type = ObserverType.Reactor, EventTypes = [event_type] };
-        Append("Q", 10UL);
-        Append("P", 11UL);
-        _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
-            .Returns(call =>
-            {
-                _wide = call.Arg<CatchUpObserverRequest>();
-                _startedJob = JobId.New();
-                _jobStorage.GetJob(_startedJob).Returns(Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobState
-                {
-                    Id = _startedJob,
-                    Status = JobStatus.Running,
-                    Request = _wide
-                }));
-                return Result<JobId, StartJobError>.Success(_startedJob);
-            });
-    }
-
-    async Task Because()
+    protected async Task RunCatchUpDuringAppends()
     {
         await _observer.CatchUp();
         var before = new ReaderRound(_startedJob);
@@ -68,6 +47,28 @@ public abstract class an_observer_catching_up_during_appends : an_observer_with_
         SuccessorStart = suffix.FromEventSequenceNumber;
         var after = new ReaderRound(_startedJob);
         foreach (var step in await after.Prepare(suffix, _observer, _keys)) await Read(step);
+    }
+
+
+    void Establish()
+    {
+        _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 10UL };
+        _definitionStorage.State = _definitionStorage.State with { Type = ObserverType.Reactor, EventTypes = [event_type] };
+        Append("Q", 10UL);
+        Append("P", 11UL);
+        _jobsManager.Start<ICatchUpObserver, CatchUpObserverRequest>(Arg.Any<CatchUpObserverRequest>())
+            .Returns(call =>
+            {
+                _wide = call.Arg<CatchUpObserverRequest>();
+                _startedJob = JobId.New();
+                _jobStorage.GetJob(_startedJob).Returns(Task.FromResult<Catch<JobState, Cratis.Choreography.Storage.Jobs.JobError>>(new JobState
+                {
+                    Id = _startedJob,
+                    Status = JobStatus.Running,
+                    Request = _wide
+                }));
+                return Result<JobId, StartJobError>.Success(_startedJob);
+            });
     }
 
     static Key Partition(JobStepDetails step) => ((HandleEventsForPartitionArguments)step.Request).Partition;

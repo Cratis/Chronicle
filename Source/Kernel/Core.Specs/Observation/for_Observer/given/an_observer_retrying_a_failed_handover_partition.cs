@@ -27,6 +27,23 @@ public abstract class an_observer_retrying_a_failed_handover_partition : an_obse
 
     protected virtual bool DeliversPartitionPages => false;
 
+    protected async Task RunHandoverAndRetry()
+    {
+        await _observer.CatchUp();
+        await _silo.RunCatchUpContinuation();
+        var p = _repairs.Single(_ => _.Key == (Key)"P");
+        await _observer.HandoverRepairCaughtUp(p.Key, p.FromSequenceNumber, p.ToSequenceNumber.Next(), 11UL, succeeded: false, p.OwnershipEpoch);
+        await _observer.TryStartRecoverJobForFailedPartition("P");
+        _startedBeforeTheOtherRepairFinished = _retry is not null;
+        await FinishRepair(_repairs.Single(_ => _.Key == (Key)"N"));
+        await _silo.RunCatchUpContinuation();
+        if (_wide is { } wide) await RunSuccessor(wide);
+        await _silo.RunCatchUpContinuation();
+        if (!_recovered && _retry is null) await _observer.TryStartRecoverJobForFailedPartition("P");
+        await FinishAdmittedRetry();
+    }
+
+
     void Establish()
     {
         _definitionStorage.State = _definitionStorage.State with { Type = ObserverType.Reactor, EventTypes = [event_type] };
@@ -49,22 +66,6 @@ public abstract class an_observer_retrying_a_failed_handover_partition : an_obse
                 _retryFrom = _retry.FromSequenceNumber;
                 return Result<JobId, StartJobError>.Success(JobId.New());
             });
-    }
-
-    async Task Because()
-    {
-        await _observer.CatchUp();
-        await _silo.RunCatchUpContinuation();
-        var p = _repairs.Single(_ => _.Key == (Key)"P");
-        await _observer.HandoverRepairCaughtUp(p.Key, p.FromSequenceNumber, p.ToSequenceNumber.Next(), 11UL, succeeded: false, p.OwnershipEpoch);
-        await _observer.TryStartRecoverJobForFailedPartition("P");
-        _startedBeforeTheOtherRepairFinished = _retry is not null;
-        await FinishRepair(_repairs.Single(_ => _.Key == (Key)"N"));
-        await _silo.RunCatchUpContinuation();
-        if (_wide is { } wide) await RunSuccessor(wide);
-        await _silo.RunCatchUpContinuation();
-        if (!_recovered && _retry is null) await _observer.TryStartRecoverJobForFailedPartition("P");
-        await FinishAdmittedRetry();
     }
 
     async Task RunSuccessor(CatchUpObserverRequest request)

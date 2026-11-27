@@ -7,6 +7,8 @@ namespace Cratis.Chronicle.Observation.for_Observer.when_catch_up_round_complete
 
 public class and_a_failed_partition_retry_precedes_successor_preparation : given.an_observer_retrying_a_failed_handover_partition
 {
+    Task Because() => RunHandoverAndRetry();
+
     [Fact] void should_not_start_retry_while_another_range_is_outstanding() => StartedBeforeTheOtherRepairFinished.ShouldBeFalse();
     [Fact] void should_keep_the_failed_partition_owned_by_its_episode_while_reading() => FailedDuringSuccessorRead.ShouldBeTrue();
     [Fact] void should_allow_healthy_work_to_progress() => HealthyProgress.ShouldBeTrue();
