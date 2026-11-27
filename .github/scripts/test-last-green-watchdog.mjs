@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { watchdog, main, marker } from './last-green-watchdog.mjs';
-import { trackerTitle, workflowPath } from './nightly-build-health-policy.mjs';
+import { trackerTitle, workflowPath, safeName } from './nightly-build-health-policy.mjs';
 
 globalThis.fetch = async () => { throw new Error('Live networking is forbidden in fixtures'); };
 const repo = 'example/chronicle';
@@ -85,6 +85,37 @@ test('missing or human-owned tracker fails safely', async () => {
 test('foreign, PR, wrong-path and wrong-branch runs cannot establish green', async () => {
     const f = fixture([run(1, 1, 'success', { head_branch: 'other' }), run(2, 1, 'success', { path: 'other.yml' }), run(3, 1, 'success', { head_repository: { full_name: 'other/repo' } }), run(4, 1, 'success', { event: 'pull_request' })]);
     assert.equal((await f.check()).verdict, 'stale');
+});
+
+test('main surfaces the real safe error code instead of a generic reason', async () => {
+    const readFailure = async url => {
+        if (url.includes('/runs?')) return { ok: true, json: async () => ({ total_count: 0, workflow_runs: [] }), headers: new Headers() };
+        if (url.includes('/issues?')) return { ok: false, status: 500, json: async () => ({}), headers: new Headers() };
+        assert.fail(`Unexpected URL ${url}`);
+    };
+    const first = [];
+    assert.equal(await main({ environment: { GITHUB_REPOSITORY: repo, GITHUB_TOKEN: 'fixture' }, fetchImpl: readFailure, now, output: line => first.push(line) }), 1);
+    assert.equal(JSON.parse(first[0]).error, 'read-500');
+
+    const second = [];
+    assert.equal(await main({ environment: { GITHUB_REPOSITORY: repo }, now, output: line => second.push(line) }), 1);
+    assert.equal(JSON.parse(second[0]).error, 'token-required');
+});
+
+test('tracker-missing still reports its own code, unchanged by the generic fallback', async () => {
+    const output = [];
+    const fetchImpl = async url => {
+        if (url.includes('/runs?')) return { ok: true, json: async () => ({ total_count: 0, workflow_runs: [] }), headers: new Headers() };
+        if (url.includes('/issues?')) return { ok: true, json: async () => [], headers: new Headers() };
+        assert.fail(`Unexpected URL ${url}`);
+    };
+    assert.equal(await main({ environment: { GITHUB_REPOSITORY: repo, GITHUB_TOKEN: 'fixture' }, fetchImpl, now, output: line => output.push(line) }), 1);
+    assert.equal(JSON.parse(output[0]).error, 'tracker-missing');
+});
+
+test('a credential-shaped error message is omitted entirely, never partially surfaced', () => {
+    assert.equal(safeName('boom ghp_1234567890123456789012345678901234'), '[omitted]');
+    assert.equal(safeName('token=abcdef'), '[omitted]');
 });
 
 test('--dry-run entry point issues zero non-GET calls through injectable fetch', async () => {
