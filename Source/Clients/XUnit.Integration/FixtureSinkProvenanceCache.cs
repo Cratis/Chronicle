@@ -25,14 +25,16 @@ internal sealed class FixtureSinkProvenanceCache : ISinkProvenanceCache, IAsyncD
     /// <inheritdoc/>
     public ValueTask DisposeAsync() => _cache.DisposeAsync();
 
+#if DEVELOPMENT
+    Task IDevelopmentSinkProvenanceObservations.RotateAfterWipe() => Reset();
+#endif
+
     /// <summary>
     /// Drains old observations after fixture storage is wiped, before kernel bootstrap.
     /// </summary>
     /// <returns>The reset task.</returns>
 #if DEVELOPMENT
     internal Task Reset() => _cache.RotateAfterWipe();
-
-    Task IDevelopmentSinkProvenanceObservations.RotateAfterWipe() => Reset();
 #else
     internal async Task Reset()
     {
