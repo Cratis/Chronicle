@@ -632,11 +632,7 @@ public partial class EventStore : IEventStore
                 await Preparation.Register(_autoDiscoverAndRegister ? DiscoverAllLocal : ValidateManualPreparation, async () =>
                 {
                     var (registerEventTypes, registerReadModels) = await PrepareArtifactRegistration();
-                    if (!isBackgroundRetry)
-                    {
-                        drift = await DetectIdentityDrift();
-                        _identityDriftEpoch = epoch;
-                    }
+                    drift = await GetRegistrationIdentityDrift(epoch, isBackgroundRetry, drift);
 
                     // Background retries reuse findings only on the same connection epoch. A restarted kernel
                     // needs a fresh snapshot, including when a reconnect joined an unfinished background attempt.
@@ -656,17 +652,29 @@ public partial class EventStore : IEventStore
                 continue;
             }
 
-            if (runFailure is not null)
-            {
-                if (effectsStarted && runFailure is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
-                {
-                    StartBackgroundRegistrationRetry();
-                }
-                ExceptionDispatchInfo.Capture(runFailure).Throw();
-            }
-
+            ThrowIfRegistrationFailed(runFailure, effectsStarted);
             return;
         }
+    }
+
+    async Task<IImmutableList<ArtifactIdentityDrift>> GetRegistrationIdentityDrift(long epoch, bool isBackgroundRetry, IImmutableList<ArtifactIdentityDrift> drift)
+    {
+        if (isBackgroundRetry) return drift;
+
+        var detected = await DetectIdentityDrift();
+        _identityDriftEpoch = epoch;
+        return detected;
+    }
+
+    void ThrowIfRegistrationFailed(Exception? runFailure, bool effectsStarted)
+    {
+        if (runFailure is null) return;
+
+        if (effectsStarted && runFailure is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered))
+        {
+            StartBackgroundRegistrationRetry();
+        }
+        ExceptionDispatchInfo.Capture(runFailure).Throw();
     }
 
     async Task<(Func<Task> EventTypes, Func<Task> ReadModels)> PrepareArtifactRegistration()
