@@ -7,7 +7,7 @@ import path from 'node:path';
 import { workflowPath, trackerTitle, requireEvidence, positive, scopeFor, eligible, historyFor,
     selectTracker, validateTracker, transition, runMetadata, jobsMetadata, renderBody } from './nightly-build-health-policy.mjs';
 
-class ReportingError extends Error {}
+export class ReportingError extends Error {}
 
 const statusLabel = status => (Number.isInteger(status) && status >= 100 && status <= 599 ? status : 'unknown');
 
