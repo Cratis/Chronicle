@@ -54,6 +54,7 @@ public partial class Observer
         if (!State.IsReplaying)
         {
             State = State with { IsReplaying = true };
+            InvalidateLagGauge();
             await WriteStateAsync();
         }
 

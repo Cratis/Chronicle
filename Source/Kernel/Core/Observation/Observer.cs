@@ -594,6 +594,7 @@ public partial class Observer(
         SupersedeRecoveryAfterQuarantine();
         var wasHeldByClient = IsHeldByClient;
         _subscription = ObserverSubscription.Unsubscribed;
+        InvalidateLagGauge();
         ForgetDurableSubscription();
         ForgetSupersededRegistrations();
         await PauseJobs();
@@ -787,6 +788,7 @@ public partial class Observer(
     {
         ResetRecoveryFlagsForEntering(state);
         _isQuarantined = state is QuarantinedObserver;
+        if (state is BaseObserverState { RunningState: not ObserverRunningState.Active }) InvalidateLagGauge();
         await _alertMutationLock.WaitAsync();
         try
         {
@@ -1135,6 +1137,7 @@ public partial class Observer(
         NotePreparationEnded();
         _catchupRecoveryAttempts = 0;
         _subscription = ObserverSubscription.Unsubscribed;
+        InvalidateLagGauge();
         ForgetDurableSubscription();
         ForgetSupersededRegistrations();
     }

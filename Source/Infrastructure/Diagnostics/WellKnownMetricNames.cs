@@ -404,6 +404,18 @@ public static class WellKnownMetricNames
     /// <summary>Unit of <see cref="ObserverResident"/>.</summary>
     public const string ObserverResidentUnit = "{observer}";
 
+    /// <summary>Event sequence slots between a resident observer's cursor and the end of the event sequence, as last sampled by the watchdog.</summary>
+    public const string ObserverLagDistance = "cratis.chronicle.observer.lag_distance";
+
+    /// <summary>Unit of <see cref="ObserverLagDistance"/>.</summary>
+    public const string ObserverLagDistanceUnit = "{event}";
+
+    /// <summary>1 while the watchdog's current sample says a resident observer is stalled, 0 while it says it is not.</summary>
+    public const string ObserverStalled = "cratis.chronicle.observer.stalled";
+
+    /// <summary>Unit of <see cref="ObserverStalled"/>.</summary>
+    public const string ObserverStalledUnit = "1";
+
     /// <summary>Number of observer jobs running in this process.</summary>
     public const string JobRunning = "cratis.chronicle.job.running";
 

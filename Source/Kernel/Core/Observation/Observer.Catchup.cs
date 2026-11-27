@@ -35,6 +35,7 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         _isPreparingCatchup = true;
+        InvalidateLagGauge();
         _walkingEveryPartition = false;
         using var scope = logger.BeginObserverScope(State.Identifier, _observerKey);
 
@@ -88,6 +89,7 @@ public partial class Observer
             State.CatchingUpPartitions.Add(partition);
         }
 
+        InvalidateLagGauge();
         await WriteStateAsync();
 
         _isPreparingCatchup = false;
@@ -136,6 +138,7 @@ public partial class Observer
         // From the moment the reporting job stops counting as an owner until routing has asked for its successor, the
         // handover itself owns catch-up. The watchdog interleaves with this call and must not rescue in that window.
         _catchUpHandoversInFlight++;
+        InvalidateLagGauge();
         _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         _catchUpOwnershipEpoch++;
         try

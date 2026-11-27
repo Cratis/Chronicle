@@ -162,6 +162,8 @@ These instruments are new, so they have no legacy name. They are published under
 | `cratis.chronicle.observer.quarantined_partitions` | Gauge `{partition}` | event store, namespace, event sequence, observer | Quarantined partitions of the observer now. Reported only while above 0. |
 | `cratis.chronicle.observer.running_state` | Gauge `1` | event store, namespace, event sequence, observer, `cratis.chronicle.observer.state` | `1` while the observer is in the state named by `cratis.chronicle.observer.state`. Reported only for `quarantined` and `suspended`. |
 | `cratis.chronicle.observer.resident` | Gauge `{observer}` | event store, namespace, `cratis.observer.type`, `cratis.chronicle.observer.state` | Observers resident in the process, in every state. |
+| `cratis.chronicle.observer.lag_distance` | Gauge `{event}` | event store, namespace, event sequence, observer | Event sequence slots between the observer's cursor and the end of the event sequence when the watchdog last sampled it. It counts slots, not events the observer will handle, and `0` means caught up. |
+| `cratis.chronicle.observer.stalled` | Gauge `1` | event store, namespace, event sequence, observer | `1` while the watchdog's current sample says the observer is stalled, `0` while it says lagging or caught up. |
 | `cratis.chronicle.observer.dormant` | Gauge `{observer}` | event store, namespace | Observers held as dormant by the appended events queues of the silo: subscribed, with no activation. See [Releasing dormant observers](observers.md#releasing-dormant-observers). |
 | `cratis.chronicle.job.running` | Gauge `{job}` | event store, namespace, `cratis.chronicle.job.type` | Running catch-up and replay jobs. |
 | `cratis.chronicle.observer.job.handled_steps` | Gauge `{step}` | event store, namespace, event sequence, observer, `cratis.chronicle.job.type` | Completed steps, successful or failed, of the observer's running jobs of that type. |
@@ -186,6 +188,15 @@ The three per-observer gauges report an observer only while it needs attention, 
 - `running_state` reports `1` for an observer while it is quarantined or suspended, with the state in `cratis.chronicle.observer.state`. Disconnected and replaying observers are normal during deployments and replays, so they appear only in `cratis.chronicle.observer.resident`.
 - When an observer recovers, or the process releases it while it is abnormal, its series reports `0` for three minutes and then stops. The first collection after the recovery reports the `0` even when the export or scrape interval is three minutes or longer. With several readers, such as an OTLP exporter and a Prometheus endpoint, only the first reader to collect after the recovery is certain to see that `0`, so a reader that collects less often than every three minutes can miss it. A backend therefore sees the value fall to `0` instead of keeping the last abnormal value until the series goes stale. Alert on the value, not on whether the series exists.
 
+`cratis.chronicle.observer.lag_distance` and `cratis.chronicle.observer.stalled` publish the watchdog's own measurement of a resident observer, the same one the Workbench shows, and measure nothing new. They differ from the gauges above in what a missing series means:
+
+- A caught-up observer reports a `lag_distance` of `0` and a `stalled` of `0`: caught up is a measurement. An observer with no current sample reports neither series. That is not the same as caught up.
+- There is no sample for an observer that has not been measured yet, is disconnected, replaying, inactive or quarantined, whose tail could not be read, or whose sample expired. A sample expires two watchdog intervals after it was taken, as `GetObserverLag` also treats it, so an observer the watchdog stops sampling goes absent rather than keeping its last value.
+- Starting a catch-up withdraws the sample at once, and a stalled sample does not come back until the watchdog takes a new one. An observer that is catching up is never reported stalled.
+- A `lag_distance` too large for a signed 64-bit integer is omitted rather than wrapped or clamped. The `stalled` series is still reported.
+- The series carry only event store, namespace, event sequence and observer. There is no status, cause, timestamp, cursor or partition tag, and no zero tail: a series that stops being measurable simply stops.
+- Only an observer resident in the process that serves it reports, and a collection reads only what the observer last published; it never calls the observer or storage.
+
 `cratis.chronicle.observer.resident` and `cratis.chronicle.job.running` report `0` for a combination of event store, namespace, type and state they have reported before, rather than leaving it out once it empties.
 
 The dormant observer counters are published under their `Telemetry:MetricNames` names (see [Telemetry names](telemetry-names.md)): `observer.dormant_releases`, `observer.dormant_wakes` with `cratis.chronicle.observer.wake_cause` (`event` or `safety_net`), `observer.dormant_wakes_delayed`, `observer.dormant_safety_net_checks` with `cratis.chronicle.observer.safety_net_outcome` (`up_to_date`, `behind`, `unverified` or `full_wake`) and `observer.dormant_resumes` with `cratis.chronicle.observer.resume_outcome` (`cursor`, `catch_up` or `stale_record`). [Releasing dormant observers](observers.md#releasing-dormant-observers) says what to read from them.
@@ -201,6 +212,7 @@ With cumulative temporality, the OpenTelemetry SDK keeps a series' slot until th
 | `observer.job.handled_steps`, `observer.job.total_steps` | Observers that ran a catch-up or replay since the process started, once per job type. |
 | `observer.successful_observations` | Observers that delivered at least one event since the process started, twice in `Convention` mode when they also replayed (`cratis.replay` `true` and `false`). |
 | `observer.resident`, `job.running` | Event stores × namespaces × types × states. Small whatever the number of observers. |
+| `observer.lag_distance`, `observer.stalled` | At most one current series per resident observer that has a current sample. Under cumulative temporality the SDK holds a slot for every observer that was ever sampled in the process, so the bound is the resident observers over the process lifetime, before the series limit. |
 | `registration.pending`, `registration.oldest_pending_age` | Event stores whose registration inbox this silo has held since the process started. |
 | `job.failed` | Job types, a fixed list. |
 

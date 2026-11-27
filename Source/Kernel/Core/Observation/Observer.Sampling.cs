@@ -74,6 +74,7 @@ public partial class Observer
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow();
         _lagTracker.Reset();
         _lagSample = ObserverLagSample.Unmeasurable(cause, now, now + LagSampleValidity);
+        PublishLagGauge();
     }
 
     /// <summary>
@@ -104,5 +105,6 @@ public partial class Observer
             IsCatchingUpForLag);
 
         _lagSample = _lagTracker.Measure(reading, (timeProvider ?? TimeProvider.System).GetUtcNow(), _stallWindow, LagSampleValidity);
+        PublishLagGauge();
     }
 }

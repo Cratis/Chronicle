@@ -17,4 +17,13 @@ public record ObserverGaugeSnapshot(ObserverRunningState RunningState, int Faile
     /// The snapshot of an observer that has not reported anything yet.
     /// </summary>
     public static readonly ObserverGaugeSnapshot Initial = new(ObserverRunningState.Unknown, 0, 0);
+
+    /// <summary>
+    /// Gets the watchdog's sample of the observer as the observer itself last published it, or null when nothing current is known.
+    /// </summary>
+    /// <remarks>
+    /// Only the observer's own turn writes this, and it clears it the moment the observer stops being measurable. A gauge
+    /// callback additionally applies <see cref="ObserverLagSample.At"/>, so an unrenewed sample expires without a turn.
+    /// </remarks>
+    public ObserverLagSample? LagSample { get; init; }
 }

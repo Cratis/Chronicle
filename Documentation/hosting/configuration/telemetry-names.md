@@ -98,6 +98,8 @@ These instruments were added after the convention. They have no legacy name and 
 | `observer.quarantined_partitions` | `{partition}` |
 | `observer.running_state` | `1` |
 | `observer.resident` | `{observer}` |
+| `observer.lag_distance` | `{event}` |
+| `observer.stalled` | `1` |
 | `observer.dormant` | `{observer}` |
 | `job.running` | `{job}` |
 | `grain.calls.running` | `{call}` |

@@ -55,6 +55,7 @@ public sealed class ObserverGauges : IObserverGauges
 
     readonly ConcurrentDictionary<ObserverKey, ObserverGaugeEntry> _entries = new();
     readonly ConcurrentDictionary<ResidentGroup, byte> _residentGroups = new();
+    readonly TimeProvider _clock;
     readonly AbnormalGaugeSeries<ObserverKey> _failed;
     readonly AbnormalGaugeSeries<ObserverKey> _quarantined;
     readonly AbnormalGaugeSeries<(ObserverKey ObserverKey, ObserverRunningState State)> _runningState;
@@ -66,10 +67,10 @@ public sealed class ObserverGauges : IObserverGauges
     /// <param name="timeProvider">The <see cref="TimeProvider"/> measuring the zero tail; the system clock when not given.</param>
     public ObserverGauges([FromKeyedServices(WellKnown.MeterName)] IMeter<ObserverGauges> meter, TimeProvider? timeProvider = null)
     {
-        var clock = timeProvider ?? TimeProvider.System;
-        _failed = new(clock, ZeroTail);
-        _quarantined = new(clock, ZeroTail);
-        _runningState = new(clock, ZeroTail);
+        _clock = timeProvider ?? TimeProvider.System;
+        _failed = new(_clock, ZeroTail);
+        _quarantined = new(_clock, ZeroTail);
+        _runningState = new(_clock, ZeroTail);
 
         var actual = meter.ActualMeter;
         if (actual is null)
@@ -97,6 +98,16 @@ public sealed class ObserverGauges : IObserverGauges
             ObserveResident,
             WellKnownMetricNames.ObserverResidentUnit,
             "Number of observers resident in this process per event store, namespace, observer type and running state");
+        actual.CreateObservableGauge(
+            WellKnownMetricNames.ObserverLagDistance,
+            ObserveLagDistance,
+            WellKnownMetricNames.ObserverLagDistanceUnit,
+            "Event sequence slots between the cursor and the end of the event sequence of each resident observer, as last sampled by the watchdog; absent when there is no current sample");
+        actual.CreateObservableGauge(
+            WellKnownMetricNames.ObserverStalled,
+            ObserveStalled,
+            WellKnownMetricNames.ObserverStalledUnit,
+            "1 while the watchdog's current sample says a resident observer is stalled, 0 while it says it is not; absent when there is no current sample");
     }
 
     /// <inheritdoc/>
@@ -158,6 +169,40 @@ public sealed class ObserverGauges : IObserverGauges
                 new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.ObserverType, group.Type),
                 new KeyValuePair<string, object?>(WellKnownTelemetryAttributes.ObserverState, group.State)))
             .ToArray();
+    }
+
+    /// <summary>
+    /// Observes how far behind the end of the event sequence the resident observers were when the watchdog last sampled them.
+    /// </summary>
+    /// <returns>One measurement per observer with a current sample whose distance is representable, zero when it is caught up.</returns>
+    internal IEnumerable<Measurement<long>> ObserveLagDistance() =>
+        CurrentSamples()
+            .Where(_ => _.Sample.Distance <= long.MaxValue)
+            .Select(_ => new Measurement<long>((long)_.Sample.Distance!.Value, _.Entry.Tags))
+            .ToArray();
+
+    /// <summary>
+    /// Observes whether the watchdog's current sample says the resident observers are stalled.
+    /// </summary>
+    /// <returns>One measurement per observer with a current sample: 1 when stalled, 0 when lagging or caught up.</returns>
+    internal IEnumerable<Measurement<int>> ObserveStalled() =>
+        CurrentSamples()
+            .Select(_ => new Measurement<int>(_.Sample.Status == ObserverLagStatus.Stalled ? 1 : 0, _.Entry.Tags))
+            .ToArray();
+
+    /// <summary>
+    /// Gets the samples that currently describe the resident observers, judged by the same expiry rule the observer's own reads use.
+    /// </summary>
+    /// <returns>Each entry with its measurable sample.</returns>
+    IEnumerable<(ObserverGaugeEntry Entry, ObserverLagSample Sample)> CurrentSamples()
+    {
+        var now = _clock.GetUtcNow();
+        foreach (var entry in _entries.Values)
+        {
+            var snapshot = entry.Snapshot;
+            if (snapshot.RunningState != ObserverRunningState.Active || snapshot.LagSample?.At(now) is not { Status: not ObserverLagStatus.Unmeasurable } sample) continue;
+            yield return (entry, sample);
+        }
     }
 
     void Release(ObserverGaugeEntry entry) =>

@@ -23,8 +23,9 @@ public partial class Observer
     {
         if (!EnsureGauge(out var gauge)) return;
         var snapshot = gauge.Snapshot;
-        if (snapshot.RunningState == State.RunningState) return;
-        gauge.Publish(snapshot with { RunningState = State.RunningState });
+        var lagSample = RetainedLagSample(snapshot);
+        if (snapshot.RunningState == State.RunningState && ReferenceEquals(lagSample, snapshot.LagSample)) return;
+        gauge.Publish(snapshot with { RunningState = State.RunningState, LagSample = lagSample });
     }
 
     /// <summary>
@@ -33,7 +34,7 @@ public partial class Observer
     void PublishFailedPartitionsGauge()
     {
         if (!EnsureGauge(out var gauge)) return;
-        gauge.Publish(CurrentGaugeSnapshot());
+        gauge.Publish(CurrentGaugeSnapshot() with { LagSample = RetainedLagSample(gauge.Snapshot) });
     }
 
     bool EnsureGauge(out ObserverGaugeEntry gauge)
@@ -52,7 +53,7 @@ public partial class Observer
             // A registry substituted in a test host may hand back nothing; the observer then simply does not report.
             if (observerGauges.Register(_observerKey, Definition.Type) is not { } registered) return false;
             _gauge = registered;
-            _gauge.Publish(CurrentGaugeSnapshot());
+            _gauge.Publish(CurrentGaugeSnapshot() with { LagSample = EffectiveLagSample() });
         }
 
         gauge = _gauge;

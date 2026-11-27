@@ -28,7 +28,8 @@ public class the_observer_gauges : Specification
                 if (ReferenceEquals(instrument.Meter, _meter)) listener.EnableMeasurementEvents(instrument);
             }
         };
-        _listener.SetMeasurementEventCallback<int>((instrument, value, tags, _) => _measurements.Add(new(instrument.Name, value, tags.ToArray())));
+        _listener.SetMeasurementEventCallback<int>((instrument, value, tags, _) => _measurements.Add(new(instrument.Name, value, tags.ToArray(), typeof(int), instrument.Unit)));
+        _listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) => _measurements.Add(new(instrument.Name, value, tags.ToArray(), typeof(long), instrument.Unit)));
         _listener.Start();
 
         var meter = Substitute.For<IMeter<ObserverGauges>>();
@@ -53,7 +54,7 @@ public class the_observer_gauges : Specification
 
     protected IReadOnlyList<RecordedMeasurement> Collect(string instrument) => [.. Collect().Where(_ => _.Instrument == instrument)];
 
-    public record RecordedMeasurement(string Instrument, long Value, IReadOnlyList<KeyValuePair<string, object?>> Tags)
+    public record RecordedMeasurement(string Instrument, long Value, IReadOnlyList<KeyValuePair<string, object?>> Tags, Type ValueType, string? Unit)
     {
         public IDictionary<string, object?> TagMap => Tags.ToDictionary(_ => _.Key, _ => _.Value);
     }

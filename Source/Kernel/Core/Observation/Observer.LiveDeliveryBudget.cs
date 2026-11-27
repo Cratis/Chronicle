@@ -90,6 +90,7 @@ public partial class Observer
         // From the moment the partition is marked as catching up until its job is started, the handover owns
         // catch-up. The watchdog interleaves with this call and must not rescue in that window.
         _catchUpHandoversInFlight++;
+        InvalidateLagGauge();
         _catchUpHandoversSettled ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         _catchUpOwnershipEpoch++;
         _liveHandOversInFlight++;

@@ -112,6 +112,8 @@ internal static class LegacyTelemetryNames
         WellKnownMetricNames.ObserverQuarantinedPartitions,
         WellKnownMetricNames.ObserverRunningState,
         WellKnownMetricNames.ObserverResident,
+        WellKnownMetricNames.ObserverLagDistance,
+        WellKnownMetricNames.ObserverStalled,
         WellKnownMetricNames.ObserverDormant,
         WellKnownMetricNames.JobRunning,
         WellKnownMetricNames.GrainCallsRunning,

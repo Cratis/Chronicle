@@ -48,6 +48,7 @@ public partial class Observer : IObserverOwnershipClaims
         var keys = partitions.ToArray();
         var set = holder == ClaimHolderKind.PartitionReplay ? State.ReplayingPartitions : State.CatchingUpPartitions;
         set.UnionWith(keys);
+        InvalidateLagGauge();
         _partitionHoldsVersion++;
         if (!CanGrantClaims())
         {
