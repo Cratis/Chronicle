@@ -14,8 +14,8 @@ namespace Cratis.Chronicle.EventStoreSubscriptions;
 /// <param name="sourceEventStore">The name of the source event store to subscribe to.</param>
 public class EventStoreSubscriptionBuilder(IEventTypes eventTypes, EventStoreSubscriptionId subscriptionId, string sourceEventStore) : IEventStoreSubscriptionBuilder
 {
-    readonly HashSet<EventTypeId> _eventTypes = new();
-    readonly HashSet<EventType> _declaredEventTypes = new();
+    readonly HashSet<EventTypeId> _eventTypes = [];
+    readonly HashSet<EventType> _declaredEventTypes = [];
     readonly List<NamedTag> _namedTags = [];
     EventGenerationDelivery _generationDelivery = EventGenerationDelivery.Compatibility;
 

@@ -122,8 +122,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendPrepared));
-        ReadProtectionGuard.Append(nameof(AppendPrepared));
+        RequireAppendAllowed(nameof(AppendPrepared));
         ThrowIfNotOwner(preparedEvent);
         return AppendCore(eventSourceId, preparedEvent.Event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, preparedEvent: preparedEvent);
     }
@@ -141,8 +140,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendPreparedThroughEventSource));
-        ReadProtectionGuard.Append(nameof(AppendPreparedThroughEventSource));
+        RequireAppendAllowed(nameof(AppendPreparedThroughEventSource));
         ThrowIfNotOwner(preparedEvent);
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return AppendCore(
@@ -212,8 +210,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendThroughEventSource));
-        ReadProtectionGuard.Append(nameof(AppendThroughEventSource));
+        RequireAppendAllowed(nameof(AppendThroughEventSource));
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return await AppendCore(
             eventSourceId,
@@ -243,8 +240,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendManyThroughEventSource));
-        ReadProtectionGuard.Append(nameof(AppendManyThroughEventSource));
+        RequireAppendAllowed(nameof(AppendManyThroughEventSource));
         var routing = ResolvedEventRouting.Resolve(eventSources, eventSource, eventStream, null, null);
         return await AppendManyCore(
             eventSourceId,
@@ -290,8 +286,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendOnce));
-        ReadProtectionGuard.Append(nameof(AppendOnce));
+        RequireAppendAllowed(nameof(AppendOnce));
         ArgumentNullException.ThrowIfNull(idempotencyKey);
         return AppendCore(eventSourceId, @event, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, idempotencyKey: idempotencyKey);
     }
@@ -311,8 +306,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendOnceWithNamedTags));
-        ReadProtectionGuard.Append(nameof(AppendOnceWithNamedTags));
+        RequireAppendAllowed(nameof(AppendOnceWithNamedTags));
         ArgumentNullException.ThrowIfNull(idempotencyKey);
         return AppendCore(eventSourceId, @event, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, idempotencyKey: idempotencyKey);
     }
@@ -331,8 +325,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendManyOnce));
-        ReadProtectionGuard.Append(nameof(AppendManyOnce));
+        RequireAppendAllowed(nameof(AppendManyOnce));
         ArgumentNullException.ThrowIfNull(idempotencyKey);
         return AppendManyCore(eventSourceId, events, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, idempotencyKey: idempotencyKey);
     }
@@ -352,8 +345,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendManyOnceWithNamedTags));
-        ReadProtectionGuard.Append(nameof(AppendManyOnceWithNamedTags));
+        RequireAppendAllowed(nameof(AppendManyOnceWithNamedTags));
         ArgumentNullException.ThrowIfNull(idempotencyKey);
         return AppendManyCore(eventSourceId, events, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject, idempotencyKey: idempotencyKey);
     }
@@ -371,8 +363,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendMany));
-        ReadProtectionGuard.Append(nameof(AppendMany));
+        RequireAppendAllowed(nameof(AppendMany));
         return AppendManyCore(eventSourceId, events, [], eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }
 
@@ -390,8 +381,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred = default,
         Subject? subject = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendManyWithNamedTags));
-        ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
+        RequireAppendAllowed(nameof(AppendManyWithNamedTags));
         return AppendManyCore(eventSourceId, events, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }
 
@@ -402,8 +392,7 @@ public partial class EventSequence(
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendMany));
-        ReadProtectionGuard.Append(nameof(AppendMany));
+        RequireAppendAllowed(nameof(AppendMany));
         return AppendManyCore(events, [], correlationId, tags, concurrencyScopes);
     }
 
@@ -415,8 +404,7 @@ public partial class EventSequence(
         IEnumerable<string>? tags = default,
         IDictionary<EventSourceId, ConcurrencyScope>? concurrencyScopes = default)
     {
-        ImmediateAppendGuard.Append(nameof(AppendManyWithNamedTags));
-        ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
+        RequireAppendAllowed(nameof(AppendManyWithNamedTags));
         return AppendManyCore(events, namedTags, correlationId, tags, concurrencyScopes);
     }
 
@@ -427,8 +415,7 @@ public partial class EventSequence(
         IEnumerable<string>? tags,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
     {
-        ImmediateAppendGuard.Append(nameof(AppendMany));
-        ReadProtectionGuard.Append(nameof(AppendMany));
+        RequireAppendAllowed(nameof(AppendMany));
         var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
         return AppendManyCore(batch.Events, [], correlationId, tags, batch.Entries);
     }
@@ -441,8 +428,7 @@ public partial class EventSequence(
         IEnumerable<string>? tags,
         IEnumerable<KeyValuePair<EventSourceId, ConcurrencyScope>> concurrencyScopes)
     {
-        ImmediateAppendGuard.Append(nameof(AppendManyWithNamedTags));
-        ReadProtectionGuard.Append(nameof(AppendManyWithNamedTags));
+        RequireAppendAllowed(nameof(AppendManyWithNamedTags));
         var batch = new EventsWithConcurrencyScopes(events, concurrencyScopes);
         return AppendManyCore(batch.Events, namedTags, correlationId, tags, batch.Entries);
     }
@@ -721,8 +707,7 @@ public partial class EventSequence(
         IEnumerable<string>? tags = default,
         DateTimeOffset? occurred = default)
     {
-        ImmediateAppendGuard.Append(nameof(Compensate));
-        ReadProtectionGuard.Append(nameof(Compensate));
+        RequireAppendAllowed(nameof(Compensate));
         var preparedEvent = await Prepare(@event);
         correlationId ??= correlationIdAccessor.Current;
         var causation = causationManager.GetCurrentChain();
@@ -966,6 +951,12 @@ public partial class EventSequence(
     internal bool MatchesTarget(EventStoreName store, EventStoreNamespaceName targetNamespace) =>
         eventStoreName == store && @namespace == targetNamespace && eventSequenceId == EventSequenceId.Log;
 
+    static void RequireAppendAllowed(string operation)
+    {
+        ImmediateAppendGuard.Append(operation);
+        ReadProtectionGuard.Append(operation);
+    }
+
     static async Task<TResult> WithClosedStreamScopeSupport<TResult>(Func<Task<TResult>> call)
     {
         try
@@ -1036,8 +1027,7 @@ public partial class EventSequence(
         Subject? subject,
         string operation = nameof(Append))
     {
-        ImmediateAppendGuard.Append(operation);
-        ReadProtectionGuard.Append(operation);
+        RequireAppendAllowed(operation);
         return AppendCore(eventSourceId, @event, namedTags, eventStreamType, eventStreamId, eventSourceType, correlationId, tags, concurrencyScope, occurred, subject);
     }
 

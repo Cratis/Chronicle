@@ -632,11 +632,7 @@ public partial class EventStore : IEventStore
                 await Preparation.Register(_autoDiscoverAndRegister ? DiscoverAllLocal : ValidateManualPreparation, async () =>
                 {
                     var (registerEventTypes, registerReadModels) = await PrepareArtifactRegistration();
-                    if (!isBackgroundRetry)
-                    {
-                        drift = await DetectIdentityDrift();
-                        _identityDriftEpoch = epoch;
-                    }
+                    drift = await GetRegistrationIdentityDrift(epoch, isBackgroundRetry, drift);
 
                     // Background retries reuse findings only on the same connection epoch. A restarted kernel
                     // needs a fresh snapshot, including when a reconnect joined an unfinished background attempt.
@@ -669,6 +665,15 @@ public partial class EventStore : IEventStore
             StartBackgroundRegistrationRetry();
         }
         ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+
+    async Task<IImmutableList<ArtifactIdentityDrift>> GetRegistrationIdentityDrift(long epoch, bool isBackgroundRetry, IImmutableList<ArtifactIdentityDrift> drift)
+    {
+        if (isBackgroundRetry) return drift;
+
+        var detected = await DetectIdentityDrift();
+        _identityDriftEpoch = epoch;
+        return detected;
     }
 
     async Task<(Func<Task> EventTypes, Func<Task> ReadModels)> PrepareArtifactRegistration()

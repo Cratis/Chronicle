@@ -88,26 +88,14 @@ public class EventSeeding(
     public IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<TEvent> events, EventSourceType? eventSourceType = default)
         where TEvent : class
     {
-        var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
-        {
-            EventSourceType = eventSourceType ?? EventSourceType.Default,
-            EventStreamType = eventStreamType,
-            EventStreamId = eventStreamId
-        });
-        AddRoutedEntries(routed, true, EventStoreNamespaceName.NotSet, _eventTypes.GetEventTypeFor(typeof(TEvent)).Id);
+        AddRoutedEntries(Route(eventSourceId, eventStreamType, eventStreamId, events, eventSourceType), true, EventStoreNamespaceName.NotSet, _eventTypes.GetEventTypeFor(typeof(TEvent)).Id);
         return this;
     }
 
     /// <inheritdoc/>
     public IEventSeedingBuilder ForEventSource(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<object> events, EventSourceType? eventSourceType = default)
     {
-        var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
-        {
-            EventSourceType = eventSourceType ?? EventSourceType.Default,
-            EventStreamType = eventStreamType,
-            EventStreamId = eventStreamId
-        });
-        return ForEvents(routed);
+        return ForEvents(Route(eventSourceId, eventStreamType, eventStreamId, events, eventSourceType));
     }
 
     /// <inheritdoc/>
@@ -121,25 +109,14 @@ public class EventSeeding(
     public IEventSeedingBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
         where TEvent : class
     {
-        var eventType = _eventTypes.GetEventTypeFor(typeof(TEvent));
-        foreach (var @event in events)
-        {
-            var eventType_clrType = @event.GetType();
-            var staticTags = eventType_clrType.GetTags().Select(t => (Tag)t);
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, true, EventStoreNamespaceName.NotSet));
-        }
+        AddEntries(eventSourceId, events, _eventTypes.GetEventTypeFor(typeof(TEvent)).Id, true, EventStoreNamespaceName.NotSet);
         return this;
     }
 
     /// <inheritdoc/>
     public IEventSeedingBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events)
     {
-        foreach (var @event in events)
-        {
-            var eventType = _eventTypes.GetEventTypeFor(@event.GetType());
-            var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
-            _entries.Add(new SeedingEntry(eventSourceId, eventType.Id, @event, staticTags, true, EventStoreNamespaceName.NotSet));
-        }
+        AddEntries(eventSourceId, events, default, true, EventStoreNamespaceName.NotSet);
         return this;
     }
 
@@ -251,6 +228,30 @@ public class EventSeeding(
         return seeding;
     }
 
+    static void AddToGroup<TKey>(Dictionary<TKey, List<Contracts.Seeding.SeedingEntry>> groups, TKey key, Contracts.Seeding.SeedingEntry entry)
+        where TKey : notnull
+    {
+        if (!groups.TryGetValue(key, out var list))
+        {
+            list = [];
+            groups[key] = list;
+        }
+        list.Add(entry);
+    }
+
+    static bool RequiresRouting(SeedingEntry entry) =>
+        (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
+        (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
+        (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default);
+
+    static IEnumerable<EventForEventSourceId> Route(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<object> events, EventSourceType? eventSourceType) =>
+        events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
+        {
+            EventSourceType = eventSourceType ?? EventSourceType.Default,
+            EventStreamType = eventStreamType,
+            EventStreamId = eventStreamId
+        });
+
     async Task<bool> DiscoverSeeder(Type seederType)
     {
         try
@@ -297,108 +298,17 @@ public class EventSeeding(
         var globalEntries = entries.Where(e => e.IsGlobal).ToList();
         var namespacedEntries = entries.Where(e => !e.IsGlobal).GroupBy(e => e.TargetNamespace);
 
-        var globalByEventTypeEntries = new List<Contracts.Seeding.EventTypeSeedEntries>();
-        var globalByEventSourceEntries = new List<Contracts.Seeding.EventSourceSeedEntries>();
+        var (globalByEventTypeEntries, globalByEventSourceEntries) = await GroupEntries(globalEntries);
         var namespaced = new List<Contracts.Seeding.NamespacedSeedEntries>();
 
-        // Process global entries
-        if (globalEntries.Count > 0)
-        {
-            var globalByEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
-            var globalByEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
-
-            foreach (var entry in globalEntries)
-            {
-                var content = await _eventSerializer.Serialize(entry.Event);
-                var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
-                var contractEntry = new Contracts.Seeding.SeedingEntry
-                {
-                    EventSourceId = entry.EventSourceId.Value,
-                    EventTypeId = entry.EventTypeId.Value,
-                    Content = JsonSerializer.Serialize(content),
-                    Tags = tags,
-                    EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
-                    EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
-                    EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
-                };
-
-                if (!globalByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
-                {
-                    eventTypeList = [];
-                    globalByEventType[entry.EventTypeId] = eventTypeList;
-                }
-                eventTypeList.Add(contractEntry);
-
-                if (!globalByEventSource.TryGetValue(entry.EventSourceId, out var eventSourceList))
-                {
-                    eventSourceList = [];
-                    globalByEventSource[entry.EventSourceId] = eventSourceList;
-                }
-                eventSourceList.Add(contractEntry);
-            }
-
-            globalByEventTypeEntries.AddRange(globalByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
-            {
-                EventTypeId = kvp.Key.Value,
-                Entries = kvp.Value
-            }));
-
-            globalByEventSourceEntries.AddRange(globalByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
-            {
-                EventSourceId = kvp.Key.Value,
-                Entries = kvp.Value
-            }));
-        }
-
-        // Process namespaced entries
         foreach (var namespaceGroup in namespacedEntries)
         {
-            var namespacedByEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
-            var namespacedByEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
-
-            foreach (var entry in namespaceGroup)
-            {
-                var content = await _eventSerializer.Serialize(entry.Event);
-                var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
-                var contractEntry = new Contracts.Seeding.SeedingEntry
-                {
-                    EventSourceId = entry.EventSourceId.Value,
-                    EventTypeId = entry.EventTypeId.Value,
-                    Content = JsonSerializer.Serialize(content),
-                    Tags = tags,
-                    EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
-                    EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
-                    EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
-                };
-
-                if (!namespacedByEventType.TryGetValue(entry.EventTypeId, out var eventTypeList))
-                {
-                    eventTypeList = [];
-                    namespacedByEventType[entry.EventTypeId] = eventTypeList;
-                }
-                eventTypeList.Add(contractEntry);
-
-                if (!namespacedByEventSource.TryGetValue(entry.EventSourceId, out var eventSourceList))
-                {
-                    eventSourceList = [];
-                    namespacedByEventSource[entry.EventSourceId] = eventSourceList;
-                }
-                eventSourceList.Add(contractEntry);
-            }
-
+            var (byEventType, byEventSource) = await GroupEntries(namespaceGroup);
             namespaced.Add(new Contracts.Seeding.NamespacedSeedEntries
             {
                 Namespace = namespaceGroup.Key.Value,
-                ByEventType = namespacedByEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
-                {
-                    EventTypeId = kvp.Key.Value,
-                    Entries = kvp.Value
-                }).ToList(),
-                ByEventSource = namespacedByEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
-                {
-                    EventSourceId = kvp.Key.Value,
-                    Entries = kvp.Value
-                }).ToList()
+                ByEventType = byEventType,
+                ByEventSource = byEventSource
             });
         }
 
@@ -413,12 +323,50 @@ public class EventSeeding(
         }).EnsureSuccess();
     }
 
+    async Task<(List<Contracts.Seeding.EventTypeSeedEntries> ByEventType, List<Contracts.Seeding.EventSourceSeedEntries> ByEventSource)> GroupEntries(IEnumerable<SeedingEntry> entries)
+    {
+        var byEventType = new Dictionary<EventTypeId, List<Contracts.Seeding.SeedingEntry>>();
+        var byEventSource = new Dictionary<EventSourceId, List<Contracts.Seeding.SeedingEntry>>();
+
+        foreach (var entry in entries)
+        {
+            var contractEntry = await ToContractEntry(entry);
+            AddToGroup(byEventType, entry.EventTypeId, contractEntry);
+            AddToGroup(byEventSource, entry.EventSourceId, contractEntry);
+        }
+
+        return (
+            byEventType.Select(kvp => new Contracts.Seeding.EventTypeSeedEntries
+            {
+                EventTypeId = kvp.Key.Value,
+                Entries = kvp.Value
+            }).ToList(),
+            byEventSource.Select(kvp => new Contracts.Seeding.EventSourceSeedEntries
+            {
+                EventSourceId = kvp.Key.Value,
+                Entries = kvp.Value
+            }).ToList());
+    }
+
+    async Task<Contracts.Seeding.SeedingEntry> ToContractEntry(SeedingEntry entry)
+    {
+        var content = await _eventSerializer.Serialize(entry.Event);
+        var tags = entry.Tags?.Select(t => t.Value).ToList() ?? [];
+        return new Contracts.Seeding.SeedingEntry
+        {
+            EventSourceId = entry.EventSourceId.Value,
+            EventTypeId = entry.EventTypeId.Value,
+            Content = JsonSerializer.Serialize(content),
+            Tags = tags,
+            EventSourceType = entry.EventSourceType?.Value ?? EventSourceType.Default.Value,
+            EventStreamType = entry.EventStreamType?.Value ?? EventStreamType.All.Value,
+            EventStreamId = entry.EventStreamId?.Value ?? EventStreamId.Default
+        };
+    }
+
     async Task ConfirmRoutingSupport(List<SeedingEntry> entries)
     {
-        if (!entries.Exists(entry =>
-            (!string.IsNullOrEmpty(entry.EventSourceType?.Value) && entry.EventSourceType != EventSourceType.Default) ||
-            (!string.IsNullOrEmpty(entry.EventStreamType?.Value) && entry.EventStreamType != EventStreamType.All) ||
-            (!string.IsNullOrEmpty(entry.EventStreamId?.Value) && entry.EventStreamId.Value != EventStreamId.Default)))
+        if (!entries.Exists(RequiresRouting))
         {
             return;
         }
@@ -451,9 +399,14 @@ public class EventSeeding(
         }
     }
 
-    void AddScopedEntry(EventSourceId eventSourceId, EventTypeId eventTypeId, object @event, IEnumerable<Tag> tags, bool isGlobal, EventStoreNamespaceName targetNamespace)
+    void AddEntries(EventSourceId eventSourceId, IEnumerable<object> events, EventTypeId? explicitEventTypeId, bool isGlobal, EventStoreNamespaceName targetNamespace)
     {
-        _entries.Add(new SeedingEntry(eventSourceId, eventTypeId, @event, tags, isGlobal, targetNamespace));
+        foreach (var @event in events)
+        {
+            var eventTypeId = explicitEventTypeId ?? _eventTypes.GetEventTypeFor(@event.GetType()).Id;
+            var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
+            _entries.Add(new SeedingEntry(eventSourceId, eventTypeId, @event, staticTags, isGlobal, targetNamespace));
+        }
     }
 
     record SeedingEntry(
@@ -472,25 +425,13 @@ public class EventSeeding(
         public IEventSeedingScopeBuilder For<TEvent>(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<TEvent> events, EventSourceType? eventSourceType = default)
             where TEvent : class
         {
-            var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
-            {
-                EventSourceType = eventSourceType ?? EventSourceType.Default,
-                EventStreamType = eventStreamType,
-                EventStreamId = eventStreamId
-            });
-            parent.AddRoutedEntries(routed, isGlobal, targetNamespace, parent._eventTypes.GetEventTypeFor(typeof(TEvent)).Id);
+            parent.AddRoutedEntries(Route(eventSourceId, eventStreamType, eventStreamId, events, eventSourceType), isGlobal, targetNamespace, parent._eventTypes.GetEventTypeFor(typeof(TEvent)).Id);
             return this;
         }
 
         public IEventSeedingScopeBuilder ForEventSource(EventSourceId eventSourceId, EventStreamType eventStreamType, EventStreamId eventStreamId, IEnumerable<object> events, EventSourceType? eventSourceType = default)
         {
-            var routed = events.Select(@event => new EventForEventSourceId(eventSourceId, @event)
-            {
-                EventSourceType = eventSourceType ?? EventSourceType.Default,
-                EventStreamType = eventStreamType,
-                EventStreamId = eventStreamId
-            });
-            return ForEvents(routed);
+            return ForEvents(Route(eventSourceId, eventStreamType, eventStreamId, events, eventSourceType));
         }
 
         public IEventSeedingScopeBuilder ForEvents(IEnumerable<EventForEventSourceId> events)
@@ -502,23 +443,13 @@ public class EventSeeding(
         public IEventSeedingScopeBuilder For<TEvent>(EventSourceId eventSourceId, IEnumerable<TEvent> events)
             where TEvent : class
         {
-            var eventType = parent._eventTypes.GetEventTypeFor(typeof(TEvent));
-            foreach (var @event in events)
-            {
-                var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
-                parent.AddScopedEntry(eventSourceId, eventType.Id, @event, staticTags, isGlobal, targetNamespace);
-            }
+            parent.AddEntries(eventSourceId, events, parent._eventTypes.GetEventTypeFor(typeof(TEvent)).Id, isGlobal, targetNamespace);
             return this;
         }
 
         public IEventSeedingScopeBuilder ForEventSource(EventSourceId eventSourceId, IEnumerable<object> events)
         {
-            foreach (var @event in events)
-            {
-                var eventType = parent._eventTypes.GetEventTypeFor(@event.GetType());
-                var staticTags = @event.GetType().GetTags().Select(t => (Tag)t);
-                parent.AddScopedEntry(eventSourceId, eventType.Id, @event, staticTags, isGlobal, targetNamespace);
-            }
+            parent.AddEntries(eventSourceId, events, default, isGlobal, targetNamespace);
             return this;
         }
     }
