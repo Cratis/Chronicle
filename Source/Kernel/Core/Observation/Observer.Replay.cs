@@ -14,6 +14,9 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
+    // Activation-local intent only. Partition replay requests and their release callbacks are non-interleaving grain calls.
+    readonly Dictionary<Key, List<PendingPartitionReplay>> _pendingPartitionReplays = [];
+
     /// <inheritdoc/>
     /// <remarks>
     /// A transition requested while another is in progress is only scheduled, and a later request replaces it. The only
@@ -208,8 +211,14 @@ public partial class Observer
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FinishedReplayForPartition(partition);
         ShadowHandOverPartition(partition, ClaimHolderKind.PartitionReplay);
-        State.ReplayingPartitions.Remove(partition);
-        _partitionHoldsVersion++;
+
+        // Keep holding live delivery if a fresh rebuild must run before catch-up.
+        if (!_pendingPartitionReplays.ContainsKey(partition))
+        {
+            State.ReplayingPartitions.Remove(partition);
+            _partitionHoldsVersion++;
+        }
+
         if (replayedEventTypes.Length > 0 && lastHandledEventSequenceNumber.IsActualValue &&
             Failures.TryGet(partition, out var failure) && failure.LastAttempt.SequenceNumber <= lastHandledEventSequenceNumber)
         {
@@ -233,6 +242,7 @@ public partial class Observer
 
         HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
         await WriteStateAsync();
+        if (await StartPendingPartitionReplay(partition)) return;
 
         // Empty partial replays report the position before held-back delivery when known; otherwise preserve the legacy fallback.
         await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber), fromStartWhenNothingRead: true);
@@ -254,11 +264,23 @@ public partial class Observer
             return;
         }
 
+        var request = new PendingPartitionReplay(sequenceNumber, eventTypes.ToArray(), retainOtherCounts);
+        if (State.ReplayingPartitions.Contains(partition))
+        {
+            QueuePartitionReplay(partition, request);
+            return;
+        }
+
+        await StartPartitionReplay(partition, request);
+    }
+
+    async Task StartPartitionReplay(Key partition, PendingPartitionReplay request, EventSequenceNumber? heldBackFromPreviousReplay = null)
+    {
+        var (sequenceNumber, eventTypesToReplay, retainOtherCounts) = request;
         await GlobalProjectionReplay.EnsureSupported(storage, _observerKey, Definition.Type);
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         logger.AttemptReplayPartition(partition, sequenceNumber);
 
-        var eventTypesToReplay = eventTypes.ToArray();
         var eventTypeIdsToReplay = eventTypesToReplay.Select(_ => _.Id).ToHashSet();
         var handledCountsStorage = GetObserverHandledCountsStorage();
         var partitionCounts = await handledCountsStorage.GetFor(_observerId, partition);
@@ -280,7 +302,7 @@ public partial class Observer
         // may interleave those awaits: events below this cursor were already handled or belong to existing
         // failure/catch-up work; events from here on cannot reach this partition while its replay marker is set.
         // The marker, hold and claim are persisted before the job starts, so admission finds the claim the job is stamped with.
-        var heldBackFrom = State.NextEventSequenceNumber;
+        var heldBackFrom = heldBackFromPreviousReplay ?? State.NextEventSequenceNumber;
         Skips.JobStarted(partition);
         RecordedHandlingState();
         using var start = BeginPartitionJobStart();
@@ -302,6 +324,36 @@ public partial class Observer
             await ReleaseRefusedPartitionReplay(partition, heldBackFrom, epochs[partition]);
             throw;
         }
+    }
+
+    void QueuePartitionReplay(Key partition, PendingPartitionReplay request)
+    {
+        if (!_pendingPartitionReplays.TryGetValue(partition, out var pending))
+        {
+            pending = [];
+            _pendingPartitionReplays.Add(partition, pending);
+        }
+
+        // Coalesce equivalent work; a bounded or selected-type replay must not absorb a full repair.
+        if (!pending.Any(_ => _.Through == request.Through && _.RetainOtherCounts == request.RetainOtherCounts && _.EventTypes.SequenceEqual(request.EventTypes)))
+        {
+            pending.Add(request);
+        }
+    }
+
+    async Task<bool> StartPendingPartitionReplay(Key partition, EventSequenceNumber? heldBackFrom = null)
+    {
+        if (!_pendingPartitionReplays.TryGetValue(partition, out var pending)) return false;
+
+        var next = pending[0];
+        pending.RemoveAt(0);
+        if (pending.Count == 0)
+        {
+            _pendingPartitionReplays.Remove(partition);
+        }
+
+        await StartPartitionReplay(partition, next, heldBackFrom);
+        return true;
     }
 
     /// <summary>
@@ -387,4 +439,6 @@ public partial class Observer
         var first = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(EventSequenceNumber.First, addedEventTypes);
         return first.Match(sequenceNumber => sequenceNumber, _ => EventSequenceNumber.Unavailable);
     }
+
+    sealed record PendingPartitionReplay(EventSequenceNumber Through, EventType[] EventTypes, bool RetainOtherCounts);
 }

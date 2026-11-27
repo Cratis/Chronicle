@@ -6,6 +6,7 @@ using Cratis.Chronicle.Events;
 using Cratis.Chronicle.EventSequences;
 using Cratis.Chronicle.Jobs;
 using Cratis.Chronicle.Observation;
+using Cratis.Chronicle.Observation.Jobs;
 using Cratis.Chronicle.Reactors;
 using Cratis.Chronicle.Reducers;
 using context = Cratis.Chronicle.Integration.for_EventSequence.when_revising.an_event_with_observers.context;
@@ -82,7 +83,7 @@ public class an_event_with_observers(context context) : Given<context>(context)
 
             // Wait for replay jobs to complete.
             await ReplayWaitDiagnostics.Run(
-                () => EventStore.Jobs.WaitForThereToBeNoJobs(),
+                () => EventStore.Jobs.WaitForJobsToDrainSuccessfully(startupTimeout),
                 new ReplayWaitSources(
                     EventStore.Jobs.GetJobs,
                     nameof(SomeReactor),
@@ -90,7 +91,9 @@ public class an_event_with_observers(context context) : Given<context>(context)
                     nameof(SomeReducer),
                     reducerHandler.GetState,
                     nameof(SomeProjection),
-                    projectionHandler.GetState));
+                    projectionHandler.GetState,
+                    GetJobScope: GetJobScope,
+                    ScenarioSource: EventSourceId.Value));
 
             // Wait for observers to finish processing the replay.
             await Reactor.WaitTillHandledEventReaches(3, startupTimeout);
@@ -107,6 +110,15 @@ public class an_event_with_observers(context context) : Given<context>(context)
             ReactorState = await reactorHandler.GetState();
             ReducerState = await reducerHandler.GetState();
             ProjectionState = await projectionHandler.GetState();
+        }
+
+        async Task<(string Observer, string Partition)?> GetJobScope(JobId id)
+        {
+            var storage = GetEventStoreNamespaceStorage(EventStore.Namespace.Value);
+            var result = await storage.Jobs.GetJob(new(id.Value));
+            return result.TryGetResult(out var state) && state.Request is ReplayObserverPartitionRequest request
+                ? (request.ObserverKey.ObserverId.ToString(), request.Key.ToString())
+                : null;
         }
     }
 

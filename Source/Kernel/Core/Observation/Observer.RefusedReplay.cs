@@ -85,6 +85,8 @@ public partial class Observer
                 await QuarantineRefusedPartitionWithoutPosition(partition);
             }
 
+            if (await StartPendingPartitionReplay(partition, heldBackFrom)) return;
+
             State.ReplayingPartitions.Remove(partition);
             RecordedHandlingState();
             await WriteStateAsync();
