@@ -11,7 +11,9 @@ static class catch_up_continuations
 {
     static readonly ConditionalWeakTable<TestKitSilo, HashSet<int>> _firedTimers = new();
 
-    public static Task RunCatchUpContinuation(this TestKitSilo silo)
+    public static Task RunCatchUpContinuation(this TestKitSilo silo) => silo.RunCatchUpContinuation(required: true);
+
+    public static Task RunCatchUpContinuation(this TestKitSilo silo, bool required)
     {
         var registrations = silo.TimerRegistry.Mock.Invocations
             .Where(_ => string.Equals(_.Method.Name, "RegisterTimer", StringComparison.Ordinal) || string.Equals(_.Method.Name, "RegisterGrainTimer", StringComparison.Ordinal))
@@ -21,7 +23,7 @@ static class catch_up_continuations
             .FirstOrDefault(candidate => !fired.Contains(candidate) && IsCatchUpContinuation(registrations[candidate]), -1);
         if (index < 0)
         {
-            throw new InvalidOperationException("no new catch-up continuation was scheduled");
+            return required ? throw new InvalidOperationException("no new catch-up continuation was scheduled") : Task.CompletedTask;
         }
         fired.Add(index);
         return silo.TimerRegistry.FireAsync(index);
