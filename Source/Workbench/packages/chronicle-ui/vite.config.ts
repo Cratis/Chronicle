@@ -26,7 +26,8 @@ export default defineConfig({
         lib: {
             entry: {
                 'index': here('./src/index.ts'),
-                'event-stores': here('./src/event-stores/index.ts')
+                'event-stores': here('./src/event-stores/index.ts'),
+                'styles': here('./src/styles.ts')
             },
             formats: ['es'],
             cssFileName: 'styles'

@@ -17,5 +17,6 @@
         "outDir": "dist/types",
         "types": []
     },
-    "include": ["src/**/*.ts", "src/**/*.tsx", "generated-input/**/*.ts"]
+    "include": ["src/**/*.ts", "src/**/*.tsx", "generated-input/**/*.ts"],
+    "exclude": ["src/styles.ts"]
 }

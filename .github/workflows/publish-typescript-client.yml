@@ -141,13 +141,17 @@ jobs:
         run: npm publish --provenance --access public --tag latest
 
   # The Workbench UI package is a second package of the same release. It is not built from protobuf, so it has
-  # its own job: rerunning it neither rebuilds the contracts nor depends on their publish result.
-  publish-chronicle-ui:
+  # its own jobs: rerunning them neither rebuilds the contracts nor depends on their publish result.
+  #
+  # Two jobs on purpose. The build job installs and runs third-party code (Yarn dependencies, the registry-resolved
+  # peers of the consumer check) and has no OIDC token. The publish job holds id-token: write and runs nothing but
+  # setup-node and npm against the tarball the build job verified.
+  build-chronicle-ui:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - name: Validate version
@@ -165,6 +169,63 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.x'
+          package-manager-cache: false
+
+      - name: Install Workbench dependencies
+        working-directory: ./Source/Workbench
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Build Chronicle UI package
+        working-directory: ./Source/Workbench
+        run: yarn build:ui
+
+      # Stamp a copy outside the Yarn workspace and pack it once: the private Workbench manifest and its lock stay
+      # untouched, and this tarball is the only artifact that is checked and published.
+      - name: Pack publishable package
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          STAGED="$RUNNER_TEMP/chronicle-ui-package"
+          mkdir -p "$STAGED" "$RUNNER_TEMP/chronicle-ui-tarball"
+          PACKAGE=Source/Workbench/packages/chronicle-ui
+          cp -R "$PACKAGE/dist" "$PACKAGE/package.json" "$PACKAGE/README.md" "$PACKAGE/LICENSE" "$STAGED/"
+          cd "$STAGED"
+          npm version "$VERSION" --no-git-tag-version
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/chronicle-ui-tarball"
+
+      - name: Check packed UI consumers
+        run: node Source/Workbench/packages/chronicle-ui/check-consumers.mjs "$RUNNER_TEMP"/chronicle-ui-tarball/cratis-chronicle-ui-*.tgz
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chronicle-ui-package
+          path: ${{ runner.temp }}/chronicle-ui-tarball/cratis-chronicle-ui-*.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-chronicle-ui:
+    if: github.ref == 'refs/heads/main'
+    needs: build-chronicle-ui
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -185,35 +246,19 @@ jobs:
             }
           "
 
-      - name: Install Workbench dependencies
-        working-directory: ./Source/Workbench
-        run: yarn install --ignore-scripts
-
-      - name: Build Chronicle UI package
-        working-directory: ./Source/Workbench
-        run: yarn build:ui
-
-      # Stamp and publish a copy outside the Yarn workspace: the private Workbench manifest and its lock stay
-      # untouched, and npm sees a standalone package.
-      - name: Stage publishable package
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          STAGED="$RUNNER_TEMP/chronicle-ui-package"
-          mkdir -p "$STAGED"
-          PACKAGE=Source/Workbench/packages/chronicle-ui
-          cp -R "$PACKAGE/dist" "$PACKAGE/package.json" "$PACKAGE/README.md" "$PACKAGE/LICENSE" "$STAGED/"
-          cd "$STAGED"
-          npm version "$VERSION" --no-git-tag-version
-
-      - name: Check packed UI consumers
-        run: node Source/Workbench/packages/chronicle-ui/check-consumers.mjs "$RUNNER_TEMP/chronicle-ui-package"
+      - name: Download verified package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chronicle-ui-package
+          path: ${{ runner.temp }}/chronicle-ui-tarball
 
       - name: Check npm for the exact package version
         id: npm-version
-        run: node "$GITHUB_WORKSPACE/.github/scripts/npm-version-exists.mjs" "$RUNNER_TEMP/chronicle-ui-package"
+        run: |
+          mkdir "$RUNNER_TEMP/chronicle-ui-inspect"
+          tar -xzf "$RUNNER_TEMP"/chronicle-ui-tarball/cratis-chronicle-ui-*.tgz -C "$RUNNER_TEMP/chronicle-ui-inspect"
+          node "$GITHUB_WORKSPACE/.github/scripts/npm-version-exists.mjs" "$RUNNER_TEMP/chronicle-ui-inspect/package"
 
       - name: Publish to npm
         if: steps.npm-version.outputs.exists == 'false'
-        working-directory: ${{ runner.temp }}/chronicle-ui-package
-        run: npm publish --provenance --access public --tag latest
+        run: npm publish "$RUNNER_TEMP"/chronicle-ui-tarball/cratis-chronicle-ui-*.tgz --provenance --access public --tag latest

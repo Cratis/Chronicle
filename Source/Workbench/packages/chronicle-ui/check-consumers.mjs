@@ -1,8 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-// Packs @cratis/chronicle-ui exactly as it would be published and consumes the tarball from a project outside
-// this checkout, with the host's real peers installed - no workspace link, alias or NODE_PATH.
+// Consumes the @cratis/chronicle-ui tarball from a project outside this checkout, with the host's real peers
+// installed - no workspace link, alias or NODE_PATH. With a .tgz argument it checks exactly that file (the
+// release verifies the artifact it then publishes); with a directory, or none, it packs the built package first.
 
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -13,13 +14,21 @@ import { inspectPackedFiles } from './inspect-pack.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 // The directory holding the built package to pack: this package by default, or a staged copy (the release).
-const packageDirectory = path.resolve(process.argv[2] ?? scriptDirectory);
+const argument = process.argv[2] ? path.resolve(process.argv[2]) : undefined;
+const tarballMode = argument?.endsWith('.tgz') === true;
+const packageDirectory = tarballMode ? scriptDirectory : (argument ?? scriptDirectory);
 const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'chronicle-ui-consumer-'));
 const run = (command, args, options = {}) => execFileSync(command, args, { stdio: 'inherit', ...options });
 
-try {
+const readTarball = tarball => ({
+    tarball,
+    files: execFileSync('tar', ['-tzf', tarball]).toString().split('\n').filter(Boolean).map(file => file.replace(/^package\//, '')),
+    manifest: JSON.parse(execFileSync('tar', ['-xOzf', tarball, 'package/package.json']).toString())
+});
+
+const packDirectory = directory => {
     for (const required of ['dist/index.js', 'dist/event-stores.js', 'dist/styles.css']) {
-        if (!existsSync(path.join(packageDirectory, required))) {
+        if (!existsSync(path.join(directory, required))) {
             throw new Error(`Build the package first (yarn build:ui): ${required} is missing`);
         }
     }
@@ -28,26 +37,35 @@ try {
     const staged = path.join(temporaryDirectory, 'package');
     mkdirSync(staged);
     for (const entry of ['dist', 'README.md', 'LICENSE']) {
-        cpSync(path.join(packageDirectory, entry), path.join(staged, entry), { recursive: true });
+        cpSync(path.join(directory, entry), path.join(staged, entry), { recursive: true });
     }
-    const manifest = JSON.parse(readFileSync(path.join(packageDirectory, 'package.json'), 'utf8'));
-    const { scripts: _scripts, devDependencies, ...publishable } = manifest;
+    const source = JSON.parse(readFileSync(path.join(directory, 'package.json'), 'utf8'));
+    const { scripts: _scripts, ...publishable } = source;
     writeFileSync(path.join(staged, 'package.json'), JSON.stringify(publishable, undefined, 2));
 
     const packEnvironment = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^npm_|^yarn_|^INIT_CWD$/i.test(key)));
-    packEnvironment.npm_config_ignore_scripts = 'true';
     const packed = path.join(temporaryDirectory, 'packed');
     mkdirSync(packed);
     const packOutput = execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', packed], {
         cwd: staged, env: packEnvironment, stdio: ['ignore', 'pipe', 'inherit']
     }).toString();
-    const files = JSON.parse(packOutput)[0].files.map(file => file.path);
+    const packResult = JSON.parse(packOutput);
+    const entry = Array.isArray(packResult) ? packResult[0] : Object.values(packResult)[0];
+    return {
+        tarball: path.join(packed, readdirSync(packed).find(file => file.endsWith('.tgz'))),
+        files: entry.files.map(file => file.path),
+        manifest: source
+    };
+};
+
+try {
+    const { tarball, files, manifest } = tarballMode ? readTarball(argument) : packDirectory(packageDirectory);
+    const { devDependencies } = manifest;
     const problems = inspectPackedFiles(files);
     if (problems.length > 0) {
         throw new Error(`The packed artifact is not publishable:\n  ${problems.join('\n  ')}`);
     }
 
-    const tarball = path.join(packed, readdirSync(packed).find(file => file.endsWith('.tgz')));
     const consumer = path.join(temporaryDirectory, 'consumer');
     mkdirSync(consumer);
     writeFileSync(path.join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
@@ -75,15 +93,17 @@ const names: () => string[] = useEventStoreNames;
 export const render = () => renderToStaticMarkup(createElement(Card, props, 'body'));
 export { names };
 `);
-    writeFileSync(path.join(consumer, 'tsconfig.json'), JSON.stringify({
-        compilerOptions: {
-            target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', jsx: 'react-jsx', strict: true,
-            skipLibCheck: false, noEmit: true, types: [], lib: ['ES2022', 'DOM'], experimentalDecorators: true
-        },
-        files: ['env.d.ts', 'entry.tsx']
-    }));
-    console.log('Type-checking the packed package with Bundler resolution and skipLibCheck: false');
-    run(process.execPath, [path.join(consumer, 'node_modules/typescript/bin/tsc'), '-p', 'tsconfig.json'], { cwd: consumer });
+    for (const [module, moduleResolution] of [['ESNext', 'Bundler'], ['NodeNext', 'NodeNext']]) {
+        writeFileSync(path.join(consumer, `tsconfig.${moduleResolution}.json`), JSON.stringify({
+            compilerOptions: {
+                target: 'ES2022', module, moduleResolution, jsx: 'react-jsx', strict: true,
+                skipLibCheck: false, noEmit: true, types: [], lib: ['ES2022', 'DOM'], experimentalDecorators: true
+            },
+            files: ['env.d.ts', 'entry.tsx']
+        }));
+        console.log(`Type-checking the packed package with ${moduleResolution} resolution and skipLibCheck: false`);
+        run(process.execPath, [path.join(consumer, 'node_modules/typescript/bin/tsc'), '-p', `tsconfig.${moduleResolution}.json`], { cwd: consumer });
+    }
 
     writeFileSync(path.join(consumer, 'vite.config.mjs'), `
 export default { logLevel: 'warn', build: { outDir: 'out', minify: false, lib: { entry: 'entry.tsx', formats: ['es'], fileName: 'entry' } } };

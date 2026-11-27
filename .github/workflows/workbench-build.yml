@@ -12,6 +12,9 @@ on:
       - "**"
     paths:
       - "Source/Workbench/**"
+      - ".github/scripts/npm-version-exists.mjs"
+      - ".github/scripts/test-npm-version-exists.mjs"
+      - ".github/workflows/workbench-build.yml"
 
 jobs:
   node-build:
@@ -58,5 +61,5 @@ jobs:
       - name: Check packed Chronicle UI consumers
         working-directory: ./Source/Workbench
         run: |
-          node --test packages/chronicle-ui/inspect-pack.test.mjs
+          node --test packages/chronicle-ui/inspect-pack.test.mjs ../../.github/scripts/test-npm-version-exists.mjs
           yarn workspace @cratis/chronicle-ui check:consumers

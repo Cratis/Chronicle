@@ -3,7 +3,6 @@
 
 import { type CSSProperties, type ReactNode } from 'react';
 import { Surface } from '@cratis/components/Common';
-import './Card.css';
 
 /**
  * Props for {@link Card}.
