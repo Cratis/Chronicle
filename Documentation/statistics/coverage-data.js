@@ -1,14 +1,14 @@
 window.COVERAGE_DATA = {
-  "lastUpdate": 1795527005414,
+  "lastUpdate": 1795779756603,
   "repoUrl": "https://github.com/Cratis/Chronicle",
   "entries": {
     "Cratis.Chronicle": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 92.3,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -309,11 +309,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.AspNetCore": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 95.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -472,11 +472,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.CodeAnalysis": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 93.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -637,11 +637,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Concepts": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 88.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -823,11 +823,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Connections": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 89.1,
+        "lineCoverage": 89.8,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -986,11 +986,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Contracts": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 95.2,
+        "lineCoverage": 95.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -1218,11 +1218,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Infrastructure": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 89.9,
+        "lineCoverage": 90.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -1441,11 +1441,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Server": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 65.4,
+        "lineCoverage": 66.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -1650,11 +1650,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 92.4,
+        "lineCoverage": 92.7,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -1813,11 +1813,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage.MongoDB": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 87.1,
+        "lineCoverage": 87.4,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -1976,11 +1976,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Testing": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 92.2,
+        "lineCoverage": 92.4,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2281,11 +2281,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Core": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 76.0,
+        "lineCoverage": 76.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2423,11 +2423,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage.Sql": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 88.5,
+        "lineCoverage": 88.7,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2551,11 +2551,11 @@ window.COVERAGE_DATA = {
     ],
     "GrpcCodeGenerator": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 69.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2658,11 +2658,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage.Vault": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 97.5,
+        "lineCoverage": 97.7,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2723,11 +2723,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage.AzureKeyVault": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 93.8,
+        "lineCoverage": 94.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2781,11 +2781,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Workbench": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 83.7,
+        "lineCoverage": 83.9,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2818,11 +2818,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage.InMemory": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 92.6,
+        "lineCoverage": 93.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2855,11 +2855,11 @@ window.COVERAGE_DATA = {
     ],
     "Aspire.Hosting": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 3.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2878,11 +2878,11 @@ window.COVERAGE_DATA = {
     ],
     "Chronicle.Benchmarks": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 3.3,
+        "lineCoverage": 3.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2901,11 +2901,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Aspire": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 37.29,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2924,11 +2924,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Compatibility": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 97.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2947,11 +2947,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Grpc": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 79.59,
+        "lineCoverage": 79.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2970,11 +2970,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Integration": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 95.9,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -2993,11 +2993,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Integration.Api": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 96.8,
+        "lineCoverage": 97.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3016,11 +3016,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Integration.Clustering": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 98.2,
+        "lineCoverage": 98.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3039,11 +3039,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Kernel.Integration": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 97.5,
+        "lineCoverage": 97.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3062,11 +3062,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.MongoDB.Integration": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 27.0,
+        "lineCoverage": 25.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3085,11 +3085,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Neo4j.Integration": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 32.2,
+        "lineCoverage": 30.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3108,11 +3108,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.Storage.Neo4j": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 99.6,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3131,11 +3131,11 @@ window.COVERAGE_DATA = {
     ],
     "Cratis.Chronicle.XUnit.Integration.v3": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 93.8,
+        "lineCoverage": 94.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3154,11 +3154,11 @@ window.COVERAGE_DATA = {
     ],
     "Docker.DotNet": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 26.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3177,11 +3177,11 @@ window.COVERAGE_DATA = {
     ],
     "Docker.DotNet.Handler.Abstractions": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 91.6,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3200,11 +3200,11 @@ window.COVERAGE_DATA = {
     ],
     "Docker.DotNet.LegacyHttp": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3223,11 +3223,11 @@ window.COVERAGE_DATA = {
     ],
     "Docker.DotNet.NativeHttp": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3246,11 +3246,11 @@ window.COVERAGE_DATA = {
     ],
     "Docker.DotNet.NPipe": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3269,11 +3269,11 @@ window.COVERAGE_DATA = {
     ],
     "Docker.DotNet.Unix": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 71.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3292,11 +3292,11 @@ window.COVERAGE_DATA = {
     ],
     "Docker.DotNet.X509": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3315,11 +3315,11 @@ window.COVERAGE_DATA = {
     ],
     "EphemeralMongo": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 42.2,
+        "lineCoverage": 43.6,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3338,11 +3338,11 @@ window.COVERAGE_DATA = {
     ],
     "FluentValidation": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 18.8,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3361,11 +3361,11 @@ window.COVERAGE_DATA = {
     ],
     "GrainCompatibility": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 76.7,
+        "lineCoverage": 76.59,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3384,11 +3384,11 @@ window.COVERAGE_DATA = {
     ],
     "Humanizer": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 2.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3407,11 +3407,11 @@ window.COVERAGE_DATA = {
     ],
     "LegacyContracts": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 63.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3430,11 +3430,11 @@ window.COVERAGE_DATA = {
     ],
     "Microsoft.Net.Http.Client": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 56.6,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3453,11 +3453,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.BroadcastChannel": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 59.1,
+        "lineCoverage": 58.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3476,11 +3476,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Core": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 42.8,
+        "lineCoverage": 42.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3499,11 +3499,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Core.Abstractions": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 45.6,
+        "lineCoverage": 45.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3522,11 +3522,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.DurableJobs": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3545,11 +3545,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Journaling": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3568,11 +3568,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Persistence.Memory": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 2.0,
+        "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3591,11 +3591,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Reminders": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 57.8,
+        "lineCoverage": 58.6,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3614,11 +3614,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Runtime": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 43.0,
+        "lineCoverage": 41.4,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3637,11 +3637,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Serialization": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 35.1,
+        "lineCoverage": 36.4,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3660,11 +3660,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Serialization.Abstractions": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 28.1,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3683,11 +3683,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Serialization.SystemTextJson": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 93.7,
+        "lineCoverage": 88.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3706,11 +3706,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Streaming": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3729,11 +3729,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.TestingHost": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 26.2,
+        "lineCoverage": 26.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3752,11 +3752,11 @@ window.COVERAGE_DATA = {
     ],
     "protobuf-net": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 36.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3775,11 +3775,11 @@ window.COVERAGE_DATA = {
     ],
     "protobuf-net.Core": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 31.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3798,11 +3798,11 @@ window.COVERAGE_DATA = {
     ],
     "protobuf-net.Grpc": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 38.6,
+        "lineCoverage": 39.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3821,11 +3821,11 @@ window.COVERAGE_DATA = {
     ],
     "protobuf-net.Grpc.AspNetCore": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 67.09,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3844,11 +3844,11 @@ window.COVERAGE_DATA = {
     ],
     "protobuf-net.Grpc.AspNetCore.Reflection": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3867,11 +3867,11 @@ window.COVERAGE_DATA = {
     ],
     "protobuf-net.Grpc.Reflection": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 20.2,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3890,11 +3890,11 @@ window.COVERAGE_DATA = {
     ],
     "protobuf-net.Reflection": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 5.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3913,11 +3913,11 @@ window.COVERAGE_DATA = {
     ],
     "ProtoGenerator": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 43.4,
+        "lineCoverage": 43.3,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3936,11 +3936,11 @@ window.COVERAGE_DATA = {
     ],
     "SharpCompress": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3959,11 +3959,11 @@ window.COVERAGE_DATA = {
     ],
     "Testcontainers": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 39.29,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -3982,11 +3982,11 @@ window.COVERAGE_DATA = {
     ],
     "Testcontainers.PostgreSql": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 75.59,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -4005,11 +4005,11 @@ window.COVERAGE_DATA = {
     ],
     "WireCompatibility": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 37.7,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -4028,11 +4028,11 @@ window.COVERAGE_DATA = {
     ],
     "Orleans.Connections.Security": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 53.5,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       },
       {
         "date": "2026-11-20",
@@ -4044,39 +4044,38 @@ window.COVERAGE_DATA = {
     ],
     "Chronicle.Benchmarks.Storage": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
-        "lineCoverage": 26.0,
+        "lineCoverage": 24.6,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       }
     ],
     "Testcontainers.MsSql": [
       {
-        "date": "2026-11-24",
+        "date": "2026-11-27",
         "week": "2026-M11-W4",
         "lineCoverage": 0.0,
         "version": null,
-        "commit": "19308c0"
+        "commit": "a4a1be7"
       }
     ]
   },
   "schemaVersion": 2,
   "latestAttempt": {
-    "state": "missing",
-    "attemptedAt": 1795773720444,
+    "state": "measured",
+    "attemptedAt": 1795783827344,
     "observer": {
       "releaseContext": "unverified",
-      "runId": 45978524475,
+      "runId": 46001890548,
       "runAttempt": 1,
-      "executionSha": "0982ebe693c1d30fbb538ad88b35cca51e3e2595",
-      "requestedVersion": "19.195.1"
-    },
-    "reason": "no scheduled main coverage producer within 30 runs/30 days"
+      "executionSha": "df6b79b69c0200f3ae2ac782a48cd3fe7465c075",
+      "requestedVersion": "19.195.2"
+    }
   },
   "measurement": {
-    "measuredAt": 1795527005414,
-    "commit": "19308c0",
+    "measuredAt": 1795779756603,
+    "commit": "a4a1be7",
     "version": null,
     "source": {
       "schemaVersion": 1,
@@ -4086,20 +4085,20 @@ window.COVERAGE_DATA = {
       "workflowId": 17945949,
       "event": "schedule",
       "ref": "refs/heads/main",
-      "runId": 45395618257,
+      "runId": 45986931203,
       "runAttempt": 1,
-      "headSha": "19308c050db074691a3b5382191a200486a18985",
-      "measuredAt": 1795527005414,
-      "summarySha256": "a0fee6060de5f9dd9770f2640177dc54ae643e9f3a5a8e89730ef1c1ed94489f",
+      "headSha": "a4a1be7556bc0540b42db93c7855e20151b5029f",
+      "measuredAt": 1795779756603,
+      "summarySha256": "4054497c3f459b70310036221d67ec71d98d45315e1b46f3b8c1ed4713106c0f",
       "scope": "dotnet-build/coverage-merge-and-cache-v1",
-      "artifactId": 14923743936,
-      "artifactName": "coverage-nightly-v1-45395618257-1",
-      "artifactDigest": "sha256:4045c4a84812f94bfe6c59d6b1e60a6c8ee795ba4dd6dd8237c6d83f4b8b63eb",
-      "artifactSize": 313573,
-      "artifactCreatedAt": "2026-11-24T13:30:08Z",
-      "artifactExpiresAt": "2026-11-25T12:39:25Z",
-      "runCreatedAt": "2026-11-24T12:39:25Z",
-      "runUpdatedAt": "2026-11-24T13:30:14Z"
+      "artifactId": 15195055976,
+      "artifactName": "coverage-nightly-v1-45986931203-1",
+      "artifactDigest": "sha256:a0f057ffd82353e4da0b2bd8e9aa17bb27156f0f8f57423a0cde0fc760017732",
+      "artifactSize": 320635,
+      "artifactCreatedAt": "2026-11-27T11:42:38Z",
+      "artifactExpiresAt": "2026-11-28T11:01:06Z",
+      "runCreatedAt": "2026-11-27T11:01:05Z",
+      "runUpdatedAt": "2026-11-27T11:42:43Z"
     }
   }
 };
