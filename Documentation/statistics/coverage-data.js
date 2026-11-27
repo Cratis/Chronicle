@@ -4064,13 +4064,13 @@ window.COVERAGE_DATA = {
   "schemaVersion": 2,
   "latestAttempt": {
     "state": "measured",
-    "attemptedAt": 1795800854143,
+    "attemptedAt": 1795820072630,
     "observer": {
       "releaseContext": "unverified",
-      "runId": 46042774153,
+      "runId": 46079326423,
       "runAttempt": 1,
-      "executionSha": "8f9f42226965dd7153a1e5031c789b6fd9ec07c4",
-      "requestedVersion": "19.195.3"
+      "executionSha": "2064d49f7c0a90284b62d04791163a3c773af1a7",
+      "requestedVersion": "19.196.0"
     }
   },
   "measurement": {
