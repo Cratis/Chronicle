@@ -66,7 +66,7 @@ public abstract class a_named_namespace(NamespaceFenceFixture fixture) : Cratis.
         }
         else
         {
-            builder.WithMongoDB(mongoServer, Constants.EventStore);
+            builder.WithMongoDB($"mongodb://localhost:{MongoDBContainer.GetMappedPublicPort(27017)}/?directConnection=true", Constants.EventStore);
         }
         builder.SiloBuilder.ConfigureServices(services => services.PostConfigure<KernelConfiguration.ChronicleOptions>(options =>
             new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
