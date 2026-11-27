@@ -16,6 +16,11 @@ public class Observers
     /// </summary>
     public static readonly TimeSpan DefaultUnseenRemovalAfter = TimeSpan.FromDays(7);
 
+    /// <summary>
+    /// The default <see cref="StallWindow"/>, and the one used when it is not a positive value.
+    /// </summary>
+    public static readonly TimeSpan DefaultStallWindow = TimeSpan.FromMinutes(3);
+
     static readonly ObserverSubscriptionKind[] _defaultDormantKinds =
     [
         ObserverSubscriptionKind.ClientReactor,
@@ -217,6 +222,15 @@ public class Observers
     /// are progressing, and that the <c language="csharp">NextEventSequenceNumber</c> is up-to-date.
     /// </summary>
     public int WatchdogInterval { get; init; } = 60;
+
+    /// <summary>
+    /// Gets how long an observer's position must stay put while events it observes are waiting, and the end of the event sequence keeps advancing, before its measured progress is reported as stalled.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to 3 minutes, three nominal <see cref="WatchdogInterval"/> ticks; a zero or negative value falls back to the default.
+    /// The window is measured between the watchdog samples of a resident observer, so it is only as fine as the watchdog interval.
+    /// </remarks>
+    public TimeSpan StallWindow { get; init; } = DefaultStallWindow;
 
     /// <summary>
     /// Gets how many seconds an observer that has no subscription and no pending work stays resident before it is released.

@@ -1,0 +1,45 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Chronicle.Observation;
+
+/// <summary>
+/// Represents why a measurement of an observer's progress has the <see cref="ObserverLagStatus"/> it has.
+/// </summary>
+public enum ObserverLagCause
+{
+    /// <summary>
+    /// The cause is not known, as when the measurement is missing.
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>
+    /// There is no state to measure, or its running state is not known.
+    /// </summary>
+    UnknownState = 1,
+
+    /// <summary>
+    /// The observer is not running: it is suspended, quarantined, changing definition or initializing.
+    /// </summary>
+    Inactive = 2,
+
+    /// <summary>
+    /// The observer has no live subscription.
+    /// </summary>
+    Disconnected = 3,
+
+    /// <summary>
+    /// The observer is replaying, so its cursor does not describe live progress.
+    /// </summary>
+    ReplayInProgress = 4,
+
+    /// <summary>
+    /// The end of the event sequence could not be read, or it is empty.
+    /// </summary>
+    TailUnavailable = 5,
+
+    /// <summary>
+    /// The observer has not been measured, or its last measurement is too old to describe it now.
+    /// </summary>
+    NoSample = 6
+}

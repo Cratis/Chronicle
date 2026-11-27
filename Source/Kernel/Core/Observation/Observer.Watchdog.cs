@@ -388,19 +388,22 @@ public partial class Observer
 
     async Task<bool> CheckNextSequenceNumber()
     {
-        if (IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
+        if (FindLagIneligibility() is { } ineligible)
         {
+            RecordLagIneligibility(ineligible);
             return false;
         }
 
         if (!State.NextEventSequenceNumber.IsActualValue)
         {
+            RecordLagIneligibility(ObserverLagCause.UnknownState);
             return false;
         }
 
         var tailSequenceNumber = await GetTailForWatchdog();
         if (!tailSequenceNumber.IsActualValue)
         {
+            RecordLagTailUnavailable();
             return false;
         }
 
@@ -415,10 +418,14 @@ public partial class Observer
                 State = State with { TailEventSequenceNumber = tailSequenceNumber };
                 await WriteStateAsync();
             }
+
+            RecordLagReading(tailSequenceNumber, ObserverLagRelevance.None);
             return false;
         }
 
-        if (!await CheckForRelevantEvents(tailSequenceNumber))
+        var relevance = await CheckForRelevantEvents(tailSequenceNumber);
+        RecordLagReading(tailSequenceNumber, relevance);
+        if (relevance.Kind != ObserverLagRelevanceKind.Pending)
         {
             return false;
         }
@@ -432,7 +439,7 @@ public partial class Observer
         return true;
     }
 
-    async Task<bool> CheckForRelevantEvents(EventSequenceNumber tailSequenceNumber)
+    async Task<ObserverLagRelevance> CheckForRelevantEvents(EventSequenceNumber tailSequenceNumber)
     {
         var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(
             State.NextEventSequenceNumber,
@@ -441,11 +448,11 @@ public partial class Observer
         if (nextEventResult.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
         {
             logger.WatchdogNextEventLookupFailed(State.NextEventSequenceNumber, error);
-            return false;
+            return ObserverLagRelevance.Unknown;
         }
 
-        var hasRelevantEvent = nextEventResult.Match(num => num.IsActualValue, _ => false);
-        if (!hasRelevantEvent)
+        var relevantPosition = nextEventResult.Match(num => num, _ => EventSequenceNumber.Unavailable);
+        if (!relevantPosition.IsActualValue)
         {
             logger.WatchdogFastForwardingNextEventSequenceNumber(State.NextEventSequenceNumber, tailSequenceNumber);
             State = State with
@@ -454,9 +461,9 @@ public partial class Observer
                 TailEventSequenceNumber = tailSequenceNumber
             };
             await WriteStateAsync();
-            return false;
+            return ObserverLagRelevance.None;
         }
 
-        return true;
+        return ObserverLagRelevance.Pending(relevantPosition);
     }
 }

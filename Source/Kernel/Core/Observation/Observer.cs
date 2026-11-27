@@ -262,6 +262,7 @@ public partial class Observer(
         _statePersistenceBatchInterval = config.StatePersistenceBatchInterval < 1 ? 1 : config.StatePersistenceBatchInterval;
         _writeCoalescingInterval = TimeSpan.FromSeconds(Math.Max(config.WriteCoalescingInterval, 0));
         _watchdogIntervalSeconds = config.WatchdogInterval;
+        ConfigureLagSampling(config);
         RegisterWithSupervisor(config.WatchdogInterval);
         ConfigureIdleDeactivation(config.IdleDeactivationAfter);
         ConfigureDurableSubscriptions(config.DurableSubscriptions);
@@ -338,7 +339,7 @@ public partial class Observer(
 
     /// <inheritdoc/>
     public Task<ObserverInformationSnapshot> GetInformation() =>
-        Task.FromResult(new ObserverInformationSnapshot(observerDefinition.State, State, _subscription.IsSubscribed, _runningStateChangedAt));
+        Task.FromResult(new ObserverInformationSnapshot(observerDefinition.State, State, _subscription.IsSubscribed, _runningStateChangedAt) { LagSample = CurrentLagSample() });
 
     /// <inheritdoc/>
     public Task<ObserverSubscription> GetSubscription() => Task.FromResult(_subscription);

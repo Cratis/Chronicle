@@ -49,6 +49,11 @@ public static class WellKnownServices
     public const string Observers = "Observers";
 
     /// <summary>
+    /// The service for reading the measured progress of an observer.
+    /// </summary>
+    public const string ObserverProgress = "ObserverProgress";
+
+    /// <summary>
     /// The name of the Namespaces service.
     /// </summary>
     public const string Namespaces = "Namespaces";

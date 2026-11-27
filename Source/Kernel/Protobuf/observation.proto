@@ -114,6 +114,12 @@ message GetObserverInformationRequest {
    string ObserverId = 3;
    string EventSequenceId = 4;
 }
+message GetObserverLagRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string ObserverId = 4;
+}
 message GetReplayableObserversForEventTypesRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -142,6 +148,36 @@ message ObserverInformation {
    uint64 TailEventSequenceNumber = 11;
    uint64 HandledEventCount = 12;
    SerializableDateTimeOffset RunningStateChangedAt = 13;
+}
+enum ObserverLagCause {
+   OBSERVER_LAG_CAUSE_Unknown = 0;
+   UnknownState = 1;
+   Inactive = 2;
+   OBSERVER_LAG_CAUSE_Disconnected = 3;
+   ReplayInProgress = 4;
+   TailUnavailable = 5;
+   NoSample = 6;
+}
+message ObserverLagResponse {
+   string EventStore = 1;
+   string Namespace = 2;
+   string EventSequenceId = 3;
+   string ObserverId = 4;
+   ObserverLagStatus Status = 5;
+   ObserverLagCause Cause = 6;
+   uint64 TailEventSequenceNumber = 7;
+   uint64 NextEventSequenceNumber = 8;
+   uint64 LastHandledEventSequenceNumber = 9;
+   uint64 RelevantPendingEventSequenceNumber = 10;
+   uint64 Distance = 11;
+   SerializableDateTimeOffset SampledAt = 12;
+   SerializableDateTimeOffset ExpiresAt = 13;
+}
+enum ObserverLagStatus {
+   Unmeasurable = 0;
+   CaughtUp = 1;
+   Lagging = 2;
+   Stalled = 3;
 }
 enum ObserverOwner {
    None = 0;
@@ -175,6 +211,14 @@ enum PartitionRecoveryOutcome {
    ObserverQuarantined = 2;
    PartitionQuarantined = 3;
    PARTITION_RECOVERY_OUTCOME_Accepted = 4;
+}
+message QueryResult_ObserverLagResponse {
+   .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   bool IsAuthorized = 2;
+   repeated ValidationResult ValidationResults = 3;
+   repeated string ExceptionMessages = 4;
+   string ExceptionStackTrace = 5;
+   ObserverLagResponse Data = 6;
 }
 message RemoveObserver {
    string EventStore = 1;
@@ -225,6 +269,17 @@ message RetryPartitionResponse {
 message SerializableDateTimeOffset {
    string Value = 1;
 }
+message ValidationResult {
+   ValidationResultSeverity Severity = 1; // default value could not be applied: Error
+   string Message = 2;
+   repeated string Members = 3;
+}
+enum ValidationResultSeverity {
+   VALIDATION_RESULT_SEVERITY_Unknown = 0;
+   Information = 1;
+   Warning = 2;
+   Error = 3;
+}
 message WaitForObserverCompletionRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -244,6 +299,9 @@ message WaitForObserverCompletionResponse {
 service FailedPartitions {
    rpc GetFailedPartitions (GetFailedPartitionsRequest) returns (IEnumerable_FailedPartition);
    rpc ObserveFailedPartitions (GetFailedPartitionsRequest) returns (stream IEnumerable_FailedPartition);
+}
+service ObserverProgress {
+   rpc GetObserverLag (GetObserverLagRequest) returns (QueryResult_ObserverLagResponse);
 }
 service Observers {
    rpc ClearFailedPartitions (.Cratis.Chronicle.Contracts.Observation.ClearFailedPartitions) returns (.google.protobuf.Empty);
