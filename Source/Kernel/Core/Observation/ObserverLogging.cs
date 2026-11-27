@@ -186,8 +186,8 @@ internal static partial class ObserverLogMessages
     [LoggerMessage(LogLevel.Information, "Existing catch up job found - resuming")]
     internal static partial void ResumingCatchUpJob(this ILogger<Observer> logger);
 
-    [LoggerMessage(LogLevel.Information, "Start new catch up job from event sequence number {EventSequenceNumber}")]
-    internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber);
+    [LoggerMessage(LogLevel.Information, "Start new catch up job from event sequence number {EventSequenceNumber} for observer {ObserverKey}")]
+    internal static partial void StartCatchUpJob(this ILogger<Observer> logger, EventSequenceNumber eventSequenceNumber, ObserverKey observerKey);
 
     [LoggerMessage(LogLevel.Warning, "No catch-up job took ownership of the preparation - clearing it rather than waiting for a job that will never report")]
     internal static partial void NoCatchUpJobTookOwnership(this ILogger logger);

@@ -46,6 +46,9 @@ public class PIICompliancePropertyValueHandler(
     public SchemaMetadataTypeName Type => ComplianceMetadataType.PII.Value;
 
     /// <inheritdoc/>
+    public bool SupportsTypedValues => encryption.SupportsTypedValues;
+
+    /// <inheritdoc/>
     /// <exception cref="PIIIdentifierIsReserved">The identifier is reserved for confidentiality keys.</exception>
     public async Task<JsonNode> Apply(EventStoreName eventStore, EventStoreNamespaceName eventStoreNamespace, string identifier, JsonNode value) =>
         (await ApplyReportingKey(eventStore, eventStoreNamespace, identifier, value)).Value;

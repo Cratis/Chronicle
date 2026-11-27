@@ -28,6 +28,7 @@ public class a_connection_with_several_endpoints : Specification
     protected IConnectionLifecycle _lifecycle;
     protected IChronicleServerAddressResolver _resolver;
     protected readonly List<CallInvoker> _callInvokers = [];
+    protected readonly List<a_tracking_http_handler> _handlers = [];
     protected ILoadBalancerStrategy _loadBalancer;
     protected ITaskFactory _tasks;
     protected CancellationTokenSource _cancellation;
@@ -41,8 +42,10 @@ public class a_connection_with_several_endpoints : Specification
     protected int _keepAlivesAnswered;
     readonly Channel<TaskCompletionSource> _watchdogDelays = Channel.CreateUnbounded<TaskCompletionSource>();
     readonly object _changeGate = new();
+    readonly object _handlersGate = new();
     TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    protected virtual int ConnectTimeout => ConnectTimeoutSeconds;
     protected virtual ChronicleConnectionString ConnectionString => ChronicleConnectionString.Default;
     protected virtual IReadOnlyList<ChronicleServerAddress> Servers => [_a, _b];
     protected virtual bool WatchdogTicksQuickly => false;
@@ -138,7 +141,7 @@ public class a_connection_with_several_endpoints : Specification
     {
         _connection = new ChronicleConnection(
             ConnectionString,
-            ConnectTimeoutSeconds,
+            ConnectTimeout,
             null,
             null,
             _lifecycle,
@@ -154,6 +157,16 @@ public class a_connection_with_several_endpoints : Specification
             loadBalancerStrategy: _loadBalancer,
             timeProvider: _time)
         {
+            HttpHandlerWrapper = inner =>
+            {
+                var handler = new a_tracking_http_handler(inner);
+                lock (_handlersGate)
+                {
+                    _handlers.Add(handler);
+                }
+
+                return handler;
+            },
             ConnectionServiceFactory = (address, callInvoker) =>
             {
                 _callInvokers.Add(callInvoker);
@@ -189,6 +202,14 @@ public class a_connection_with_several_endpoints : Specification
     }
 
     /// <summary>
+    /// Changes the servers the resolver reports from now on.
+    /// </summary>
+    /// <param name="servers">The servers to report.</param>
+    protected void ResolveTo(params ChronicleServerAddress[] servers) =>
+        _resolver.Resolve(Arg.Any<ChronicleConnectionString>())
+            .Returns(_ => Task.FromResult<IReadOnlyList<ChronicleServerAddress>>(servers));
+
+    /// <summary>
     /// Starts connecting.
     /// </summary>
     /// <returns>The connect task.</returns>
@@ -214,6 +235,16 @@ public class a_connection_with_several_endpoints : Specification
         var tick = await _watchdogDelays.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
         tick.TrySetResult();
         await _watchdogDelays.Reader.WaitToReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+    }
+
+    /// <summary>
+    /// Ends the watchdog's current delay without waiting for it to act, for a spec whose attempt only ends when the manual clock moves.
+    /// </summary>
+    /// <returns>Awaitable task.</returns>
+    protected async Task ReleaseWatchdogDelay()
+    {
+        var tick = await _watchdogDelays.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TimeProvider.System);
+        tick.TrySetResult();
     }
 
     /// <summary>

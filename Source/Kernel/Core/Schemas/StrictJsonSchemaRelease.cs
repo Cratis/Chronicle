@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.ProtectedValues;
 
 namespace Cratis.Chronicle.Schemas;
 
@@ -11,8 +12,10 @@ namespace Cratis.Chronicle.Schemas;
 /// Validates protected values for comparison without the erased-value fallbacks used by persistence release.
 /// Traversal is shared with apply and release in <see cref="JsonSchemaMetadataManager"/>.
 /// </summary>
-internal static class StrictJsonSchemaRelease
+internal sealed class StrictJsonSchemaRelease
 {
+    readonly LegacyProtectedTypes _types = new();
+
     /// <summary>
     /// Attempts to recover the complete original value, including its JSON kind.
     /// </summary>
@@ -23,7 +26,7 @@ internal static class StrictJsonSchemaRelease
     /// <param name="identifier">The protection identifier.</param>
     /// <param name="node">The stored value.</param>
     /// <returns>The original value, or null if it cannot be recovered without loss.</returns>
-    internal static async Task<JsonNode?> ReleaseValue(JsonSchema schema, IJsonSchemaMetadataValueHandler handler, EventStoreName eventStore, EventStoreNamespaceName @namespace, string identifier, JsonNode node)
+    internal async Task<JsonNode?> ReleaseValue(JsonSchema schema, IJsonSchemaMetadataValueHandler handler, EventStoreName eventStore, EventStoreNamespaceName @namespace, string identifier, JsonNode node)
     {
         var released = await handler.TryRelease(eventStore, @namespace, identifier, node);
         return released is null ? null : TryRestore(schema, released);
@@ -35,31 +38,12 @@ internal static class StrictJsonSchemaRelease
     /// <param name="schema">The protected boundary's schema.</param>
     /// <param name="released">The released value, which is text for non-string protected types.</param>
     /// <returns>The original value, or null if it cannot be restored without loss.</returns>
-    internal static JsonNode? TryRestore(JsonSchema schema, JsonNode released)
+    internal JsonNode? TryRestore(JsonSchema schema, JsonNode released)
     {
-        var type = ProtectedType(schema);
-        try
-        {
-            if (type != JsonObjectType.String && released is JsonValue scalar && scalar.TryGetValue<string>(out var text))
-            {
-                released = JsonNode.Parse(text)!;
-            }
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-
-        var valid = type switch
-        {
-            JsonObjectType.String => released?.GetValueKind() == JsonValueKind.String,
-            JsonObjectType.Boolean => released?.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
-            JsonObjectType.Integer or JsonObjectType.Number => released?.GetValueKind() == JsonValueKind.Number,
-            JsonObjectType.Array => released is JsonArray,
-            JsonObjectType.Object => released is JsonObject,
-            _ => false
-        };
-        return valid ? released : null;
+        if (AuthenticatedProtectedValue.HasKind(released)) return released;
+        var type = _types.For(schema);
+        released = RestoreJsonKind(type, released)!;
+        return HasJsonKind(type, released) ? released : null;
     }
 
     /// <summary>
@@ -67,30 +51,32 @@ internal static class StrictJsonSchemaRelease
     /// </summary>
     /// <param name="schema">The protected boundary's schema.</param>
     /// <returns>Whether the codec's untyped text can be restored without ambiguity.</returns>
-    internal static bool HasSupportedType(JsonSchema schema) =>
-        ProtectedType(schema) is JsonObjectType.String or JsonObjectType.Integer or JsonObjectType.Number or JsonObjectType.Boolean or JsonObjectType.Array or JsonObjectType.Object;
+    internal bool HasSupportedType(JsonSchema schema) => _types.IsSupported(schema);
 
-    static JsonObjectType ProtectedType(JsonSchema schema)
+    static JsonNode? RestoreJsonKind(JsonObjectType type, JsonNode released)
     {
-        // Do not use ActualTypeSchema here: for a union it selects the first non-null branch,
-        // which would hide exactly the ambiguity this operation must reject.
-        var type = schema.Type;
-        if (schema.HasReference)
+        if (type == JsonObjectType.String || released is not JsonValue scalar || !scalar.TryGetValue<string>(out var text))
         {
-            type |= ProtectedType(schema.Reference!);
+            return released;
         }
 
-        foreach (var alternative in schema.OneOf.Concat(schema.AnyOf).Concat(schema.AllOf))
+        try
         {
-            var alternativeType = ProtectedType(alternative);
-            if (alternativeType == JsonObjectType.None && alternative.Type != JsonObjectType.Null)
-            {
-                return JsonObjectType.None;
-            }
-
-            type |= alternativeType;
+            return JsonNode.Parse(text);
         }
-
-        return type & ~JsonObjectType.Null;
+        catch (JsonException)
+        {
+            return null;
+        }
     }
+
+    static bool HasJsonKind(JsonObjectType type, JsonNode? released) => type switch
+    {
+        JsonObjectType.String => released?.GetValueKind() == JsonValueKind.String,
+        JsonObjectType.Boolean => released?.GetValueKind() is JsonValueKind.True or JsonValueKind.False,
+        JsonObjectType.Integer or JsonObjectType.Number => released?.GetValueKind() == JsonValueKind.Number,
+        JsonObjectType.Array => released is JsonArray,
+        JsonObjectType.Object => released is JsonObject,
+        _ => false
+    };
 }

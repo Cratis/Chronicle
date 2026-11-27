@@ -112,27 +112,20 @@ public static class JobsWaitHelpers
     /// </summary>
     /// <param name="jobs"><see cref="IJobs"/> system.</param>
     /// <param name="timeout">Optional timeout. Defaults to 5 seconds.</param>
-    /// <param name="includeStatuses">Optional job statuses to include in the check. Defaults to all statuses.</param>
+    /// <param name="includeStatuses">Job statuses allowed to remain. By default, no jobs may remain.</param>
     /// <returns>Awaitable task.</returns>
-    public static async Task<IEnumerable<Job>> WaitForThereToBeNoJobs(this IJobs jobs, TimeSpan? timeout = default, params JobStatus[] includeStatuses)
-    {
-        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-empty");
-        timing?.Failure();
-        timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
-        while (true)
-        {
-            timing?.Poll();
-            var currentJobs = await jobs.GetJobs();
-            if (!currentJobs.Any() || currentJobs.All(_ => includeStatuses.Contains(_.Status)))
-            {
-                timing?.Success();
-                return currentJobs;
-            }
+    public static Task<IEnumerable<Job>> WaitForThereToBeNoJobs(this IJobs jobs, TimeSpan? timeout = default, params JobStatus[] includeStatuses) =>
+        WaitForDrain(jobs, timeout, includeStatuses, failOnTerminalFailure: false);
 
-            await Task.Delay(DefaultDelay, cts.Token);
-        }
-    }
+    /// <summary>
+    /// Waits for all jobs to drain, failing immediately if any observed job has failed.
+    /// </summary>
+    /// <param name="jobs">The jobs system.</param>
+    /// <param name="timeout">Optional timeout. Defaults to 5 seconds.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="JobFailedWhileWaiting">A poll observed a terminal job failure.</exception>
+    public static Task WaitForJobsToDrainSuccessfully(this IJobs jobs, TimeSpan? timeout = default) =>
+        WaitForDrain(jobs, timeout, [], failOnTerminalFailure: true);
 
     /// <summary>
     /// Waits for a job to be completed.
@@ -239,6 +232,31 @@ public static class JobsWaitHelpers
             {
                 timing?.Success();
                 return currentJob;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
+    }
+
+    static async Task<IEnumerable<Job>> WaitForDrain(IJobs jobs, TimeSpan? timeout, JobStatus[] includeStatuses, bool failOnTerminalFailure)
+    {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-empty");
+        timing?.Failure();
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            timing?.Poll();
+            var currentJobs = (await jobs.GetJobs()).ToArray();
+            if (failOnTerminalFailure && Array.Find(currentJobs, _ => _.Status is JobStatus.Failed or JobStatus.CompletedWithFailures) is { } failed)
+            {
+                throw new JobFailedWhileWaiting(failed);
+            }
+
+            if (currentJobs.All(_ => includeStatuses.Contains(_.Status)))
+            {
+                timing?.Success();
+                return currentJobs;
             }
 
             await Task.Delay(DefaultDelay, cts.Token);

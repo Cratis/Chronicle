@@ -215,7 +215,8 @@ public static class ChronicleServerSiloBuilderExtensions
                     sp.GetRequiredService<IOptions<ChronicleOptions>>()),
                 ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.EventSources.EventSources>(sp))
             {
-                Imports = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Imports.Imports>(sp)
+                Imports = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Imports.Imports>(sp),
+                ConstraintIndexes = ActivatorUtilities.CreateInstance<Cratis.Chronicle.Services.Events.Constraints.Operator.ConstraintIndexes>(sp)
             };
 
             // Served by the very reactors and reducers above, so a multiplexed stream and a per-observer call behave the same.

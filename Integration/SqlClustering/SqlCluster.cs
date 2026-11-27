@@ -27,6 +27,8 @@ public sealed class SqlCluster(bool postgres, string? image = null) : IAsyncDisp
 
     public IReadOnlyList<IContainer> Nodes => _nodes;
 
+    internal System.Data.Common.DbConnection CreateDiagnosticConnection() => _database.CreateConnection();
+
     public ChronicleConnectionString ConnectionString => new ChronicleConnectionString(
         $"chronicle://{string.Join(',', _nodes.Select((node, index) => $"{node.Hostname}:{_ports[index]}"))}/?skipTlsValidation=true")
         .WithCredentials(ChronicleConnectionString.DevelopmentClient, ChronicleConnectionString.DevelopmentClientSecret);

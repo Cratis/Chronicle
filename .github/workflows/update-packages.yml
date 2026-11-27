@@ -11,10 +11,9 @@ jobs:
     with:
       # StyleCop.Analyzers stays held, as in the reusable workflow's default. Castle.Core stays on 5.1.1:
       # 5.2.1 breaks NSubstitute class proxies (https://github.com/Cratis/Chronicle/issues/5414).
-      # Cratis.Choreography waits for https://github.com/Cratis/Chronicle/issues/6161.
       # Matching is exact; these IDs do not hold entire families.
       # Setting this input replaces the default, so StyleCop.Analyzers is listed too.
-      nuget-package-exclusions: StyleCop.Analyzers,Castle.Core,Cratis.Choreography
+      nuget-package-exclusions: StyleCop.Analyzers,Castle.Core
       publication-mode: pull-request
       pull-request-label: patch
     secrets:

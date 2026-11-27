@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Compliance;
+
 namespace Cratis.Chronicle.Schemas.for_JsonSchemaMetadataManager.when_reporting_erasure;
 
 public class with_corrupt_ciphertext_and_a_live_key : given.content_for_erasure_reporting
@@ -11,8 +13,9 @@ public class with_corrupt_ciphertext_and_a_live_key : given.content_for_erasure_
         await _keys.AllowNewKeyFor("store", "tenant", "subject");
         _stored = await _manager.Apply("store", "tenant", _schema, "subject", _plaintext);
         var bytes = Convert.FromBase64String(_stored["profile"]["name"].GetValue<string>());
-        bytes[^1] ^= 1;
-        _stored["profile"]["name"] = Convert.ToBase64String(bytes);
+        var envelope = EncryptionEnvelope.Read(bytes);
+        envelope.Ciphertext[^1] ^= 1;
+        _stored["profile"]["name"] = Convert.ToBase64String(envelope.Bytes());
         await Release();
     }
 

@@ -124,29 +124,7 @@ public class ReactorInvoker(
             {
                 await middlewares.BeforeInvoke(reactorId, eventContext, content);
 
-                object?[] arguments;
-                if (_argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
-                    method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery)))
-                {
-                    arguments = await registeredResolver.Resolve(
-                        method,
-                        activatedReactor.Instance,
-                        content,
-                        eventContext,
-                        eventStore,
-                        serviceProvider,
-                        ResolveDelivery(reactorId, eventContext));
-                }
-                else
-                {
-                    arguments = await _argumentsResolver.Resolve(
-                        method,
-                        activatedReactor.Instance,
-                        content,
-                        eventContext,
-                        eventStore,
-                        serviceProvider);
-                }
+                var arguments = await ResolveArguments(method, content, eventContext, reactorId);
 
                 var returnValue = method.Invoke(activatedReactor.Instance, arguments);
 
@@ -165,15 +143,7 @@ public class ReactorInvoker(
         }
         catch (Exception ex)
         {
-            if (ex.IsInterruptedByShutdown(StoppingToken))
-            {
-                logger.ReactorInterruptedByShutdown(reactorId, eventTypeName, ex);
-            }
-            else
-            {
-                logger.ReactorFailed(reactorId, eventTypeName, ex);
-            }
-
+            LogFailure(reactorId, eventTypeName, ex);
             return ReactorInvocationResult.FromException(ex);
         }
         finally
@@ -208,6 +178,29 @@ public class ReactorInvoker(
         }
     }
 
+    void LogFailure(ReactorId reactorId, string eventTypeName, Exception ex)
+    {
+        if (ex.IsInterruptedByShutdown(StoppingToken))
+        {
+            logger.ReactorInterruptedByShutdown(reactorId, eventTypeName, ex);
+        }
+        else
+        {
+            logger.ReactorFailed(reactorId, eventTypeName, ex);
+        }
+    }
+
+    async Task<object?[]> ResolveArguments(MethodInfo method, object content, EventContext eventContext, ReactorId reactorId)
+    {
+        if (_argumentsResolver is IRegisteredReactorMethodArgumentsResolver registeredResolver &&
+            method.GetParameters().Any(parameter => parameter.ParameterType == typeof(ReactorDelivery)))
+        {
+            return await registeredResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider, ResolveDelivery(reactorId, eventContext));
+        }
+
+        return await _argumentsResolver.Resolve(method, activatedReactor.Instance, content, eventContext, eventStore, serviceProvider);
+    }
+
     ReactorDelivery ResolveDelivery(ReactorId reactorId, EventContext eventContext)
     {
         var sequence = RegisteredEventSequenceId ?? RegisteredObserverMetadata.SequenceFor(
@@ -234,76 +227,38 @@ public class ReactorInvoker(
         {
             await task;
 
-            if (!method.ReturnType.IsGenericType)
-            {
-                return null;
-            }
-
-            var resultProperty = task.GetType().GetProperty(nameof(Task<object>.Result));
-            var result = resultProperty?.GetValue(task);
-            if (result is null)
-            {
-                return null;
-            }
-
-            if (sideEffectHandlers is null || eventStore is null)
-            {
-                return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, result.GetType()));
-            }
-
-            var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
-            {
-                EventStore = eventStore,
-                Delivery = ResolveDelivery(reactorId, eventContext),
-                Logger = logger
-            };
-            if (sideEffectHandlers.CanHandle(reactorContext, eventStore, result))
-            {
-                var handleResult = await sideEffectHandlers.Handle(reactorContext, eventStore, result);
-                if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
-                {
-                    return ReactorInvocationResult.FromSideEffectFailure(failure);
-                }
-            }
-            else
-            {
-                return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, result.GetType()));
-            }
-
-            return null;
+            var result = method.ReturnType.IsGenericType
+                ? task.GetType().GetProperty(nameof(Task<object>.Result))?.GetValue(task)
+                : null;
+            return result is null ? null : await HandleSideEffect(result, eventContext, reactorId);
         }
 
         // Synchronous side-effect return value (e.g. TEvent, IEnumerable<T>)
-        if (returnValue is null)
-        {
-            return null;
-        }
+        return returnValue is null ? null : await HandleSideEffect(returnValue, eventContext, reactorId);
+    }
 
+    async Task<ReactorInvocationResult?> HandleSideEffect(object value, EventContext eventContext, ReactorId reactorId)
+    {
         if (sideEffectHandlers is null || eventStore is null)
         {
-            return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, returnValue.GetType()));
+            return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, value.GetType()));
         }
 
-        var syncReactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
+        var reactorContext = new ReactorContext(eventContext, activatedReactor.Instance, BuildValues(eventContext))
         {
             EventStore = eventStore,
             Delivery = ResolveDelivery(reactorId, eventContext),
             Logger = logger
         };
-        if (sideEffectHandlers.CanHandle(syncReactorContext, eventStore, returnValue))
+        if (!sideEffectHandlers.CanHandle(reactorContext, eventStore, value))
         {
-            var handleResult = await sideEffectHandlers.Handle(syncReactorContext, eventStore, returnValue);
-            if (!handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null)
-            {
-                return ReactorInvocationResult.FromSideEffectFailure(failure);
-            }
-        }
-        else
-        {
-            return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, returnValue.GetType()));
+            return ReactorInvocationResult.FromException(new UnhandledReactorReturnValue(targetType, value.GetType()));
         }
 
-        return null;
+        var handleResult = await sideEffectHandlers.Handle(reactorContext, eventStore, value);
+        return !handleResult.IsSuccess && handleResult.TryGetError(out var failure) && failure is not null
+            ? ReactorInvocationResult.FromSideEffectFailure(failure)
+            : null;
     }
 
     ReactorContextValues BuildValues(EventContext eventContext) =>
@@ -383,15 +338,7 @@ public class ReactorInvoker(
             {
                 if (!method.IsEventHandlerMethod(eventTypes, sideEffectHandlers))
                 {
-                    // A public method shaped like a handler (its first parameter is a known event type) but with
-                    // an unrecognized return type is almost always a mistake. Left unchecked it is silently
-                    // skipped, leaving the reactor subscribed to nothing and never observing events. Fail loudly
-                    // at registration instead.
-                    if (method.IsPublic && method.HasEventHandlerShape(eventTypes))
-                    {
-                        throw new InvalidReactorHandlerReturnType(targetType, method.Name, method.ReturnType);
-                    }
-
+                    ThrowIfMisshapedHandler(targetType, method, eventTypes);
                     continue;
                 }
 
@@ -410,6 +357,18 @@ public class ReactorInvoker(
 
             var batchMethods = GetBatchMethods(targetType, eventTypes, liveMethodsByEventType, replayMethodsByEventType);
             return new(liveMethodsByEventType.ToFrozenDictionary(), replayMethodsByEventType.ToFrozenDictionary(), onceOnlyMethods.ToFrozenSet(), batchMethods);
+        }
+
+        static void ThrowIfMisshapedHandler(Type targetType, MethodInfo method, IEnumerable<Type> eventTypes)
+        {
+            // A public method shaped like a handler (its first parameter is a known event type) but with
+            // an unrecognized return type is almost always a mistake. Left unchecked it is silently
+            // skipped, leaving the reactor subscribed to nothing and never observing events. Fail loudly
+            // at registration instead.
+            if (method.IsPublic && method.HasEventHandlerShape(eventTypes))
+            {
+                throw new InvalidReactorHandlerReturnType(targetType, method.Name, method.ReturnType);
+            }
         }
 
         static IReadOnlyList<BatchMethod> GetBatchMethods(Type targetType, IEnumerable<Type> eventTypes, Dictionary<Type, MethodInfo> live, Dictionary<Type, MethodInfo> replay)

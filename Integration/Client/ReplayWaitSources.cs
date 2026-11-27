@@ -18,6 +18,9 @@ namespace Cratis.Chronicle.Diagnostics;
 /// <param name="GetReducerState">Reads the reducer state.</param>
 /// <param name="ProjectionName">The known projection identity.</param>
 /// <param name="GetProjectionState">Reads the projection state.</param>
+/// <param name="GetJobScope">Reads the observer and partition from a job's typed request, if available.</param>
+/// <param name="GetJobSteps">Overrides the job step reader.</param>
+/// <param name="ScenarioSource">The scenario's event source, not necessarily the failed job's partition.</param>
 internal sealed record ReplayWaitSources(
     Func<Task<IEnumerable<Job>>> GetJobs,
     string ReactorName,
@@ -25,4 +28,7 @@ internal sealed record ReplayWaitSources(
     string ReducerName,
     Func<Task<ReducerState>> GetReducerState,
     string ProjectionName,
-    Func<Task<ProjectionState>> GetProjectionState);
+    Func<Task<ProjectionState>> GetProjectionState,
+    Func<JobId, Task<(string Observer, string Partition)?>>? GetJobScope = null,
+    Func<Job, Task<IEnumerable<JobStep>>>? GetJobSteps = null,
+    string? ScenarioSource = null);

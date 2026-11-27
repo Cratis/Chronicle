@@ -186,29 +186,19 @@ static class FromDefinitionExtensions
     /// <returns>An invariant string representation of the value.</returns>
     internal static string ConvertValueToInvariantString(object value)
     {
-        var actualValue = value;
-
-        if (actualValue.GetType().IsEnum)
+        if (value.GetType().IsEnum)
         {
-            var underlyingType = Enum.GetUnderlyingType(actualValue.GetType());
-            if (underlyingType == typeof(int))
-            {
-                actualValue = Convert.ChangeType(actualValue, underlyingType);
-            }
-            else
-            {
-                return actualValue.ToString()!;
-            }
+            return ConvertEnumToInvariantString(value);
         }
 
-        return actualValue switch
+        return value switch
         {
             DateTime dateTime => dateTime.ToString("o", CultureInfo.InvariantCulture),
             DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("o", CultureInfo.InvariantCulture),
             DateOnly dateOnly => dateOnly.ToString("o", CultureInfo.InvariantCulture),
             TimeOnly timeOnly => timeOnly.ToString("o", CultureInfo.InvariantCulture),
             IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => actualValue.ToString()!
+            _ => value.ToString()!
         };
     }
 
@@ -230,5 +220,13 @@ static class FromDefinitionExtensions
             targetFrom[eventTypeId] = fromDefinition;
         }
         return fromDefinition;
+    }
+
+    static string ConvertEnumToInvariantString(object value)
+    {
+        var underlyingType = Enum.GetUnderlyingType(value.GetType());
+        return underlyingType == typeof(int)
+            ? ((IFormattable)Convert.ChangeType(value, underlyingType)).ToString(null, CultureInfo.InvariantCulture)
+            : value.ToString()!;
     }
 }

@@ -30,6 +30,8 @@ public class content_for_erasure_reporting : Specification
         var access = Substitute.For<IEncryptionKeyStorage>();
         access.TryGetLatestFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
             .Returns(call => _materialMissing ? Task.FromResult<EncryptionKeyAtRevision?>(null) : _keys.TryGetLatestFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
+        access.TryGetAtRevisionFor(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>(), Arg.Any<EncryptionKeyRevision>())
+            .Returns(call => _materialMissing ? Task.FromResult<EncryptionKeyAtRevision?>(null) : _keys.TryGetAtRevisionFor(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2), call.ArgAt<EncryptionKeyRevision>(3)));
         access.GetErasureForRelease(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<EncryptionKeyIdentifier>())
             .Returns(call => _keys.GetErasureForRelease(call.ArgAt<EventStoreName>(0), call.ArgAt<EventStoreNamespaceName>(1), call.ArgAt<EncryptionKeyIdentifier>(2)));
         _manager = new(

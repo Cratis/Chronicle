@@ -32,10 +32,10 @@ public class when_appending_generations_with_different_pii : Specification
         _readBack = await _scenario.EventSequence.GetFromSequenceNumber(EventSequenceNumber.First, _id);
     }
 
-    [Fact] void should_encrypt_the_old_generations_private_field() => Convert.FromBase64String(_firstStored["alias"]!.GetValue<string>()).Take(4).ShouldContainOnly("CENV"u8.ToArray());
-    [Fact] void should_encrypt_the_old_generations_field_classified_by_the_newer_generation() => Convert.FromBase64String(_firstStored["address"]!.GetValue<string>()).Take(4).ShouldContainOnly("CENV"u8.ToArray());
+    [Fact] void should_encrypt_the_old_generations_private_field() => Convert.FromBase64String(_firstStored["alias"]!.GetValue<string>()).Take(4).ShouldContainOnly("CEN4"u8.ToArray());
+    [Fact] void should_encrypt_the_old_generations_field_classified_by_the_newer_generation() => Convert.FromBase64String(_firstStored["address"]!.GetValue<string>()).Take(4).ShouldContainOnly("CEN4"u8.ToArray());
     [Fact] void should_keep_the_new_generations_public_field() => _secondStored["alias"]!.GetValue<string>().ShouldEqual("public-new-alias");
-    [Fact] void should_encrypt_the_new_generations_private_field() => Convert.FromBase64String(_secondStored["address"]!.GetValue<string>()).Take(4).ShouldContainOnly("CENV"u8.ToArray());
+    [Fact] void should_encrypt_the_new_generations_private_field() => Convert.FromBase64String(_secondStored["address"]!.GetValue<string>()).Take(4).ShouldContainOnly("CEN4"u8.ToArray());
     [Fact] void should_release_the_old_generation_into_the_current_client_shape() => _readBack[0].Content.ShouldEqual(new ContactReclassified("private-old-alias", "public-old-address"));
     [Fact] void should_preserve_the_stored_generation_in_the_context() => _readBack[0].Context.EventType.Generation.Value.ShouldEqual(1U);
     [Fact] void should_release_the_new_generation() => _readBack[1].Content.ShouldEqual(new ContactReclassified("public-new-alias", "private-new-address"));

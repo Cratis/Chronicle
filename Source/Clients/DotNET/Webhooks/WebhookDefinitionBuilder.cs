@@ -14,7 +14,7 @@ namespace Cratis.Chronicle.Webhooks;
 /// <param name="eventTypes">The <see cref="IEventTypes"/>.</param>
 public class WebhookDefinitionBuilder(IEventTypes eventTypes) : IWebhookDefinitionBuilder
 {
-    readonly HashSet<EventType> _eventTypes = new();
+    readonly HashSet<EventType> _eventTypes = [];
     readonly Dictionary<string, string> _headers = new();
     EventSequenceId _eventSequenceId = EventSequenceId.Log;
     OneOf.OneOf<BasicAuthorization, BearerTokenAuthorization, OAuthAuthorization, OneOf.Types.None> _authorization = default(OneOf.Types.None);

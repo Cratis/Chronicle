@@ -73,6 +73,7 @@ public partial class JsonSchema
         Node = node;
         _root = root;
         _resourceBase = root is null ? null : ResourceId(node, root.ResourceBase);
+        _resolutionContext = ScopeFromParent(root, node);
     }
 
     /// <summary>
@@ -182,8 +183,7 @@ public partial class JsonSchema
                 {
                     if (value is JsonObject propObj)
                     {
-                        var propNode = (JsonObject)propObj.DeepClone();
-                        var prop = CreateChildProperty(key, propNode);
+                        var prop = CreateChildProperty(key, propObj);
                         properties.LoadWithoutSync(key, prop);
                     }
                 }
@@ -221,13 +221,14 @@ public partial class JsonSchema
     public IList<JsonSchema> OneOf => _oneOfCache ??= BuildSchemaList("oneOf");
 
     /// <summary>
-    /// Gets whether this schema is a $ref.
+    /// Gets whether this schema has an ordinary $ref keyword.
     /// </summary>
-    public bool HasReference => Node["$ref"] is not null;
+    public bool HasReference => HasReferenceKeyword;
 
     /// <summary>
-    /// Gets the resolved $ref schema.
+    /// Gets the statically resolved target of the ordinary $ref keyword.
     /// </summary>
+    /// <remarks>Contextual references are considered separately for metadata classification, not type navigation.</remarks>
     public JsonSchema? Reference
     {
         get
@@ -257,7 +258,7 @@ public partial class JsonSchema
             }
 
             var resolved = Node["items"] is JsonObject itemNode
-                ? CreateChildProperty(string.Empty, (JsonObject)itemNode.DeepClone())
+                ? CreateChildProperty(string.Empty, itemNode)
                 : null;
             return (_itemCache = new Cached<JsonSchema?>(resolved)).Value;
         }
@@ -299,7 +300,7 @@ public partial class JsonSchema
                 {
                     if (value is JsonObject defObj)
                     {
-                        definitions[key] = CreateChildSchema((JsonObject)defObj.DeepClone());
+                        definitions[key] = CreateChildSchema(defObj);
                     }
                 }
             }
@@ -317,7 +318,7 @@ public partial class JsonSchema
         {
             if (Node["additionalProperties"] is JsonObject addlObj)
             {
-                return CreateChildSchema((JsonObject)addlObj.DeepClone());
+                return CreateChildSchema(addlObj);
             }
             return null;
         }
@@ -941,7 +942,7 @@ public partial class JsonSchema
             {
                 if (item is JsonObject obj)
                 {
-                    list.Add(CreateChildSchema((JsonObject)obj.DeepClone()));
+                    list.Add(CreateChildSchema(obj));
                 }
             }
         }
@@ -990,7 +991,7 @@ public partial class JsonSchema
 
     JsonSchema? ResolveRef()
     {
-        var refValue = Node["$ref"]?.GetValue<string>();
+        var refValue = ReferenceValue;
         if (refValue is null) return null;
         return ResolveScopedRef(refValue);
     }

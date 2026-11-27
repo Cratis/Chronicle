@@ -55,7 +55,10 @@ public static class ProtectedValueCodec
     /// <returns>The encrypted value, as a base64 <see cref="JsonValue"/>.</returns>
     public static JsonNode Encrypt(IEncryption encryption, EncryptionKey key, JsonNode value, EncryptionKeyRevision revision, ProtectedValueAddress address)
     {
-        var encrypted = encryption.Encrypt(Encoding.UTF8.GetBytes(value.ToString()), key, revision, address);
+        var plaintext = Encoding.UTF8.GetBytes(value.ToString());
+        var encrypted = encryption.SupportsTypedValues
+            ? encryption.Encrypt(plaintext, new EncryptionKeyAtRevision(key, revision), address, AuthenticatedProtectedValue.KindOf(value))
+            : encryption.Encrypt(plaintext, key, revision, address);
         return JsonValue.Create(Convert.ToBase64String(encrypted));
     }
 
@@ -65,12 +68,13 @@ public static class ProtectedValueCodec
     /// <param name="encryption"><see cref="IEncryption"/> to decrypt with.</param>
     /// <param name="key"><see cref="EncryptionKey"/> to decrypt under.</param>
     /// <param name="encrypted">The ciphertext bytes previously decoded by <see cref="TryDecodeCipherText"/>.</param>
-    /// <returns>The decrypted value, as a <see cref="JsonValue"/>.</returns>
+    /// <returns>The authenticated JSON value for v4, or legacy plaintext as a <see cref="JsonValue"/>.</returns>
     public static JsonNode Decrypt(IEncryption encryption, EncryptionKey key, byte[] encrypted)
     {
         var decrypted = encryption.Decrypt(encrypted, key);
         var decryptedAsString = Encoding.UTF8.GetString(decrypted);
-        return JsonValue.Create(decryptedAsString);
+        var kind = EncryptionEnvelope.HasMagic(encrypted) ? EncryptionEnvelope.Read(encrypted).Kind : null;
+        return AuthenticatedProtectedValue.Decode(decryptedAsString, kind);
     }
 
     /// <summary>

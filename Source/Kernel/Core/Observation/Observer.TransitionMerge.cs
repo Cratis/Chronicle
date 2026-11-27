@@ -30,11 +30,29 @@ public partial class Observer
     /// transition completes, which only makes the fast handover fall back to the full subscribe.
     /// </remarks>
     bool _stateTransitionInProgress;
+    bool _leavingState;
+    bool _recoverSubscriptionAfterLeaving;
+    IGrainTimer? _subscriptionRecoveryAfterLeaveTimer;
+
+    /// <summary>
+    /// Ends a failed leave and schedules any owed recovery after Choreography has unwound the transition.
+    /// </summary>
+    internal void StateLeaveFailed()
+    {
+        _leavingState = false;
+        if (!_recoverSubscriptionAfterLeaving) return;
+
+        _subscriptionRecoveryAfterLeaveTimer?.Dispose();
+        _subscriptionRecoveryAfterLeaveTimer = this.RegisterGrainTimer(
+            RecoverSubscriptionAfterFailedLeave,
+            new GrainTimerCreationOptions { DueTime = TimeSpan.Zero, Period = Timeout.InfiniteTimeSpan });
+    }
 
     /// <inheritdoc/>
     protected override Task OnBeforeLeavingState(IState<ObserverState> state)
     {
         _stateTransitionInProgress = true;
+        _leavingState = true;
         BeginTransitionHook();
         return Task.CompletedTask;
     }
@@ -42,8 +60,38 @@ public partial class Observer
     /// <inheritdoc/>
     protected override Task OnAfterLeavingState(IState<ObserverState> state)
     {
+        _leavingState = false;
         KeepWhatWasRecordedDuringTransitionHook();
         return Task.CompletedTask;
+    }
+
+    Task RecoverSubscriptionAfterFailedLeave(CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return Task.CompletedTask;
+
+        // Disposing the one-shot timer cancels its callback token, so check cancellation before disposal.
+        _subscriptionRecoveryAfterLeaveTimer?.Dispose();
+        _subscriptionRecoveryAfterLeaveTimer = null;
+        return RecoverSubscriptionAfterLeaving();
+    }
+
+    async Task RecoverSubscriptionAfterLeaving()
+    {
+        var recover = _recoverSubscriptionAfterLeaving && _subscription.IsSubscribed;
+        _recoverSubscriptionAfterLeaving = false;
+        if (!recover) return;
+
+        try
+        {
+            await RecoverAfterSubscribing(leavesQuarantine: false);
+        }
+        catch
+        {
+            // The callers that deferred this recovery already reported the subscription as established, so a failure here
+            // must say it is not, or the keeper, restoration and recovery never retry it.
+            _subscriptionSetupFailed = true;
+            throw;
+        }
     }
 
     /// <summary>
