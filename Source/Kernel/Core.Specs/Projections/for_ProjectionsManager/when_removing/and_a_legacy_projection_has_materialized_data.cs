@@ -42,7 +42,7 @@ public class and_a_legacy_projection_has_materialized_data : given.a_manager_wit
         _sink.ClearReceivedCalls();
         _bindings = Substitute.For<IReadModelReadBindings>();
         _bindings.Resolve(Arg.Any<EventStoreName>(), Arg.Any<EventStoreNamespaceName>(), Arg.Any<ReadModelDefinition>(), Arg.Any<ReadModelContainerName?>())
-            .Returns(new ReadModelReadBinding(_sink, _retainedReadModel.ContainerName));
+            .Returns(new ReadModelReadBinding(_sink, _retainedReadModel.ContainerName) { Lease = SinkProvenanceLease.Exempt });
         _bindings.ClearReceivedCalls();
     }
 

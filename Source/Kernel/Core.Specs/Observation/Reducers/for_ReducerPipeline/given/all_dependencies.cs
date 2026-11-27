@@ -83,7 +83,8 @@ public class all_dependencies : Specification
             _objectComparer,
             new ReadModelsCompliance(_complianceManager, _expandoObjectConverter),
             EventStore,
-            EventStoreNamespace);
+            EventStoreNamespace,
+            () => Task.CompletedTask);
     }
 
     protected AppendedEvent CreateEvent(string eventSourceId, Subject? subject = null)

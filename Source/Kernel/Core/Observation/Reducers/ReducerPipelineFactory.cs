@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Changes;
 using Cratis.Chronicle.Concepts;
+using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.Observation.Reducers;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.Json;
@@ -20,6 +21,7 @@ namespace Cratis.Chronicle.Observation.Reducers;
 /// <param name="objectComparer"><see cref="IObjectComparer"/> for comparing objects.</param>
 /// <param name="readModelsCompliance">The <see cref="IReadModelsCompliance"/> for encrypting and decrypting compliance and security fields.</param>
 /// <param name="options">The <see cref="ChronicleOptions"/> holding the read model write configuration.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 /// <param name="expandoObjectConverter">The converter used to serialize committed state for watchers.</param>
 /// <param name="memoryGate">Optional <see cref="ReducerMemoryGate"/> that makes reduces of large states wait for room in the memory budget.</param>
 public class ReducerPipelineFactory(
@@ -28,6 +30,7 @@ public class ReducerPipelineFactory(
     IObjectComparer objectComparer,
     IReadModelsCompliance readModelsCompliance,
     IOptions<ChronicleOptions> options,
+    IReadModelSinkProvenance provenance,
     IExpandoObjectConverter? expandoObjectConverter = null,
     ReducerMemoryGate? memoryGate = null) : IReducerPipelineFactory
 {
@@ -37,9 +40,11 @@ public class ReducerPipelineFactory(
         EventStoreNamespaceName @namespace,
         ReducerDefinition definition)
     {
+        await ReadModelProducerWriteGuard.Ensure(provenance, eventStore, definition.EventSequenceId.IsSystemSequence());
         var namespaceStorage = storage.GetEventStore(eventStore).GetNamespace(@namespace);
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
         readModel.Sink.EnsureReadModelSupported();
+        await provenance.EnsureReadable(eventStore, @namespace, readModel);
         var sink = await namespaceStorage.Sinks.GetFor(readModel);
         return new ReducerPipeline(
             readModel,
@@ -48,6 +53,7 @@ public class ReducerPipelineFactory(
             readModelsCompliance,
             eventStore,
             @namespace,
+            () => provenance.EnsureReadable(eventStore, @namespace, readModel),
             options.Value.ReadModels.GuardSinkWritesOnWatermark,
             expandoObjectConverter,
             memoryGate);

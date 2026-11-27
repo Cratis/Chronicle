@@ -50,6 +50,7 @@ public class and_the_kernel_stores_events_in_mongodb : Specification
             .AddSingleton(Options.Create(options))
             .BuildServiceProvider();
         var factory = new SinkFactory(_services, new ExpandoObjectConverter(new TypeFormats()));
+        await factory.GetProvenance("store", "namespace", "reporting").CompleteInventory(false);
         _sinks = new StorageSinks("store", "namespace", new KnownInstancesOf<ISinkFactory>([factory]), new SinkConfigurations(Options.Create(options)));
         _readModel = new(
             "orders",

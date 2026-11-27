@@ -28,7 +28,7 @@ public class a_history_provider : a_projections_manager
         _grainId = GrainId.Create("projection", new ProjectionKey(_firstDefinition.Identifier, _eventStore).ToString());
         var clock = Substitute.For<TimeProvider>();
         clock.GetUtcNow().Returns(_now);
-        _provider = new(_storage, clock);
+        _provider = new(_storage, clock, Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
     }
 
     protected Task Write() => _provider.WriteStateAsync("projection", _grainId, _state);

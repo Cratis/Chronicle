@@ -151,6 +151,9 @@ public class ChronicleOrleansFixture<TChronicleFixture>(TChronicleFixture chroni
         //     the new reader never sees.
         Services.GetRequiredService<IStorage>().Clear();
 
+        // Only the fixture starts a new observation lifetime after replacing physical databases.
+        await Services.GetRequiredService<FixtureSinkProvenanceCache>().Reset();
+
         // The startup task is removed from the test silo. Restore its System event schemas and
         // kernel reactors after the wipe, before any client can create namespaces again.
         await BootstrapKernel();

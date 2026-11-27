@@ -13,6 +13,7 @@ using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Configuration;
 using Cratis.Chronicle.ReadModels;
+using Cratis.Chronicle.Security;
 using Cratis.Chronicle.Storage;
 using Cratis.DependencyInjection;
 using Cratis.Metrics;
@@ -33,6 +34,7 @@ namespace Cratis.Chronicle.Projections.Engine;
 /// <param name="meter">The engine cache meter.</param>
 /// <param name="options">The kernel configuration.</param>
 /// <param name="logger">The logger.</param>
+/// <param name="provenance">The database provenance coordinator.</param>
 [Singleton]
 public partial class ProjectionsManager(
     IProjectionFactory projectionFactory,
@@ -40,7 +42,8 @@ public partial class ProjectionsManager(
     IGrainFactory grainFactory,
     [FromKeyedServices(WellKnown.MeterName)] IMeter<ProjectionsManager>? meter,
     IOptions<ChronicleOptions> options,
-    ILogger<ProjectionsManager> logger) : IProjectionsManager
+    ILogger<ProjectionsManager> logger,
+    IReadModelSinkProvenance provenance) : IProjectionsManager
 {
     /// <summary>The silo-wide limit on cached compiled root graphs.</summary>
     internal const int CacheCapacity = 256;
@@ -67,7 +70,7 @@ public partial class ProjectionsManager(
     /// <param name="meter">The engine cache meter.</param>
     /// <param name="options">The kernel configuration.</param>
     internal ProjectionsManager(IProjectionFactory projectionFactory, IStorage storage, IGrainFactory grainFactory, IMeter<ProjectionsManager>? meter, IOptions<ChronicleOptions> options)
-        : this(projectionFactory, storage, grainFactory, meter, options, NullLogger<ProjectionsManager>.Instance)
+        : this(projectionFactory, storage, grainFactory, meter, options, NullLogger<ProjectionsManager>.Instance, new ReadModelSinkProvenance(storage))
     {
     }
 
@@ -204,7 +207,7 @@ public partial class ProjectionsManager(
         var readModelFingerprint = ReadModelFingerprintFor(readModel);
         var revision = _evictionRevision;
         if (_registrations.TryGetValue((eventStore, definition.Identifier), out var previous) &&
-            previous.Fingerprint == fingerprint && previous.ReadModelFingerprint == readModelFingerprint)
+            previous.Matches(fingerprint, readModelFingerprint))
         {
             return;
         }
@@ -239,9 +242,12 @@ public partial class ProjectionsManager(
         var definition = await eventStoreStorage.Projections.Get(id);
         if (SkipDefinition(eventStore, definition)) return null;
         var fingerprint = ProjectionFactory.DefinitionFingerprintFor(definition);
-        if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
-
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
+        var sinkNamespace = definition.Graph is null && definition.Scope == ProjectionScope.Global
+            ? EventStoreNamespaceName.NotSet
+            : @namespace;
+        await provenance.EnsureReadable(eventStore, sinkNamespace, readModel);
+        if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
         var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
         lock (_publication)
         {
@@ -256,11 +262,15 @@ public partial class ProjectionsManager(
 
     bool SkipDefinition(EventStoreName eventStore, ProjectionDefinition definition)
     {
-        if (!definition.UsesUnsupportedEventSequence()) return false;
+        if (SystemStoreAccess.IsSystem(eventStore) || !definition.UsesUnsupportedEventSequence()) return false;
         UnsupportedEventSequence(logger, definition.Identifier);
         Evict(eventStore, definition.Identifier);
         return true;
     }
 
-    sealed record RegisteredProjection(ProjectionDefinition Definition, string Fingerprint, string ReadModelFingerprint);
+    sealed record RegisteredProjection(ProjectionDefinition Definition, string Fingerprint, string ReadModelFingerprint)
+    {
+        internal bool Matches(string fingerprint, string readModelFingerprint) =>
+            Fingerprint == fingerprint && ReadModelFingerprint == readModelFingerprint;
+    }
 }

@@ -53,6 +53,7 @@ public class a_pipeline_whose_write_conflicts : Specification
             new ProjectionHandleLock(),
             Substitute.For<IReplayScopedCache>(),
             NullLogger<ProjectionPipeline>.Instance,
+            () => Task.CompletedTask,
             null,
             false);
     }

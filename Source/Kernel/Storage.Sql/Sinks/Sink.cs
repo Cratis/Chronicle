@@ -126,6 +126,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         ReplayingTables replayingTables,
         ILogger<Sink> logger)
     {
+        SinkProvenanceNames.EnsureNotReserved(readModel.ContainerName);
         _logger = logger;
         _telemetry = SqlStorageTelemetry.For(database);
         _compositeKeyShadow = new(database is Database sql ? sql.MetricNames : MetricNames.Legacy);
@@ -395,6 +396,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <exception cref="UnverifiedReplayBackup">An existing backup cannot be distinguished from a legacy half-swap.</exception>
     public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        await EnsureDestinationAvailable(context.RevertContainerName);
         var failedPartitions = await EndBulk();
         try
         {
@@ -418,6 +420,8 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     /// <inheritdoc/>
     public async Task Remove(ReadModelContainerName containerName)
     {
+        await EnsureDestinationAvailable(containerName);
+
         // Do not migrate the backup being removed: a truncated logical name may now address another
         // replay's backup. Resolve ownership through the marker table on the primary's connection.
         await using var scope = await OpenScope(_tableName);
@@ -469,7 +473,7 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
     async Task<DbContextScope<ReadModelDbContext>> OpenScope(string table, ConnectionPurpose purpose = ConnectionPurpose.Runtime)
     {
         await EnsureLayout();
-        return await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, purpose);
+        return await _database.ReadModelTable(_eventStoreName, _namespace, table, _columns, purpose, ProvenanceTarget);
     }
 
     /// <inheritdoc/>
@@ -597,10 +601,10 @@ public partial class Sink : ISink, ICanReconcileIndexes, ISinkCompositeKeyLookup
         await EnsureLayoutForRead();
         if (occurrence is null || containerName == _tableName)
         {
-            return await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+            return await _database.ReadModelTable(_eventStoreName, _namespace, containerName, _columns, admittedTarget: ProvenanceTarget);
         }
 
-        return await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns);
+        return await _database.ExistingReadModelTable(_eventStoreName, _namespace, containerName, _columns, ProvenanceTarget);
     }
 
     /// <summary>

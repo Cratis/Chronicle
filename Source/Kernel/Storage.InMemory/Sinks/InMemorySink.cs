@@ -30,9 +30,11 @@ namespace Cratis.Chronicle.Storage.InMemory.Sinks;
 /// </remarks>
 /// <param name="readModel">The target <see cref="ReadModelDefinition"/>.</param>
 /// <param name="typeFormats">The <see cref="ITypeFormats"/> for resolving actual types from JSON schema.</param>
+/// <param name="provenance">The optional database-local marker supplied by the factory.</param>
 public partial class InMemorySink(
     ReadModelDefinition readModel,
-    ITypeFormats typeFormats) : ISink, ISinkCompositeKeyLookup, IDisposable
+    ITypeFormats typeFormats,
+    ISinkProvenanceStorage? provenance = null) : ISink, ISinkCompositeKeyLookup, IDisposable
 {
     readonly Dictionary<object, ExpandoObject> _collection = [];
     readonly Dictionary<object, ExpandoObject> _rewindCollection = [];
@@ -61,6 +63,9 @@ public partial class InMemorySink(
     /// </remarks>
     Dictionary<object, ulong> LastHandledEventSequenceNumbers =>
         _isReplaying ? _rewindLastHandledEventSequenceNumbers : _lastHandledEventSequenceNumbers;
+
+    /// <inheritdoc/>
+    public Task EnsureProvenance() => provenance is null ? Task.CompletedTask : SinkAcquisitionProvenance.Ensure(provenance);
 
     /// <summary>
     /// Gets the value this sink addresses a document by for a given <see cref="Key"/>.

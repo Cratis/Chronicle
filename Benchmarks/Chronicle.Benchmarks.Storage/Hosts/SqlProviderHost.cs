@@ -186,6 +186,7 @@ internal sealed class SqlProviderHost(StorageProvider provider) : IStorageProvid
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
+        Database?.Dispose();
         SqliteConnection.ClearAllPools();
         if (_container is not null) await _container.DisposeAsync();
         if (Directory.Exists(_directory)) Directory.Delete(_directory, true);

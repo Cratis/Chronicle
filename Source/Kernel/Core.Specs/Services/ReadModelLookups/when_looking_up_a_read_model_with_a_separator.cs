@@ -17,7 +17,7 @@ public class when_looking_up_a_read_model_with_a_separator : Specification
     {
         var grainFactory = Substitute.For<IGrainFactory>();
         var store = Substitute.For<IMaterializedReadModelStore>();
-        var service = new ReadModelLookups(grainFactory, store, Substitute.For<ITypeFormats>(), Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), NamespaceCasingContext.Create(), NullLogger<ReadModelLookups>.Instance);
+        var service = new ReadModelLookups(grainFactory, store, Substitute.For<ITypeFormats>(), Substitute.For<IExpandoObjectConverter>(), new JsonSerializerOptions(), Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>(), NamespaceCasingContext.Create(), NullLogger<ReadModelLookups>.Instance);
 
         var result = await service.FindByCompositeKey(new FindByCompositeKeyRequest
         {

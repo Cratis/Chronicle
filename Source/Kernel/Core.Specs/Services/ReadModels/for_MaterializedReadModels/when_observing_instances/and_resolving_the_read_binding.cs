@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_MaterializedReadModels.when_observing_instances;
@@ -14,7 +15,7 @@ public class and_resolving_the_read_binding : for_ReadModels.given.all_dependenc
     void Establish()
     {
         _readBindings.Resolve("test-store", "test-namespace", _readModelDefinition, (ReadModelContainerName)"requested-occurrence")
-            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence"));
+            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence") { Lease = SinkProvenanceLease.Exempt });
         _sink.GetInstances((ReadModelContainerName)"bound-occurrence", 10, 10).Returns(new ReadModelInstances([], 0));
         _sink.ObserveInstances((ReadModelContainerName)"bound-occurrence", 10, 10).Returns(Observable.Return(Enumerable.Empty<System.Dynamic.ExpandoObject>()));
     }

@@ -277,21 +277,23 @@ public partial class Database(IServiceProvider serviceProvider, IOptions<Chronic
             (options, name) => new EventSequenceDbContext(options, name, eventSequenceMigrator));
 
     /// <inheritdoc/>
-    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime) =>
+    public Task<DbContextScope<ReadModelDbContext>> ReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, ConnectionPurpose purpose = ConnectionPurpose.Runtime, Sinks.SinkProvenanceTarget? admittedTarget = null) =>
         GetOrCreateReadModelDbContext(
             eventStore,
             @namespace,
             containerName,
-            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()),
-            purpose);
+            (contextOptions, name) => new ReadModelDbContext(contextOptions, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>(), options.Value.Storage.Schema),
+            purpose,
+            admittedTarget);
 
     /// <inheritdoc/>
-    public Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns) =>
+    public Task<DbContextScope<ReadModelDbContext>?> ExistingReadModelTable(EventStoreName eventStore, EventStoreNamespaceName @namespace, string containerName, IReadOnlyList<ProjectedColumn> columns, Sinks.SinkProvenanceTarget? admittedTarget = null) =>
         GetExistingReadModelDbContext(
             eventStore,
             @namespace,
             containerName,
-            (options, name) => new ReadModelDbContext(options, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>()));
+            (contextOptions, name) => new ReadModelDbContext(contextOptions, name, columns, serviceProvider.GetRequiredService<IReadModelMigrator>(), options.Value.Storage.Schema),
+            admittedTarget);
 
     /// <inheritdoc/>
     public void ClearTableMigrationCache(string connectionStringPrefix)

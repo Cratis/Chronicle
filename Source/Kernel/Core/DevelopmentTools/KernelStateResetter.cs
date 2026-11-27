@@ -5,6 +5,7 @@ using Cratis.Chronicle.EventStores;
 using Cratis.Chronicle.Projections.Engine.Pipelines;
 using Cratis.Chronicle.Setup;
 using Cratis.Chronicle.Storage;
+using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Logging;
 #if DEVELOPMENT
 using Cratis.Chronicle.Observation.EventStoreSubscriptions;
@@ -24,12 +25,17 @@ namespace Cratis.Chronicle.DevelopmentTools;
 /// <param name="resetHandlers">Storage components that wipe their backing store during a development reset.</param>
 /// <param name="eventStoreInitialization">The event store initialization cache to clear.</param>
 /// <param name="bootstrapResetHandler">Re-runs kernel bootstrap (identity, system event store) after storage is wiped.</param>
+/// <param name="provenanceCache">The active silo observation cache.</param>
 /// <param name="logger">The logger.</param>
 /// <remarks>
 /// This exists for integration tests, which need a known-empty server between test classes. It is compiled in only
 /// when the server is built with the DEVELOPMENT preprocessor symbol - a released kernel cannot be asked to do this.
 /// </remarks>
 #if DEVELOPMENT
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "The reset gate is used only through WaitAsync and Release; no wait handle is allocated.")]
 internal sealed partial class KernelStateResetter(
 #else
 internal sealed class KernelStateResetter(
@@ -40,8 +46,13 @@ internal sealed class KernelStateResetter(
     IEnumerable<ICanPerformKernelStateReset> resetHandlers,
     IEventStoreInitialization eventStoreInitialization,
     KernelBootstrapResetHandler bootstrapResetHandler,
+    ISinkProvenanceCache provenanceCache,
     ILogger<KernelStateResetter> logger) : IKernelStateResetter
 {
+#if DEVELOPMENT
+    readonly SemaphoreSlim _resetGate = new(1, 1);
+#endif
+
     /// <summary>
     /// Gets a value indicating whether the server exposes development tools.
     /// </summary>
@@ -60,6 +71,29 @@ internal sealed class KernelStateResetter(
     public async Task Reset()
     {
 #if DEVELOPMENT
+        await _resetGate.WaitAsync();
+        try
+        {
+            await ResetCore();
+        }
+        finally
+        {
+            _resetGate.Release();
+        }
+#else
+        await Task.CompletedTask;
+        throw new DevelopmentToolsNotAvailable();
+#endif
+    }
+
+#if DEVELOPMENT
+    [LoggerMessage(LogLevel.Warning, "Kernel grain activations did not settle before the development reset continued.")]
+    static partial void LogDeactivationTimeout(ILogger logger);
+
+    async Task ResetCore()
+    {
+        var observations = provenanceCache as IDevelopmentSinkProvenanceObservations
+            ?? throw new InvalidOperationException("The active provenance cache does not support development reset.");
         await KeepAliveGrainReset.Reset(grainFactory);
         await EventStoreSubscriptionsReset.Reset(grainFactory, storage);
 
@@ -76,6 +110,7 @@ internal sealed class KernelStateResetter(
 
         // Cached stores bypass catalog creation, but the wipe removed their persisted catalog entries.
         storage.Clear();
+        await observations.RotateAfterWipe();
         eventStoreInitialization.Clear();
         projectionPipelineManager.Clear();
 
@@ -83,15 +118,7 @@ internal sealed class KernelStateResetter(
         // silo lifetime, so without this the next test class would hit an empty identity DB
         // and every gRPC call would fail with 401.
         await bootstrapResetHandler.Bootstrap();
-#else
-        await Task.CompletedTask;
-        throw new DevelopmentToolsNotAvailable();
-#endif
     }
-
-#if DEVELOPMENT
-    [LoggerMessage(LogLevel.Warning, "Kernel grain activations did not settle before the development reset continued.")]
-    static partial void LogDeactivationTimeout(ILogger logger);
 
     async Task WipeStorage()
     {

@@ -49,6 +49,7 @@ public class when_handling_an_event_without_a_bulk_window : Specification
             new ProjectionHandleLock(),
             Substitute.For<IReplayScopedCache>(),
             NullLogger<ProjectionPipeline>.Instance,
+            () => Task.CompletedTask,
             null,
             false);
     }

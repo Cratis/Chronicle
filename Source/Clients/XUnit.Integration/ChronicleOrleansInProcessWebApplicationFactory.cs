@@ -15,6 +15,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Diagnostics.OpenTelemetry.Tracing;
 using Cratis.Chronicle.Identities;
 using Cratis.Chronicle.Setup;
+using Cratis.Chronicle.Storage.Sinks;
 using Cratis.DependencyInjection;
 using Cratis.Json;
 using Cratis.Serialization;
@@ -204,13 +205,7 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
                         }
                     }
 
-                    // The kernel shares this host - and its type discovery - with the application under test, so its
-                    // own commands would otherwise run through the application's command filters, execution scopes and
-                    // authorization: a deny-by-default policy refuses the kernel's appends, and Arc.Chronicle's
-                    // transactional scope deadlocks start-up by resolving the event store that is waiting on the very
-                    // kernel command it wraps. The application's own commands keep every extension point.
-                    services.AddKernelSideCommandExtensionPointsForKernelCommands();
-                    KernelAuthorizationPolicies.Apply(services);
+                    ConfigureKernelIsolation(services);
 
                     services.AddSingleton<IReactorMediator, ReactorMediator>();
                     services.AddSingleton<IReducerMediator, ReducerMediator>();
@@ -304,6 +299,22 @@ public class ChronicleOrleansInProcessWebApplicationFactory<TStartup>(
             configureWebHost(b);
         });
         return builder;
+    }
+
+    static void ConfigureKernelIsolation(IServiceCollection services)
+    {
+        // The kernel shares this host - and its type discovery - with the application under test, so its
+        // own commands would otherwise run through the application's command filters, execution scopes and
+        // authorization: a deny-by-default policy refuses the kernel's appends, and Arc.Chronicle's
+        // transactional scope deadlocks start-up by resolving the event store that is waiting on the very
+        // kernel command it wraps. The application's own commands keep every extension point.
+        services.AddKernelSideCommandExtensionPointsForKernelCommands();
+        KernelAuthorizationPolicies.Apply(services);
+
+        // A destructive test reset replaces physical databases while retaining this silo.
+        services.RemoveAll<ISinkProvenanceCache>();
+        services.AddSingleton<FixtureSinkProvenanceCache>();
+        services.AddSingleton<ISinkProvenanceCache>(sp => sp.GetRequiredService<FixtureSinkProvenanceCache>());
     }
 
     static int GetFreePort()

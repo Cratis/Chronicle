@@ -14,6 +14,7 @@ public partial class ProjectionPipeline
     /// <inheritdoc/>
     public async Task PreparePage(IReadOnlyList<AppendedEvent> events)
     {
+        await EnsureProvenance();
         Interlocked.Increment(ref _activity);
         ClearPreparedPage();
         if (!_isReplaying || replayScopedCache is not IEventSequenceStorage storage) return;

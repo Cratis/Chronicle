@@ -13,7 +13,7 @@ public class and_the_projection_is_child_only : given.all_dependencies
     void Establish()
     {
         _readBindings.Resolve("test-store", "test-namespace", _readModelDefinition, (ReadModelContainerName)"requested-occurrence")
-            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence", ReadModelInstanceVisibility.IncludeUninitialized));
+            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence", ReadModelInstanceVisibility.IncludeUninitialized) { Lease = SinkProvenanceLease.Exempt });
         _sink.GetInstances((ReadModelContainerName)"bound-occurrence", 10, 10, ReadModelInstanceVisibility.IncludeUninitialized).Returns(new ReadModelInstances([], 0));
     }
 

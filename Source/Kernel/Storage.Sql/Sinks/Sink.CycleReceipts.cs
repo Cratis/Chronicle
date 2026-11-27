@@ -150,7 +150,7 @@ public partial class Sink
             return;
         }
 
-        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns, ConnectionPurpose.Schema);
+        await using var scope = await _database.ReadModelTable(_eventStoreName, _namespace, ActiveTableName, _columns, ConnectionPurpose.Schema, ProvenanceTarget);
         await scope.DbContext.EnsureSinkCycleReceipts();
         Volatile.Write(ref _receiptTableEnsured, 1);
     }

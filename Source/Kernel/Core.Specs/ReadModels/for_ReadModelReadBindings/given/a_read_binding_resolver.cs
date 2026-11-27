@@ -3,8 +3,11 @@
 
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
+using Cratis.Chronicle.Concepts.Projections;
+using Cratis.Chronicle.Concepts.Projections.Definitions;
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.Concepts.Sinks;
+using Cratis.Chronicle.Projections;
 using Cratis.Chronicle.Schemas;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.ReadModels;
@@ -39,6 +42,9 @@ public class a_read_binding_resolver : Specification
             []);
         _sink = Substitute.For<ISink>();
         _sinks = Substitute.For<ISinks>();
+        var provenance = Substitute.For<ISinkProvenanceStorage>();
+        provenance.GetLease().Returns(SinkProvenanceLease.Exempt);
+        _sinks.GetProvenance(_definition).Returns(provenance);
         _sinks.GetFor(_definition, _definition.ContainerName).Returns(_sink);
         _sinks.GetWithoutProvisioning(_definition).Returns(_sink);
         var storage = Substitute.For<IStorage>();
@@ -53,7 +59,11 @@ public class a_read_binding_resolver : Specification
         _replayManager.GetOccurrences().Returns(
             [new ReadModelOccurrence(ObserverId.Unspecified, DateTimeOffset.UnixEpoch, new ReadModelType(_definition.Identifier, ReadModelGeneration.First), _definition.ContainerName, "historical-container")]);
         var grainFactory = Substitute.For<IGrainFactory>();
+        var projections = Substitute.For<IProjectionsManager>();
+        var projection = Projections.for_ProjectionsManager.given.a_projections_manager_grain.CreateDefinition("observer", "model");
+        grainFactory.GetGrain<IProjectionsManager>(EventStore).Returns(projections);
+        projections.GetProducersFor(Arg.Any<ReadModelIdentifier>(), Arg.Any<ProjectionId?>()).Returns(Task.FromResult<IEnumerable<ProjectionDefinition>>([projection]));
         grainFactory.GetGrain<IReadModelReplayManager>(Arg.Any<string>()).Returns(_replayManager);
-        _resolver = new(storage, grainFactory, _visibilities);
+        _resolver = new(storage, grainFactory, _visibilities, Substitute.For<IReadModelSinkProvenance>());
     }
 }

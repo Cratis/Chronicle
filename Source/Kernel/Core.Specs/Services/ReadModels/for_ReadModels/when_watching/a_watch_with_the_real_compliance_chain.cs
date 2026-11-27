@@ -88,7 +88,8 @@ public class a_watch_with_the_real_compliance_chain : given.all_dependencies
                 _expandoObjectConverter),
             _materializedReadModels,
             new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
     }
 
     protected async Task Push(JsonObject document, ReadModelChangeContext change)

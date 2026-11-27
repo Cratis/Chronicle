@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using Cratis.Arc.Connections;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Graphs;
@@ -41,10 +40,22 @@ public partial class Neo4jGraphSink(
     INeo4jConnections connections) : IGraphSink
 {
     readonly GraphCypher _cypher = new(
-        definition,
+        ValidateLabels(definition),
         connections.Options.DatabaseMode == Neo4jDatabaseMode.Single ? @namespace.Value : null);
+    readonly Neo4jGraphTarget _target = new(connections, eventStore, @namespace);
 
     readonly ConcurrentDictionary<ProjectionId, long> _replayGenerations = new();
+
+    /// <summary>
+    /// Initializes a graph sink that shares its route with provenance storage.
+    /// </summary>
+    /// <param name="definition">The graph definition.</param>
+    /// <param name="eventStore">The event store of the graph.</param>
+    /// <param name="scope">The event store namespace of the graph.</param>
+    /// <param name="connections">The resolver for the graph route.</param>
+    /// <param name="target">The route shared with provenance storage.</param>
+    internal Neo4jGraphSink(GraphDefinition definition, EventStoreName eventStore, EventStoreNamespaceName scope, INeo4jConnections connections, Neo4jGraphTarget target)
+        : this(definition, eventStore, scope, connections) => _target = target;
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.Neo4j;
@@ -62,18 +73,17 @@ public partial class Neo4jGraphSink(
 
         foreach (var edge in definition.Edges)
         {
+            GraphCypher.ValidateIdentifier(edge.Type);
             EnsureNotReserved(edge.IdentifyingProperty, edge.Schema);
         }
 
-        var schema = await connections.Resolve(eventStore, @namespace, ConnectionPurpose.Schema);
-        if (schema.CanCreateDatabase)
-        {
-            await CreateDatabaseIfMissing(schema);
-        }
-
+        var runtime = await _target.Runtime();
+        var schema = await _target.Schema(runtime);
+        await _target.PrepareSchema(runtime, schema);
         await using var session = schema.OpenSession();
         await session.ExecuteWriteAsync(async transaction =>
         {
+            await _target.EnsureDatabase(transaction);
             await Run(transaction, _cypher.CreateOwnerConstraint());
             foreach (var node in definition.Nodes) await Run(transaction, _cypher.CreateNodeConstraint(node));
             foreach (var edge in definition.Edges.Where(_ => _.IdentifyingProperty is not null)) await Run(transaction, _cypher.CreateEdgeIndex(edge));
@@ -85,10 +95,11 @@ public partial class Neo4jGraphSink(
     {
         var owner = changeset.Owner.Value;
         var sequence = checked((long)eventSequenceNumber.Value);
-        var connection = await connections.Resolve(eventStore, @namespace, ConnectionPurpose.Runtime);
+        var connection = await _target.Runtime();
         await using var session = connection.OpenSession();
         await session.ExecuteWriteAsync(async transaction =>
         {
+            await _target.EnsureDatabase(transaction);
             var replay = _replayGenerations.TryGetValue(changeset.Owner, out var generation) ? generation : (long?)null;
             var current = replay ?? await ReadGeneration(transaction, owner);
             var application = new GraphChangeApplication(definition, _cypher, transaction, owner, sequence, current, replay);
@@ -119,18 +130,22 @@ public partial class Neo4jGraphSink(
         foreach (var property in schema.Properties.Keys) GraphBookkeeping.EnsureNotReserved(property);
     }
 
+    static GraphDefinition ValidateLabels(GraphDefinition graph)
+    {
+        foreach (var node in graph.Nodes) GraphBookkeeping.EnsureApplicationLabel(node.Label);
+        foreach (var edge in graph.Edges)
+        {
+            GraphBookkeeping.EnsureApplicationLabel(edge.SourceLabel);
+            GraphBookkeeping.EnsureApplicationLabel(edge.TargetLabel);
+        }
+        return graph;
+    }
+
     async Task<long> ReadGeneration(IAsyncQueryRunner transaction, string owner)
     {
         var statement = _cypher.ReadGeneration(owner);
         var cursor = await transaction.RunAsync(statement.Text, statement.ToDriverParameters());
         var records = await cursor.ToListAsync();
         return records.Count == 0 || records[0]["generation"] is null ? 0 : records[0]["generation"].As<long>();
-    }
-
-    async Task CreateDatabaseIfMissing(Neo4jConnection connection)
-    {
-        await using var session = connection.OpenSystemSession();
-        var cursor = await session.RunAsync($"CREATE DATABASE {GraphCypher.Escape(connection.Database)} IF NOT EXISTS WAIT");
-        await cursor.ConsumeAsync();
     }
 }

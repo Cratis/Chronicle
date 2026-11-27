@@ -78,7 +78,8 @@ public class and_read_model_is_passive_with_a_pii_property : given.all_dependenc
                 _expandoObjectConverter),
             _materializedReadModels,
             new JsonSerializerOptions(),
-            NamespaceCasingContext.Create());
+            NamespaceCasingContext.Create(),
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
     }
 
     async Task Because() => _exception = await Catch.Exception(async () => _result = await _service.GetInstanceByKey(new()

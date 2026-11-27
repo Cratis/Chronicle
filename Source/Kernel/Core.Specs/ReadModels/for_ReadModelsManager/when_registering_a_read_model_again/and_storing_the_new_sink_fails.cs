@@ -12,6 +12,7 @@ using Cratis.Chronicle.Storage.Sinks;
 using Microsoft.Extensions.Options;
 using Orleans.Core;
 using Orleans.TestKit;
+using KernelStorage = Cratis.Chronicle.Storage.IStorage;
 
 namespace Cratis.Chronicle.ReadModels.for_ReadModelsManager.when_registering_a_read_model_again;
 
@@ -37,6 +38,8 @@ public class and_storing_the_new_sink_fails : Specification
         _silo.AddProbe(_ => _readModel);
         _silo.AddProbe(_ => Substitute.For<IProjectionsManager>());
         _silo.AddService(Substitute.For<IProjectionPipelineManager>());
+        _silo.AddService(Substitute.For<KernelStorage>());
+        _silo.AddService(Substitute.For<IReadModelSinkProvenance>());
         _silo.AddService<ISinkConfigurations>(new SinkConfigurations(Options.Create(new ChronicleOptions
         {
             Sinks = new()

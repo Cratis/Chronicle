@@ -38,6 +38,11 @@ public class GraphProjectionPipeline(
     bool _sessionOpen;
     Action? _sessionOpened;
 
+    /// <summary>
+    /// Gets the callback that verifies the provenance of the graph payload route before the pipeline writes to it.
+    /// </summary>
+    internal Func<Task> VerifyProvenance { get; init; } = () => Task.CompletedTask;
+
     /// <inheritdoc/>
     public long GetActivity() => Interlocked.Read(ref _activity);
 
@@ -48,26 +53,29 @@ public class GraphProjectionPipeline(
     public void ObserveSessions(Action onSessionOpened) => _sessionOpened = onSessionOpened;
 
     /// <inheritdoc/>
-    public Task BeginReplay(ReplayContext context)
+    public async Task BeginReplay(ReplayContext context)
     {
+        await VerifyProvenance();
         Interlocked.Increment(ref _activity);
         OpenSession();
-        return sink.BeginReplay(projection.Identifier, context);
+        await sink.BeginReplay(projection.Identifier, context);
     }
 
     /// <inheritdoc/>
-    public Task ResumeReplay(ReplayContext context)
+    public async Task ResumeReplay(ReplayContext context)
     {
+        await VerifyProvenance();
         Interlocked.Increment(ref _activity);
         OpenSession();
-        return sink.ResumeReplay(projection.Identifier, context);
+        await sink.ResumeReplay(projection.Identifier, context);
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
+    public async Task<IEnumerable<FailedPartition>> EndReplay(ReplayContext context)
     {
+        await VerifyProvenance();
         Volatile.Write(ref _sessionOpen, false);
-        return sink.EndReplay(projection.Identifier, context);
+        return await sink.EndReplay(projection.Identifier, context);
     }
 
     /// <inheritdoc/>
@@ -110,6 +118,7 @@ public class GraphProjectionPipeline(
 
         // Operations on one node or edge can come from events of many event sources, so handling is serialized per projection.
         using var handleScope = await handleLock.AcquireCoarse();
+        await VerifyProvenance();
         @event = projection.ForProjection(@event);
         var context = ProjectionEventContext.Empty(objectComparer, @event);
         var changeset = await builder.Build(@event);

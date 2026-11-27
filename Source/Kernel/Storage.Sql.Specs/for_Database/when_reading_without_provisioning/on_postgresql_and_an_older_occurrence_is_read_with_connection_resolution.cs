@@ -11,6 +11,13 @@ public class on_postgresql_and_an_older_occurrence_is_read_with_connection_resol
 {
     protected override Database Reader => ResolvingDatabase(_ => _.Identity.UseCustom<given.RecordingConnectionResolver>());
 
+    async Task Establish()
+    {
+        await new SinkProvenanceStorage(Database, Store, Namespace).CompleteInventory(false);
+        _catalogBefore = await Catalog(await ReadModelConnection());
+        _databasesBefore = await PhysicalDatabases();
+    }
+
     async Task Because()
     {
         _read = await ColdIndexedSink.ReadTheOccurrence(Reader, ColdIndexedSink.IntegerValueSchema, Store, Namespace);
@@ -19,6 +26,7 @@ public class on_postgresql_and_an_older_occurrence_is_read_with_connection_resol
         _databasesAfter = await PhysicalDatabases();
     }
 
-    [Fact] void should_read_nothing_and_change_nothing() =>
+    [Fact]
+    void should_read_nothing_and_change_nothing() =>
         (_rowsBefore == 1, _read, _catalogAfter == _catalogBefore, string.Join(',', _databasesAfter) == string.Join(',', _databasesBefore)).ShouldEqual((true, new OccurrenceRead(0, 0, 0), true, true));
 }

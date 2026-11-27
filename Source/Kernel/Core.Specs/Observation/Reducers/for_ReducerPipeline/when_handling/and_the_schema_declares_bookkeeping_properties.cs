@@ -38,7 +38,7 @@ public class and_the_schema_declares_bookkeeping_properties : given.all_dependen
                     .OfType<PropertiesChanged<ExpandoObject>>().SelectMany(change => change.Differences).ToArray();
                 return Task.FromResult(Enumerable.Empty<FailedPartition>());
             });
-        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace);
+        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace, () => Task.CompletedTask);
     }
 
     Task Because() => _pipeline.Reduce(CreateContext(EventSourceIdValue), CreateReducer(_changed));

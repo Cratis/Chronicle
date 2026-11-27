@@ -66,7 +66,8 @@ public class when_flat_identity_is_violated_in_a_pipeline : given.a_runtime_lang
             new TypeFormats(),
             _compliance,
             Options.Create(new Configuration.ChronicleOptions()),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            Substitute.For<IReadModelSinkProvenance>());
         var pipeline = await manager.GetFor(_eventStore, _namespace, _projection);
         _sink.ClearReceivedCalls();
         _history.ClearReceivedCalls();
@@ -84,8 +85,9 @@ public class when_flat_identity_is_violated_in_a_pipeline : given.a_runtime_lang
     void should_only_read_the_sink()
     {
         var calls = _sink.ReceivedCalls().ToArray();
-        calls.Length.ShouldEqual(1);
-        calls[0].GetMethodInfo().Name.ShouldEqual(nameof(ISink.FindOrDefault));
+        calls.Length.ShouldEqual(2);
+        calls[0].GetMethodInfo().Name.ShouldEqual(nameof(ISink.EnsureProvenance));
+        calls[1].GetMethodInfo().Name.ShouldEqual(nameof(ISink.FindOrDefault));
     }
 
     [Fact] void should_not_write_history_or_success_notifications() => _history.ReceivedCalls().ShouldBeEmpty();

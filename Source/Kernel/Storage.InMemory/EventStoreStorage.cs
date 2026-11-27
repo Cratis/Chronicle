@@ -55,6 +55,7 @@ public sealed class EventStoreStorage(
     readonly Occurrences.OccurrencesStorage _occurrences = new();
     bool _initialized;
     bool _observersInitialized;
+    bool _sinkProvenanceInventoryComplete;
 
     /// <summary>
     /// Initializes a store with an event-types storage factory for in-process composition.
@@ -170,6 +171,16 @@ public sealed class EventStoreStorage(
     public Task MarkInitialized()
     {
         _initialized = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsSinkProvenanceInventoryComplete() => Task.FromResult(_sinkProvenanceInventoryComplete);
+
+    /// <inheritdoc/>
+    public Task MarkSinkProvenanceInventoryComplete()
+    {
+        _sinkProvenanceInventoryComplete = true;
         return Task.CompletedTask;
     }
 

@@ -136,7 +136,7 @@ public sealed class Neo4jGraphServer : IAsyncDisposable
         foreach (var database in allDatabases ? await UserDatabases() : [Database])
         {
             await using var session = Driver.AsyncSession(_ => _.WithDatabase(database));
-            var cursor = await session.RunAsync("MATCH (n) DETACH DELETE n");
+            var cursor = await session.RunAsync("MATCH (n) WHERE NOT '__cratis_sink_inventory' IN labels(n) DETACH DELETE n");
             await cursor.ConsumeAsync();
         }
     }

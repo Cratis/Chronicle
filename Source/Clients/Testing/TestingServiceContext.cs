@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using KernelProjectionsManager = KernelCore::Cratis.Chronicle.Projections.Engine.ProjectionsManager;
 using KernelReadModelInstanceVisibilities = KernelCore::Cratis.Chronicle.ReadModels.ReadModelInstanceVisibilities;
 using KernelReadModelReadBindings = KernelCore::Cratis.Chronicle.ReadModels.ReadModelReadBindings;
+using KernelReadModelSinkProvenance = KernelCore::Cratis.Chronicle.ReadModels.ReadModelSinkProvenance;
 
 namespace Cratis.Chronicle.Testing;
 
@@ -51,6 +52,9 @@ internal sealed class TestingServiceContext
     /// <summary>Gets the observer registration gate shared by the reactor and reducer services.</summary>
     internal UnboundedObserverRegistrationGate RegistrationGate { get; private set; } = default!;
 
+    /// <summary>Gets the provenance coordinator shared by registration and read services.</summary>
+    internal KernelReadModelSinkProvenance Provenance { get; private set; } = default!;
+
     /// <summary>Gets the read bindings shared by the read model service and its materialized store.</summary>
     internal KernelReadModelReadBindings ReadBindings { get; private set; } = default!;
 
@@ -65,6 +69,7 @@ internal sealed class TestingServiceContext
         ConnectionOwnership = new InProcessConnectionOwnership();
         KernelOptions = Options.Create(new KernelCore::Cratis.Chronicle.Configuration.ChronicleOptions());
         RegistrationGate = new UnboundedObserverRegistrationGate();
+        Provenance = new KernelReadModelSinkProvenance(Storage);
         ReadBindings = CreateReadBindings();
         return this;
     }
@@ -74,5 +79,13 @@ internal sealed class TestingServiceContext
             Storage,
             GrainFactory,
             new KernelReadModelInstanceVisibilities(
-                new KernelProjectionsManager(Cratis.Chronicle.Testing.ReadModels.ProjectionReadModelProcessor.CreateProjectionFactory(Storage), Storage, GrainFactory)));
+                new KernelProjectionsManager(
+                    Cratis.Chronicle.Testing.ReadModels.ProjectionReadModelProcessor.CreateProjectionFactory(Storage),
+                    Storage,
+                    GrainFactory,
+                    null,
+                    KernelOptions,
+                    NullLogger<KernelProjectionsManager>.Instance,
+                    Provenance)),
+            Provenance);
 }

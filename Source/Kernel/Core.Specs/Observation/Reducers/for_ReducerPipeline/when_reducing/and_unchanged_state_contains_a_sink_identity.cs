@@ -29,7 +29,7 @@ public class and_unchanged_state_contains_a_sink_identity : given.all_dependenci
         values[WellKnownProperties.Subject] = EventSourceIdValue;
         _initialSnapshot = values.ToArray();
         _sink.FindOrDefault(Arg.Any<Key>()).Returns(_initial);
-        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace);
+        _pipeline = new ReducerPipeline(_readModelDefinition, _sink, new ObjectComparer(), new ReadModelsCompliance(_complianceManager, _expandoObjectConverter), EventStore, EventStoreNamespace, () => Task.CompletedTask);
     }
 
     async Task Because()

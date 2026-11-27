@@ -111,6 +111,7 @@ internal sealed class SqlAllocationFixture(bool legacy) : IDisposable
     public void Dispose()
     {
         _legacyHost?.Dispose();
+        _database?.Dispose();
         _connection.Dispose();
     }
 

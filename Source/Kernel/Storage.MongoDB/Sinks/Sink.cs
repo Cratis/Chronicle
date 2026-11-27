@@ -192,6 +192,9 @@ public partial class Sink(
     public SinkTypeId TypeId => WellKnownSinkTypes.MongoDB;
 
     /// <inheritdoc/>
+    public Task EnsureProvenance() => collections.EnsureProvenance();
+
+    /// <inheritdoc/>
     public bool IsInBulkMode => _isBulkMode;
 
     /// <inheritdoc/>

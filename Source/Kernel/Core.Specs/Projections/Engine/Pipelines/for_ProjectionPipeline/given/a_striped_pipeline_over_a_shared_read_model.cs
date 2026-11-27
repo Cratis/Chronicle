@@ -36,7 +36,8 @@ public class a_striped_pipeline_over_a_shared_read_model : Specification
             [new ReadModifyWriteStep(_counters)],
             new ProjectionHandleLock(),
             Substitute.For<IReplayScopedCache>(),
-            NullLogger<ProjectionPipeline>.Instance);
+            NullLogger<ProjectionPipeline>.Instance,
+            () => Task.CompletedTask);
     }
 
     protected AppendedEvent EventFor(string eventSourceId) =>

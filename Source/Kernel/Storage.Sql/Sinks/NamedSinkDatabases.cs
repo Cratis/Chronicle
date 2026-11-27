@@ -64,6 +64,7 @@ public class NamedSinkDatabases(IServiceProvider serviceProvider)
             SystemDatabaseName = kernel.Storage.SystemDatabaseName,
             CreateIfMissing = kernel.Storage.CreateIfMissing,
             SchemaMode = kernel.Storage.SchemaMode,
+            Schema = kernel.Storage.Schema,
             PostgreSqlPooling = kernel.Storage.PostgreSqlPooling,
             ConnectionResolution = kernel.Storage.ConnectionResolution
         },

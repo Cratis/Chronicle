@@ -16,6 +16,7 @@ public partial class ProjectionsManager
     /// <inheritdoc/>
     public async Task<ObserverRemovalResult> Remove(ProjectionId identifier)
     {
+        await provenance.Preserve(_eventStoreName);
         var eventStoreStorage = storage.GetEventStore(_eventStoreName);
         var definition = State.Projections.FirstOrDefault(projection => projection.Identifier == identifier);
         if (definition is null)

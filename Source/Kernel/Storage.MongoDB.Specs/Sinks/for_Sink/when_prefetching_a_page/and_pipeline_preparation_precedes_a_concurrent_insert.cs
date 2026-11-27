@@ -36,7 +36,8 @@ public class and_pipeline_preparation_precedes_a_concurrent_insert(MongoDBFixtur
             [new WriteCount(_sink, () => Changes(1))],
             new ProjectionHandleLock(),
             (IReplayScopedCache)storage,
-            NullLogger<ProjectionPipeline>.Instance);
+            NullLogger<ProjectionPipeline>.Instance,
+            () => Task.CompletedTask);
         await pipeline.ResumeReplay(new(new("id", 1), "read-models", "read-models-revert", DateTimeOffset.UtcNow));
         await pipeline.BeginBulk();
         var preparedEvent = AppendedEvent.EmptyWithEventSequenceNumber(0UL) with { Context = EventContext.Empty with { EventSourceId = "k", SequenceNumber = 0UL } };

@@ -45,7 +45,8 @@ public class when_a_reducer_registers_on_a_connection_another_caller_owns : Spec
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloSupervisor.Instance);
+            NoSiloSupervisor.Instance,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
         using var messages = new Subject<ReducerMessage>();
         var observed = reducers.Observe(messages).ToTask();
 

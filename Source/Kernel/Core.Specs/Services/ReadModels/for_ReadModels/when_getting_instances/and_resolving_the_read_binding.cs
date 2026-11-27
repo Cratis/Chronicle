@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Concepts.ReadModels;
 using Cratis.Chronicle.ReadModels;
 using Cratis.Chronicle.Storage.ReadModels;
+using Cratis.Chronicle.Storage.Sinks;
 
 namespace Cratis.Chronicle.Services.ReadModels.for_ReadModels.when_getting_instances;
 
@@ -12,7 +13,7 @@ public class and_resolving_the_read_binding : given.all_dependencies
     void Establish()
     {
         _readBindings.Resolve("test-store", "test-namespace", _readModelDefinition, (ReadModelContainerName)"requested-occurrence")
-            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence"));
+            .Returns(new ReadModelReadBinding(_sink, "bound-occurrence") { Lease = SinkProvenanceLease.Exempt });
         _sink.GetInstances((ReadModelContainerName)"bound-occurrence", 10, 10).Returns(new ReadModelInstances([], 0));
     }
 

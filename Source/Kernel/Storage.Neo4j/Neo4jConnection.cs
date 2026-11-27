@@ -19,6 +19,11 @@ public record Neo4jConnection(IDriver Driver, string Database, bool CanCreateDat
     public const string SystemDatabase = "system";
 
     /// <summary>
+    /// Gets the resolved endpoint used to compare graph placement across credentials.
+    /// </summary>
+    internal Uri? Endpoint { get; init; }
+
+    /// <summary>
     /// Open a session on the database of the graph.
     /// </summary>
     /// <param name="accessMode">The <see cref="AccessMode"/> of the session.</param>

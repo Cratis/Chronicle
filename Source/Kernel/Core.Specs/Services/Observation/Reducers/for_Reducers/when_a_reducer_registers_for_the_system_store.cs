@@ -41,7 +41,8 @@ public class when_a_reducer_registers_for_the_system_store : Specification
             NullLogger<Reducers>.Instance,
             Substitute.For<IObserverRegistrationGate>(),
             NamespaceCasingContext.Create(),
-            NoSiloSupervisor.Instance);
+            NoSiloSupervisor.Instance,
+            Substitute.For<Cratis.Chronicle.ReadModels.IReadModelSinkProvenance>());
         using var messages = new Subject<ReducerMessage>();
         var observed = reducers.Observe(messages).ToTask();
 

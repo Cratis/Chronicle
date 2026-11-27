@@ -23,6 +23,7 @@ namespace Cratis.Chronicle.Storage.MongoDB.Sinks;
 /// <param name="logger">Optional <see cref="ILogger{T}"/> for logging refused destructive operations.</param>
 /// <param name="writes">Optional sink write executor.</param>
 /// <param name="generationClaims">Optional generation ownership lookup.</param>
+/// <param name="provenance">Optional sink provenance storage.</param>
 /// <remarks>
 /// Every destructive operation - clearing, dropping and renaming - is guarded by <see cref="SinkCollectionGuards"/>, so it only
 /// ever touches the collection this sink owns in its current lifecycle phase, and fails loudly otherwise.
@@ -32,12 +33,13 @@ public class SinkCollections(
     IMongoDatabase database,
     ILogger<SinkCollections>? logger,
     ISinkWrites? writes,
-    IGenerationContainerClaims? generationClaims = null) : ISinkCollections
+    IGenerationContainerClaims? generationClaims = null,
+    ISinkProvenanceStorage? provenance = null) : ISinkCollections
 {
     const int NamespaceNotFound = 26;
     const int NamespaceExists = 48;
 
-    readonly SinkCollectionNames _names = SinkCollectionNames.For(readModel.ContainerName);
+    readonly SinkCollectionNames _names = CollectionNamesFor(readModel);
     readonly ILogger<SinkCollections> _logger = logger ?? NullLogger<SinkCollections>.Instance;
     bool _isReplaying;
 
@@ -57,6 +59,9 @@ public class SinkCollections(
     public string PromotingCollectionName => _names.Promoting;
 
     string ReplayCollectionName => _names.Replay;
+
+    /// <inheritdoc/>
+    public Task EnsureProvenance() => SinkAcquisitionProvenance.Ensure(provenance ?? new SinkProvenanceStorage(database));
 
     /// <inheritdoc/>
     public async Task BeginReplay(Chronicle.Storage.ReadModels.ReplayContext context)
@@ -83,6 +88,8 @@ public class SinkCollections(
     /// <inheritdoc/>
     public async Task EndReplay(Chronicle.Storage.ReadModels.ReplayContext context)
     {
+        SinkProvenanceNames.EnsureNotReserved(context.RevertContainerName.Value);
+
         // Ending a replay is sent to every silo, and every silo holds its own sink for the read model.
         // Whatever happens to the swap, this sink must stop writing to the replay collection: a sink left
         // in replay mode keeps sending every live change to a collection nothing reads, with no error to
@@ -106,6 +113,7 @@ public class SinkCollections(
     /// <inheritdoc/>
     public async Task Remove(ReadModelContainerName collectionName)
     {
+        SinkProvenanceNames.EnsureNotReserved(collectionName.Value);
         Guard(SinkCollectionOperation.Drop, collectionName.Value, () => SinkCollectionGuards.ThrowIfCannotRemove(_names, collectionName.Value));
         await GuardGenerations(SinkCollectionOperation.Drop, collectionName.Value);
         var collectionNames = await (await database.ListCollectionNamesAsync()).ToListAsync();
@@ -119,7 +127,17 @@ public class SinkCollections(
     public IMongoCollection<BsonDocument> GetCollection() => database.GetCollection<BsonDocument>(_isReplaying ? ReplayCollectionName : _names.Primary);
 
     /// <inheritdoc/>
-    public IMongoCollection<BsonDocument> GetCollection(string collectionName) => database.GetCollection<BsonDocument>(collectionName);
+    public IMongoCollection<BsonDocument> GetCollection(string collectionName)
+    {
+        SinkProvenanceNames.EnsureNotReserved(collectionName);
+        return database.GetCollection<BsonDocument>(collectionName);
+    }
+
+    static SinkCollectionNames CollectionNamesFor(ReadModelDefinition definition)
+    {
+        SinkProvenanceNames.EnsureNotReserved(definition.ContainerName);
+        return SinkCollectionNames.For(definition.ContainerName);
+    }
 
     static bool IsNamespaceConflict(MongoCommandException exception) =>
         exception.Code is NamespaceNotFound or NamespaceExists;
@@ -190,6 +208,8 @@ public class SinkCollections(
 
     async Task Rename(string source, string target)
     {
+        SinkProvenanceNames.EnsureNotReserved(source);
+        SinkProvenanceNames.EnsureNotReserved(target);
         await GuardGenerations(SinkCollectionOperation.Rename, source);
         await GuardGenerations(SinkCollectionOperation.Rename, target);
         await database.RenameCollectionAsync(source, target);

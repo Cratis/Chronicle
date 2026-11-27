@@ -29,6 +29,10 @@ public class when_resetting : Specification
     IInstancesOf<ICanPerformKernelStateReset> _handlers;
     KernelBootstrapResetHandler _bootstrap;
     IKernelStateResetter _resetter;
+    Storage.Sinks.ISinkProvenanceCache _cache;
+    Storage.Sinks.SinkProvenanceLease _oldLease;
+    Storage.Sinks.SinkProvenanceLease _newLease;
+    Storage.Sinks.SinkProvenanceState _state;
 
     void Establish()
     {
@@ -67,6 +71,7 @@ public class when_resetting : Specification
         {
             _operations.Add("wipe");
             _eventStores.Clear();
+            _state = new(new(Guid.NewGuid()), Storage.Sinks.SinkProvenanceState.CurrentInventoryVersion, false);
             return Task.CompletedTask;
         });
         _handlers = Substitute.For<IInstancesOf<ICanPerformKernelStateReset>>();
@@ -74,15 +79,37 @@ public class when_resetting : Specification
         var namespaces = Substitute.For<INamespaces>();
         _grainFactory.GetGrain<INamespaces>(EventStoreName.System).Returns(namespaces);
         _bootstrap = new KernelBootstrapResetHandler(_grainFactory, Substitute.For<IEventTypes>(), Substitute.For<IReactors>(), new TestAuthenticationService());
-        _resetter = new KernelStateResetter(_grainFactory, _storage, Substitute.For<IProjectionPipelineManager>(), _handlers, Substitute.For<IEventStoreInitialization>(), _bootstrap, Microsoft.Extensions.Logging.Abstractions.NullLogger<KernelStateResetter>.Instance);
+        _cache = new Storage.Sinks.DevelopmentSinkProvenanceCache();
+        _state = new(new(Guid.NewGuid()), Storage.Sinks.SinkProvenanceState.CurrentInventoryVersion, false);
+        _resetter = new KernelStateResetter(
+            _grainFactory,
+            _storage,
+            Substitute.For<IProjectionPipelineManager>(),
+            _handlers,
+            Substitute.For<IEventStoreInitialization>(),
+            _bootstrap,
+            _cache,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<KernelStateResetter>.Instance);
     }
 
     async Task Because()
     {
+        _oldLease = await Bind().GetLease();
+        await _oldLease.Ensure();
         await _resetter.Reset();
+        _newLease = await Bind().GetLease();
         _storage.GetEventStore("target");
         _recreatedEventStoreExists = await _storage.HasEventStore("target");
     }
+
+    Storage.Sinks.ISinkProvenanceStorage Bind() => _cache.Bind("physical-route", () =>
+    {
+        var raw = Substitute.For<Storage.Sinks.ISinkProvenanceStorage>();
+        raw.ReadState().Returns(_ => _state);
+        return raw;
+    });
+
+    ValueTask Destroy() => ((IAsyncDisposable)_cache).DisposeAsync();
 
     IStorage CreateStorage()
     {
@@ -115,6 +142,8 @@ public class when_resetting : Specification
         public Task EnsureDefaultClientCredentials() => Task.CompletedTask;
     }
 
+    [Fact] void should_revoke_a_lease_from_the_old_database() => Catch.Exception(_oldLease.Check).ShouldBeOfExactType<InvalidOperationException>();
+    [Fact] Task should_admit_a_fresh_binding_to_the_new_database() => _newLease.Ensure();
     [Fact] void should_recreate_a_previously_cached_event_store_in_the_wiped_catalog() => _recreatedEventStoreExists.ShouldBeTrue();
     [Fact] async Task should_remove_the_subscription() => await _manager.Received(1).Remove(new EventStoreSubscriptionId("subscription"));
     [Fact] void should_wipe_before_and_after_activation_collection() => _operations.ShouldEqual(["remove-subscription", "wipe", "deactivate", "wipe"]);
