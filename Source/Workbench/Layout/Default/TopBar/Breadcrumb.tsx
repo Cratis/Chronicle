@@ -9,11 +9,10 @@ import css from './Breadcrumb.module.css';
 import { useEffect, useState } from 'react';
 import { Popover, type PopoverRootOpenChangeEvent } from 'primereact/popover';
 import { ItemsList } from 'Components/ItemsList/ItemsList';
-import { ObserveEventStores } from 'Features/EventStores';
+import { useEventStoreNames } from '@cratis/chronicle-ui/event-stores';
 
 export const Breadcrumb = () => {
-    const [eventStoresResult] = ObserveEventStores.use();
-    const eventStores = eventStoresResult.data.map(_ => _.name);
+    const eventStores = useEventStoreNames();
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams<Shared.EventStoreAndNamespaceParams>();

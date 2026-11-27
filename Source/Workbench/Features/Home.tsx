@@ -3,7 +3,7 @@
 
 import { EventStoreCard } from 'Components/Common/EventStoreCard';
 import { EventStoreKeyFigures } from 'Components/Common/EventStoreKeyFigures';
-import { ObserveEventStores } from 'Features/EventStores';
+import { useEventStoreNames } from '@cratis/chronicle-ui/event-stores';
 import { useRelativePath } from '../Utils/useRelativePath';
 import css from './Home.module.css';
 import { MdAdd } from 'react-icons/md';
@@ -14,8 +14,7 @@ import chronicleLogo from './Security/chronicle.svg';
 import { version } from '../version';
 
 export const Home = () => {
-    const [eventStoresResult] = ObserveEventStores.use();
-    const eventStores = eventStoresResult.data.map(_ => _.name);
+    const eventStores = useEventStoreNames();
     const basePath = useRelativePath('event-store');
     const [AddEventStoreDialogWrapper, showAddEventStoreDialog] = useDialog(AddEventStoreDialog);
 

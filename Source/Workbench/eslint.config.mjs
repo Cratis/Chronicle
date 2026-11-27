@@ -149,6 +149,7 @@ const defaultConfig = [
             '**/wallaby.js',
             '**/*.js',
             '**/dist/**',
+            '**/generated-input/**',
             '**/node_modules/**',
             '**/wwwroot/**',
             '**/templates/**',

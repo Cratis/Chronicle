@@ -45,7 +45,7 @@ vi.mock('react-router-dom', () => ({
     Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) =>
         createElement('a', { href: to, className }, children)
 }));
-vi.mock('Components/Card', () => ({
+vi.mock('@cratis/chronicle-ui', () => ({
     Card: ({ header, children, className }: { header: ReactNode; children: ReactNode; className?: string }) =>
         createElement('section', { className }, header, children)
 }));

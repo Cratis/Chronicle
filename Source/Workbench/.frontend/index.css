@@ -13,6 +13,9 @@
 @import '@cratis/components/theme';
 @import './primeIslands/primereact-v10-palette.css';
 @import './datatable.css';
+/* The shared Chronicle UI package ships its own scoped rules (the card chrome); the host imports them
+   once, after the Components styles it builds on. */
+@import '@cratis/chronicle-ui/styles.css';
 
 /* The palette above resolves its semantic tokens through `var(--p-*-token, <lara-dark-blue
    literal>)` - the literal only applies when the active preset leaves that `--p-*` token

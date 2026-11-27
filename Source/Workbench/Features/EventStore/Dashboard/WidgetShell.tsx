@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { Card } from 'Components/Card';
+import { Card } from '@cratis/chronicle-ui';
 import { ReactNode } from 'react';
 import './Dashboard.css';
 

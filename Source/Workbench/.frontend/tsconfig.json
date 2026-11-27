@@ -92,7 +92,9 @@
         "../**/*.tsx"
     ],
     "exclude": [
-        "vite.config.ts"
+        "vite.config.ts",
+        "../packages/*/dist",
+        "../packages/*/generated-input"
     ],
     "references": [
         {

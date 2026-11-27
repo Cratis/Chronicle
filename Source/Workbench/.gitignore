@@ -43,3 +43,6 @@ dist
 !.yarn/sdks
 !.yarn/versions
 storybook-static
+
+# The repository-wide NuGet rule ignores **/packages/*; this is the npm workspace package.
+!/packages/chronicle-ui/
