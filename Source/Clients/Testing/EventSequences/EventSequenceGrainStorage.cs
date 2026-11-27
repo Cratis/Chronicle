@@ -6,6 +6,7 @@ extern alias KernelCore;
 
 using Cratis.Chronicle.Storage.EventSequences;
 using Orleans.Core;
+using KernelNamespaces = KernelCore::Cratis.Chronicle.Namespaces;
 using KernelSequences = KernelCore::Cratis.Chronicle.EventSequences;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
@@ -15,11 +16,13 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 /// </summary>
 /// <param name="storage">The scenario's shared storage.</param>
 /// <param name="key">The event sequence identity.</param>
+/// <param name="namespaceIncarnations">The scenario's namespace capability, disabled unless genuinely supported.</param>
 internal sealed class EventSequenceGrainStorage(
     Storage.IStorage storage,
-    KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey key) : IStorage<EventSequenceState>
+    KernelConcepts::Cratis.Chronicle.Concepts.EventSequences.EventSequenceKey key,
+    KernelNamespaces::INamespaceIncarnations namespaceIncarnations) : IStorage<EventSequenceState>
 {
-    readonly KernelSequences::EventSequencesStorageProvider _provider = new(storage, new global::Cratis.Chronicle.Storage.InMemory.InMemoryReservedEventSequenceIds());
+    readonly KernelSequences::EventSequencesStorageProvider _provider = new(storage, new global::Cratis.Chronicle.Storage.InMemory.InMemoryReservedEventSequenceIds(), namespaceIncarnations);
     readonly GrainState<EventSequenceState> _state = new(new EventSequenceState());
     readonly GrainId _grainId = GrainId.Create("eventsequence", key.ToString());
 

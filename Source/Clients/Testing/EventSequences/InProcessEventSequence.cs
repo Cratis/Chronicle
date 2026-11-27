@@ -142,7 +142,8 @@ internal static class InProcessEventSequence
         }
 
         var key = new KernelSequenceConcepts::EventSequenceKey(eventSequenceId, eventStoreName, namespaceName);
-        var grainStorage = new EventSequenceGrainStorage(storage, key);
+        var namespaceIncarnations = new KernelCore::Cratis.Chronicle.Namespaces.NamespaceIncarnations(storage, runtimeGrainFactory, Options.Create(new KernelConfiguration::ChronicleOptions()));
+        var grainStorage = new EventSequenceGrainStorage(storage, key, namespaceIncarnations);
         await grainStorage.ReadStateAsync();
         _storageField.SetValue(grain, grainStorage);
         _eventSequenceKeyField.SetValue(grain, key);

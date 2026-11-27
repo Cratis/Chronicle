@@ -142,7 +142,7 @@ public partial class EventSequence
 
             return appendResult.ReportingConcurrencyCheck(concurrencyScope.ShouldBeValidated);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (_namespaceAppendStorage is null)
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }
@@ -152,7 +152,7 @@ public partial class EventSequence
     {
         if (publication is null) return null;
 
-        var publicationStorage = EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
+        var publicationStorage = PublicationStorage;
         if (!(await publicationStorage.TryGetPublication(publication)).TryGetValue(out var receipt)) return null;
 
         await ReconcileExistingPublication(receipt, eventType);

@@ -19,11 +19,13 @@ namespace Cratis.Chronicle.Namespaces;
 /// <param name="clusterClient"><see cref="IClusterClient"/> instance.</param>
 /// <param name="logger"><see cref="ILogger{TCategoryName}"/> instance.</param>
 /// <param name="namespaceCasing">The namespace casing cache.</param>
+/// <param name="incarnations">The optional opt-in lifecycle routing.</param>
 [StorageProvider(ProviderName = WellKnownGrainStorageProviders.Namespaces)]
 public class Namespaces(
     IClusterClient clusterClient,
     ILogger<Namespaces> logger,
-    INamespaceCasing namespaceCasing) : Grain<NamespacesState>, INamespaces
+    INamespaceCasing namespaceCasing,
+    INamespaceIncarnations? incarnations = null) : Grain<NamespacesState>, INamespaces
 {
     readonly IBroadcastChannelProvider _namespaceAddedChannel = clusterClient.GetBroadcastChannelProvider(WellKnownBroadcastChannelNames.NamespaceAdded);
 
@@ -38,6 +40,7 @@ public class Namespaces(
     /// <exception cref="NamespaceAddedCouldNotBeAppended">The durable namespace creation notification could not be appended.</exception>
     public async Task<EventStoreNamespaceName> EnsureCanonical(EventStoreNamespaceName @namespace)
     {
+        if (incarnations?.Enabled == true) return await incarnations.Ensure(this.GetPrimaryKeyString(), @namespace);
         var existing = await GetCanonical(@namespace);
         if (existing is not null) return existing;
 
@@ -77,6 +80,7 @@ public class Namespaces(
     /// <inheritdoc/>
     public Task<EventStoreNamespaceName?> GetCanonical(EventStoreNamespaceName @namespace)
     {
+        if (incarnations?.Enabled == true) return incarnations.GetCanonical(this.GetPrimaryKeyString(), @namespace);
         var existing = State.Namespaces.Concat(State.NewNamespaces)
             .FirstOrDefault(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.OrdinalIgnoreCase));
         if (existing is null) return Task.FromResult<EventStoreNamespaceName?>(null);
@@ -87,8 +91,9 @@ public class Namespaces(
     }
 
     /// <inheritdoc/>
-    public Task<IEnumerable<EventStoreNamespaceName>> GetAll() =>
-        Task.FromResult(State.Namespaces.Select(_ => _.Name).ToArray().AsEnumerable());
+    public Task<IEnumerable<EventStoreNamespaceName>> GetAll() => incarnations?.Enabled == true
+        ? incarnations.GetAll(this.GetPrimaryKeyString())
+        : Task.FromResult(State.Namespaces.Select(_ => _.Name).ToArray().AsEnumerable());
 
     /// <inheritdoc/>
     public async Task Forget(EventStoreNamespaceName @namespace)
@@ -100,6 +105,26 @@ public class Namespaces(
         State.Namespaces.Remove(existing);
         namespaceCasing.Forget(eventStoreName, existing.Name);
 
+        await RecordRemoval(eventStoreName, @namespace);
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="NamespaceIncarnationUnavailable">The guarded callback is unavailable without opt-in.</exception>
+    /// <exception cref="NamespaceCannotBeRemoved">The default namespace cannot be forgotten by lifecycle removal.</exception>
+    public async Task ForgetIncarnation(EventStoreNamespaceName @namespace, NamespaceIncarnationId incarnation, Guid operation)
+    {
+        var eventStore = (EventStoreName)this.GetPrimaryKeyString();
+        if (incarnations?.Enabled != true) throw new NamespaceIncarnationUnavailable(eventStore);
+        if (@namespace.Value.Equals(EventStoreNamespaceName.Default.Value, StringComparison.OrdinalIgnoreCase)) throw new NamespaceCannotBeRemoved(eventStore, @namespace);
+        await incarnations.ValidateForget(eventStore, @namespace, incarnation, operation);
+        var existing = State.Namespaces.FirstOrDefault(_ => _.Name.Value.Equals(@namespace.Value, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null) State.Namespaces.Remove(existing);
+        namespaceCasing.Forget(eventStore, @namespace);
+        await RecordRemoval(eventStore, @namespace);
+    }
+
+    async Task RecordRemoval(EventStoreName eventStoreName, EventStoreNamespaceName @namespace)
+    {
         // Recorded once the namespace is gone, so a retry of a half-done removal is not reported as done.
         var result = await GrainFactory.GetSystemEventSequence().Append($"{eventStoreName}/{@namespace}", new NamespaceRemoved(eventStoreName, @namespace));
         if (!result.IsSuccess)

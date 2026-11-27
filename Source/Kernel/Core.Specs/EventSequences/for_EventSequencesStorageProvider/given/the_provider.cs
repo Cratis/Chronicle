@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.EventSequences;
 using Cratis.Chronicle.Concepts.EventTypes;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Storage;
 using Cratis.Chronicle.Storage.EventSequences;
 using Cratis.Chronicle.Storage.EventTypes;
@@ -16,6 +17,7 @@ public class the_provider : Specification
 {
     protected EventSequencesStorageProvider provider = null!;
     protected IStorage storage = null!;
+    protected INamespaceIncarnations namespaceIncarnations = null!;
     protected IReservedEventSequenceIds reservedEventSequenceIds = null!;
     protected IEventStoreStorage eventStoreStorage = null!;
     protected IEventStoreNamespaceStorage eventStoreNamespaceStorage = null!;
@@ -30,7 +32,8 @@ public class the_provider : Specification
         eventStoreNamespaceStorage = Substitute.For<IEventStoreNamespaceStorage>();
         eventTypesStorage = Substitute.For<IEventTypesStorage>();
         eventSequenceStorage = Substitute.For<IEventSequenceStorage>();
-        provider = new(storage, reservedEventSequenceIds);
+        namespaceIncarnations = Substitute.For<INamespaceIncarnations>();
+        provider = new(storage, reservedEventSequenceIds, namespaceIncarnations);
 
         storage.GetEventStore(Arg.Any<EventStoreName>()).Returns(eventStoreStorage);
         eventStoreStorage.GetNamespace(Arg.Any<EventStoreNamespaceName>()).Returns(eventStoreNamespaceStorage);

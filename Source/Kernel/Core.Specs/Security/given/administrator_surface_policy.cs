@@ -103,6 +103,8 @@ public static class administrator_surface_policy
         ["Jobs.JobStepSummary"] = "read-only job diagnostics",
         ["Jobs.JobSummary"] = "read-only job diagnostics",
         ["Namespaces.NamespaceNames"] = "read-only namespace discovery",
+        ["Namespaces.NamespaceBinding"] = "read-only namespace discovery",
+        ["Namespaces.NamespaceRemovalStatus"] = "read-only namespace diagnostics",
         ["Observation.ObserverInformationForEventType"] = "read-only observer diagnostics",
         ["Observation.ObserverInformation"] = "read-only observer diagnostics",
         ["Observation.FailedPartitionDetails"] = "read-only observer diagnostics",

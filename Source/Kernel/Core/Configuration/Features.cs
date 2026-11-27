@@ -24,6 +24,13 @@ public class Features
     /// </summary>
     public bool ChangesetStorage { get; init; }
 
+    /// <summary>Gets whether namespace incarnation issuance and lifecycle coordination are enabled. Default false.</summary>
+    /// <remarks>
+    /// Enable only after every silo and administration endpoint has upgraded and the storage provider supports every
+    /// supplied-token commit fence. Mixed-version removal and rollback do not provide protected-write guarantees.
+    /// </remarks>
+    public bool NamespaceIncarnations { get; init; }
+
     /// <summary>
     /// Whether the OAuth Authority is enabled. Default true.
     /// </summary>

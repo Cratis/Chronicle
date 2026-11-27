@@ -46,6 +46,7 @@ internal static class TestingCommandPipeline
         var storage = context.Storage;
         var compliance = context.Compliance;
 
+        services.AddSingleton(context.NamespaceIncarnations);
         services.AddSingleton<KernelCore::Cratis.Chronicle.Events.IEventCompliance>(compliance.CreateEventCompliance(storage));
         services.AddSingleton<KernelCore::Cratis.Chronicle.Schemas.IJsonSchemaMetadataManager>(compliance.Manager);
         services.AddSingleton<KernelCore::Cratis.Chronicle.EventTypes.IEventTypesCacheClient>(new EventSequences.NoOpEventTypesCacheClient());

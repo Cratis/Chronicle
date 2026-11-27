@@ -17,6 +17,20 @@ message AppendManyForEventSourcesRequest {
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
    EffectReceipt EffectReceipt = 10;
+   .bcl.Guid ExpectedIncarnation = 11;
+}
+message AppendManyForEventSourcesToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   repeated EventForEventSourceIdWithNamedTags Events = 5;
+   .bcl.Guid CorrelationId = 6;
+   repeated string Tags = 7;
+   repeated Causation Causation = 8;
+   Identity CausedBy = 9;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 10;
+   EffectReceipt EffectReceipt = 11;
 }
 message AppendManyForEventSourcesWithNamedTagsRequest {
    string EventStore = 1;
@@ -29,6 +43,7 @@ message AppendManyForEventSourcesWithNamedTagsRequest {
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
    EffectReceipt EffectReceipt = 10;
+   .bcl.Guid ExpectedIncarnation = 11;
 }
 message AppendManyOnceRequest {
    string EventStore = 1;
@@ -40,6 +55,7 @@ message AppendManyOnceRequest {
    repeated Causation Causation = 7;
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+   .bcl.Guid ExpectedIncarnation = 10;
 }
 message AppendManyOnceResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -57,6 +73,18 @@ message AppendManyOnceResponse {
    bool IsRetryable = 13;
    .bcl.TimeSpan RetryAfter = 14;
 }
+message AppendManyOnceToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   repeated KeyedEventForEventSourceIdWithNamedTags Events = 5;
+   .bcl.Guid CorrelationId = 6;
+   repeated string Tags = 7;
+   repeated Causation Causation = 8;
+   Identity CausedBy = 9;
+   repeated EventSourceConcurrencyScope ConcurrencyScopes = 10;
+}
 message AppendManyOnceWithNamedTagsRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -67,6 +95,7 @@ message AppendManyOnceWithNamedTagsRequest {
    repeated Causation Causation = 7;
    Identity CausedBy = 8;
    repeated EventSourceConcurrencyScope ConcurrencyScopes = 9;
+   .bcl.Guid ExpectedIncarnation = 10;
 }
 message AppendManyRequest {
    string EventStore = 1;
@@ -81,6 +110,7 @@ message AppendManyRequest {
    ConcurrencyScope ConcurrencyScope = 10;
    SerializableDateTimeOffset Occurred = 11;
    EffectReceipt EffectReceipt = 12;
+   .bcl.Guid ExpectedIncarnation = 13;
 }
 message AppendManyResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -98,6 +128,21 @@ message AppendManyResponse {
    bool IsRetryable = 13;
    .bcl.TimeSpan RetryAfter = 14;
 }
+message AppendManyToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   string EventSourceId = 5;
+   repeated EventToAppendWithNamedTags Events = 6;
+   .bcl.Guid CorrelationId = 7;
+   repeated string Tags = 8;
+   SerializableDateTimeOffset Occurred = 9;
+   repeated Causation Causation = 10;
+   Identity CausedBy = 11;
+   ConcurrencyScope ConcurrencyScope = 12;
+   EffectReceipt EffectReceipt = 13;
+}
 message AppendManyWithNamedTagsRequest {
    string EventStore = 1;
    string Namespace = 2;
@@ -111,6 +156,7 @@ message AppendManyWithNamedTagsRequest {
    Identity CausedBy = 10;
    ConcurrencyScope ConcurrencyScope = 11;
    EffectReceipt EffectReceipt = 12;
+   .bcl.Guid ExpectedIncarnation = 13;
 }
 message AppendOnceRequest {
    string EventStore = 1;
@@ -131,6 +177,7 @@ message AppendOnceRequest {
    Identity CausedBy = 16;
    ConcurrencyScope ConcurrencyScope = 17;
    string EventSource = 18;
+   .bcl.Guid ExpectedIncarnation = 19;
 }
 message AppendOnceResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -147,6 +194,28 @@ message AppendOnceResponse {
    repeated IdempotencyKeyConflict IdempotencyConflicts = 12;
    bool IsRetryable = 13;
    .bcl.TimeSpan RetryAfter = 14;
+}
+message AppendOnceToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   string EventSourceId = 5;
+   string EventSourceType = 6;
+   string EventStreamType = 7;
+   string EventStreamId = 8;
+   EventType EventType = 9;
+   string Content = 10;
+   string IdempotencyKey = 11;
+   repeated NamedTag NamedTags = 12;
+   .bcl.Guid CorrelationId = 13;
+   repeated string Tags = 14;
+   SerializableDateTimeOffset Occurred = 15;
+   string Subject = 16;
+   repeated Causation Causation = 17;
+   Identity CausedBy = 18;
+   ConcurrencyScope ConcurrencyScope = 19;
+   string EventSource = 20;
 }
 message AppendOnceWithNamedTagsRequest {
    string EventStore = 1;
@@ -168,6 +237,7 @@ message AppendOnceWithNamedTagsRequest {
    Identity CausedBy = 17;
    ConcurrencyScope ConcurrencyScope = 18;
    string EventSource = 19;
+   .bcl.Guid ExpectedIncarnation = 20;
 }
 enum AppendOutcome {
    Committed = 0;
@@ -193,6 +263,7 @@ message AppendRequest {
    ConcurrencyScope ConcurrencyScope = 16;
    string EventSource = 17;
    EffectReceipt EffectReceipt = 18;
+   .bcl.Guid ExpectedIncarnation = 19;
 }
 message AppendResponse {
    .bcl.Guid CorrelationId = 1; // default value could not be applied: 00000000-0000-0000-0000-000000000000
@@ -209,6 +280,28 @@ message AppendResponse {
    bool EffectAlreadyRecorded = 12;
    bool IsRetryable = 13;
    .bcl.TimeSpan RetryAfter = 14;
+}
+message AppendToNamespaceRequest {
+   string EventStore = 1;
+   string Namespace = 2;
+   .bcl.Guid ExpectedIncarnation = 3; // default value could not be applied: 00000000-0000-0000-0000-000000000000
+   string EventSequenceId = 4;
+   string EventSourceId = 5;
+   string EventSourceType = 6;
+   string EventStreamType = 7;
+   string EventStreamId = 8;
+   EventType EventType = 9;
+   string Content = 10;
+   .bcl.Guid CorrelationId = 11;
+   repeated string Tags = 12;
+   SerializableDateTimeOffset Occurred = 13;
+   string Subject = 14;
+   repeated Causation Causation = 15;
+   Identity CausedBy = 16;
+   ConcurrencyScope ConcurrencyScope = 17;
+   string EventSource = 18;
+   EffectReceipt EffectReceipt = 19;
+   repeated NamedTag NamedTags = 20;
 }
 message AppendWithNamedTagsRequest {
    string EventStore = 1;
@@ -230,6 +323,7 @@ message AppendWithNamedTagsRequest {
    ConcurrencyScope ConcurrencyScope = 17;
    string EventSource = 18;
    EffectReceipt EffectReceipt = 19;
+   .bcl.Guid ExpectedIncarnation = 20;
 }
 message AppendedEventResponse {
    string Id = 1;
@@ -992,12 +1086,17 @@ service EventSequences {
    rpc AppendedEvents (AppendedEventsRequest) returns (QueryResult_IEnumerable_AppendedEventResponse);
    rpc AppendMany (AppendManyRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSources (AppendManyForEventSourcesRequest) returns (CommandResult_AppendManyResponse);
+   rpc AppendManyForEventSourcesToNamespace (AppendManyForEventSourcesToNamespaceRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyForEventSourcesWithNamedTags (AppendManyForEventSourcesWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyOnce (AppendManyOnceRequest) returns (CommandResult_AppendManyOnceResponse);
+   rpc AppendManyOnceToNamespace (AppendManyOnceToNamespaceRequest) returns (CommandResult_AppendManyOnceResponse);
    rpc AppendManyOnceWithNamedTags (AppendManyOnceWithNamedTagsRequest) returns (CommandResult_AppendManyOnceResponse);
+   rpc AppendManyToNamespace (AppendManyToNamespaceRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendManyWithNamedTags (AppendManyWithNamedTagsRequest) returns (CommandResult_AppendManyResponse);
    rpc AppendOnce (AppendOnceRequest) returns (CommandResult_AppendOnceResponse);
+   rpc AppendOnceToNamespace (AppendOnceToNamespaceRequest) returns (CommandResult_AppendOnceResponse);
    rpc AppendOnceWithNamedTags (AppendOnceWithNamedTagsRequest) returns (CommandResult_AppendOnceResponse);
+   rpc AppendToNamespace (AppendToNamespaceRequest) returns (CommandResult_AppendResponse);
    rpc AppendWithNamedTags (AppendWithNamedTagsRequest) returns (CommandResult_AppendResponse);
    rpc ClosedStreams (ClosedStreamsRequest) returns (QueryResult_IEnumerable_ClosedStreamResponse);
    rpc Compensate (CompensateRequest) returns (CommandResult_AppendResponse);

@@ -68,6 +68,7 @@ internal static class KernelCommandExtensionPoints
     static IServiceCollection AddNarrowed(this IServiceCollection services, bool onlyForKernelCommands) =>
         services
             .AddNarrowed<ICommandFilter>(onlyForKernelCommands)
+            .AddNarrowed<ICommandExceptionMapper>(onlyForKernelCommands)
             .AddNarrowed<ICommandExecutionScope>(onlyForKernelCommands)
             .AddNarrowed<ICommandContextValuesProvider>(onlyForKernelCommands)
             .AddNarrowed<ICommandResponseValueHandler>(onlyForKernelCommands)

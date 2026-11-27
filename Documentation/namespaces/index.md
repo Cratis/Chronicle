@@ -26,7 +26,9 @@ For the full path from selecting a tenant to deciding which database stores its 
 
 When retiring a tenant, stop requests and background clients that use its namespace before calling `RemoveNamespace` with its name on the event store (`IEventStore.RemoveNamespace` in the .NET client). Otherwise, continued use can create the namespace again. The default namespace cannot be removed.
 
-Chronicle performs removal in this order:
+With namespace incarnations enabled, removal uses persisted checkpoints and closes admission before cleanup. Closing or RecoveryRequired is not successful deletion. See the [incarnation fence](incarnation-fence.md) and [namespace recovery workflow](../operations/recover-a-namespace.md) before retrying interrupted coordinated removal.
+
+Without that opt-in feature, Chronicle uses the legacy removal order:
 
 1. Removes the namespace from the listing and attempts to append a `NamespaceRemoved` event to the system event sequence. Removing it from the listing first prevents periodic subscription setup from selecting it again.
 2. Unsubscribes and removes its observers, including their persistent reminders. Those reminders would otherwise wake observers after a restart.
@@ -34,10 +36,11 @@ Chronicle performs removal in this order:
 
 Namespace removal does not drop the separate read-model data written by projections and reducers. Remove that application-owned data as part of retiring the tenant. Other storage providers leave stored namespace data in place, so plan to remove it separately as well.
 
-An interrupted removal can be repeated. Removal is not a permanent ban on the namespace name: using that name again can create a new namespace.
+An interrupted legacy removal can be repeated. For coordinated removal, do not reissue unresolved destructive work; inspect its persisted recovery state first. Removal is not a permanent ban on the namespace name: using that name again can create a new namespace. An incarnation-bound writer must not replay an old decision into that replacement.
 
 ## Topics
 
+- [Namespace incarnation fence](incarnation-fence.md): bind decisions to a namespace lifetime and handle removal/recreation safely.
 - [DotNET client usage](dotnet-client): select a namespace in a direct client or worker service.
 - [ASP.NET Core namespace resolution](aspnetcore): select a namespace from an HTTP request and enforce tenant access.
 

@@ -297,6 +297,7 @@ enum Cratis.Chronicle.Concepts.Imports.OnInvalidEvent : int
 orleans [Alias("Cratis.Chronicle.Concepts.Keys.Key")] Cratis.Chronicle.Concepts.Keys.Key
   [Id(0,Level=0,Constructor=true)] Value: object
   [Id(1,Level=0,Constructor=true)] ArrayIndexers: Cratis.Chronicle.Properties.ArrayIndexers
+concept Cratis.Chronicle.Concepts.NamespaceIncarnationId : System.Guid
 enum Cratis.Chronicle.Concepts.Observation.AlertDisposition : int
   Active = 0
   Retired = 1

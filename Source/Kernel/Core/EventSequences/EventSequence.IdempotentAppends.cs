@@ -22,7 +22,7 @@ namespace Cratis.Chronicle.EventSequences;
 
 public partial class EventSequence
 {
-    IEventPublicationStorage PublicationStorage => EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
+    IEventPublicationStorage PublicationStorage => _namespaceAppendStorage is { } bound ? bound : EventSequenceStorage as IEventPublicationStorage ?? throw new EventPublicationStorageNotSupported();
 
     /// <inheritdoc/>
     public async Task<IdempotentAppendResult> AppendWithIdempotencyKey(EventToAppend @event, IdempotencyKey idempotencyKey, CorrelationId correlationId, IEnumerable<Causation> causation, Identity causedBy, ConcurrencyScope concurrencyScope)
@@ -50,7 +50,8 @@ public partial class EventSequence
         var conflict = new IdempotencyConflict(request.Key!, number, comparison.StoredEventType, request.Event.EventType.Generation, reason);
         return new(AppendResult.Failed(correlationId, [reason == IdempotencyConflictReason.Unverifiable
             ? IdempotencyRefusals.Unverifiable(request.Key!, comparison.StoredEventType, number, comparison.UnverifiableKind)
-            : IdempotencyRefusals.Conflict(conflict)])) { Conflicts = [conflict] };
+            : IdempotencyRefusals.Conflict(conflict)]))
+        { Conflicts = [conflict] };
     }
 
     static void FinishAbsentKeys(IEnumerable<KeyedAppend> requests, AppendResult failure)
@@ -127,7 +128,7 @@ public partial class EventSequence
             }
             await StoreKeyedBatch(absent, batch, contexts, correlationId, scopes);
         }
-        catch (Exception error)
+        catch (Exception error) when (_namespaceAppendStorage is null)
         {
             var @event = requests[0].Event;
             FinishAbsentKeys(requests, HandleAppendEventException(error, @event.EventSourceType, @event.EventSourceId, @event.EventType, @event.eventStreamId, correlationId));

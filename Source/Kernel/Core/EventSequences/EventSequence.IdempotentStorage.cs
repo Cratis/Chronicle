@@ -28,7 +28,7 @@ public partial class EventSequence
             {
                 result = (AppendManyStorageFailure)new IdentitiesAlreadyDurable(new Dictionary<string, StoredEventPublication>());
             }
-            catch (Exception)
+            catch (Exception) when (_namespaceAppendStorage is null)
             {
                 await SettleUnknownKeyedAppend(requests, batch, contexts, correlationId, concurrencyChecked);
                 return;
@@ -120,7 +120,7 @@ public partial class EventSequence
         {
             await SettleKeys(requests, correlationId);
         }
-        catch (Exception)
+        catch (Exception) when (_namespaceAppendStorage is null)
         {
             // A failed probe establishes neither a commit nor absence. Never report a non-commit here.
             FinishAbsentKeys(requests, AppendResult.Failed(correlationId, [AppendError.AppendOutcomeUnknown]));

@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Validation;
+using Cratis.Chronicle.Namespaces;
 using Cratis.Chronicle.Security;
 using ProtoBuf.Grpc;
 
@@ -131,6 +132,16 @@ internal static class QueryExecutor
     static QueryResult<TData> Failed<TData>(Guid correlationId, Exception exception, Action<Exception>? onError)
     {
         onError?.Invoke(exception);
-        return QueryResult<TData>.Error(correlationId, exception);
+        var code = NamespaceExceptionCodes.For(exception);
+        if (code is null)
+        {
+            return QueryResult<TData>.Error(correlationId, exception);
+        }
+
+        return new()
+        {
+            CorrelationId = correlationId,
+            ExceptionMessages = [code]
+        };
     }
 }

@@ -2,6 +2,8 @@
   href: index.mdx
 - name: Recovering from failures
   href: recovering-from-failures.md
+- name: Recover a namespace removal
+  href: recover-a-namespace.md
 - name: Rebuild a constraint index
   href: rebuild-a-constraint-index.md
 - name: Diagnostics

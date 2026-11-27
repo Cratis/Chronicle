@@ -5,6 +5,7 @@ extern alias KernelConcepts;
 extern alias KernelCore;
 
 using KernelCore::Cratis.Chronicle.Namespaces;
+using KernelIncarnation = KernelConcepts::Cratis.Chronicle.Concepts.NamespaceIncarnationId;
 using KernelName = KernelConcepts::Cratis.Chronicle.Concepts.EventStoreNamespaceName;
 
 namespace Cratis.Chronicle.Testing.EventSequences;
@@ -32,4 +33,7 @@ internal sealed class InProcessNamespaces : INamespaces
 
     /// <inheritdoc/>
     public Task Forget(KernelName @namespace) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public Task ForgetIncarnation(KernelName @namespace, KernelIncarnation incarnation, Guid operation) => Task.CompletedTask;
 }

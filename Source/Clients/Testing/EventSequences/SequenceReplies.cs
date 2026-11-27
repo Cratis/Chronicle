@@ -17,6 +17,41 @@ namespace Cratis.Chronicle.Testing.EventSequences;
 internal sealed class SequenceReplies(IEventSequences inner, DropReplyInterceptor replies) : IEventSequences
 {
     /// <inheritdoc/>
+    public async Task<CommandResult<AppendResponse>> AppendToNamespace(AppendToNamespaceRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendToNamespace(request, callContext);
+        return replies.After(DroppedReply.Append, result, request.EffectReceipt is not null && result.IsSuccess && result.Response.IsSuccess);
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult<AppendManyResponse>> AppendManyToNamespace(AppendManyToNamespaceRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendManyToNamespace(request, callContext);
+        return replies.After(DroppedReply.Append, result, request.EffectReceipt is not null && result.IsSuccess && result.Response.IsSuccess);
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult<AppendManyResponse>> AppendManyForEventSourcesToNamespace(AppendManyForEventSourcesToNamespaceRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendManyForEventSourcesToNamespace(request, callContext);
+        return replies.After(DroppedReply.Append, result, request.EffectReceipt is not null && result.IsSuccess && result.Response.IsSuccess);
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult<AppendOnceResponse>> AppendOnceToNamespace(AppendOnceToNamespaceRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendOnceToNamespace(request, callContext);
+        return replies.After(DroppedReply.Append, result, result.IsSuccess && result.Response.IsSuccess);
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult<AppendManyOnceResponse>> AppendManyOnceToNamespace(AppendManyOnceToNamespaceRequest request, CallContext callContext = default)
+    {
+        var result = await inner.AppendManyOnceToNamespace(request, callContext);
+        return replies.After(DroppedReply.Append, result, result.IsSuccess && result.Response.IsSuccess);
+    }
+
+    /// <inheritdoc/>
     public async Task<CommandResult<AppendResponse>> Append(AppendRequest request, CallContext callContext = default)
     {
         var result = await inner.Append(request, callContext);

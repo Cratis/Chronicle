@@ -1,6 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Commands;
+using Cratis.Chronicle.Contracts.Namespaces;
+using Cratis.Chronicle.Discovery;
+
 namespace Cratis.Chronicle.Registrations;
 
 /// <summary>
@@ -21,6 +25,14 @@ internal sealed class RegistrationBackoff(TimeSpan? initialDelay = null, TimeSpa
     readonly Func<double> _jitterSource = jitterSource ?? Random.Shared.NextDouble;
 
     /// <summary>
+    /// Determines whether a registration failure can be retried without operator intervention.
+    /// </summary>
+    /// <param name="exception">The failure, potentially wrapping a structured kernel command result.</param>
+    /// <returns>False for local preparation failures and the literal namespace recovery-required code.</returns>
+    public static bool IsRetryable(Exception exception) =>
+        exception is not (ArtifactIdentityDriftDetected or ArtifactPreparationReentered) && !RequiresNamespaceRecovery(exception);
+
+    /// <summary>
     /// Get the delay to wait before the next run.
     /// </summary>
     /// <param name="consecutiveFailures">Number of runs that have failed in a row. Zero means the previous run succeeded or there has been none.</param>
@@ -39,4 +51,12 @@ internal sealed class RegistrationBackoff(TimeSpan? initialDelay = null, TimeSpa
 
         return TimeSpan.FromTicks((long)jitteredTicks);
     }
+
+    static bool RequiresNamespaceRecovery(Exception exception) => exception switch
+    {
+        CommandFailed { Result: { } result } when result.ExceptionMessages.Contains(NamespaceErrorCodes.RecoveryRequired, StringComparer.Ordinal) => true,
+        AggregateException aggregate => aggregate.InnerExceptions.Any(RequiresNamespaceRecovery),
+        { InnerException: { } inner } => RequiresNamespaceRecovery(inner),
+        _ => false
+    };
 }

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
-using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Auditing;
 using Cratis.Chronicle.Connections;
@@ -86,17 +85,13 @@ public partial class EventSequence(
     readonly IActivitySource<EventSequence> _activitySource = activitySource ?? DefaultActivitySource;
     readonly ILogger<EventSequence> _logger = (concurrencyScopeStrategies as ConcurrencyScopeStrategies)?.Logger ?? NullLogger<EventSequence>.Instance;
 
-    IObservable<IEnumerable<AppendedEventWithResult>>? _appendOperations;
-    event Action<IEnumerable<AppendedEventWithResult>>? _appendedEventsRaised;
+    EventSequenceAppendNotifications _appendNotifications = new();
 
     /// <inheritdoc/>
     public EventSequenceId Id => eventSequenceId;
 
     /// <inheritdoc/>
-    public IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations =>
-        _appendOperations ??= Observable.FromEvent<IEnumerable<AppendedEventWithResult>>(
-            h => _appendedEventsRaised += h,
-            h => _appendedEventsRaised -= h);
+    public IObservable<IEnumerable<AppendedEventWithResult>> AppendOperations => _appendNotifications.Operations;
 
     /// <inheritdoc/>
     public ITransactionalEventSequence Transactional => new TransactionalEventSequence(this, unitOfWorkManager);
@@ -1136,7 +1131,7 @@ public partial class EventSequence(
             };
 
             // A key that was already appended did not write this attempt's event, so it is never notified as an append.
-            var handler = result.WasAlreadyAppended ? null : _appendedEventsRaised;
+            var handler = result.WasAlreadyAppended ? null : _appendNotifications.Handler;
             if (handler is not null)
             {
                 var context = EventContext.From(
@@ -1172,6 +1167,8 @@ public partial class EventSequence(
 
     async Task<AppendResult> AppendUnkeyed(Contracts.Sequences.AppendRequest request, IReadOnlyList<NamedTag> resolvedNamedTags)
     {
+        if (_namespaceBinding is not null) return (await AppendToBoundNamespace(request, resolvedNamedTags)).ToClient();
+
         var response = resolvedNamedTags.Count == 0
             ? await _servicesAccessor.Services.Sequences.Append(request).EnsureSuccess()
             : await _servicesAccessor.Services.Sequences.AppendWithNamedTags(new Contracts.Sequences.AppendWithNamedTagsRequest
@@ -1201,6 +1198,8 @@ public partial class EventSequence(
 
     async Task<AppendResult> AppendKeyed(Contracts.Sequences.AppendRequest request, IdempotencyKey idempotencyKey, IReadOnlyList<NamedTag> resolvedNamedTags)
     {
+        if (_namespaceBinding is not null) return (await AppendOnceToBoundNamespace(request, idempotencyKey, resolvedNamedTags)).ToClient();
+
         var response = resolvedNamedTags.Count == 0
             ? await _servicesAccessor.Services.Sequences.AppendOnce(new Contracts.Sequences.AppendOnceRequest
             {
@@ -1290,7 +1289,7 @@ public partial class EventSequence(
 
             // The legacy single-source batch contract cannot carry routing metadata. Use the existing
             // multi-source contract for explicit routes, retaining the batch-wide union of tags and scope.
-            if (idempotencyKey is not null || routing is not null || resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
+            if (_namespaceBinding is not null || idempotencyKey is not null || routing is not null || resolvedEventSourceType != EventSourceType.Default || resolvedEventStreamType != EventStreamType.All || !resolvedEventStreamId.IsDefault)
             {
                 return await AppendManyForEventSources(
                     eventsList.Select((@event, index) => new EventForEventSourceId(eventSourceId, @event)
@@ -1602,7 +1601,7 @@ public partial class EventSequence(
         // Its result therefore reports no event types appended in this turn.
         if (response?.EffectAlreadyRecorded == true) return result with { EventTypes = [], AppendedEventTypes = [] };
 
-        var handler = result.AllAlreadyAppended ? null : _appendedEventsRaised;
+        var handler = result.AllAlreadyAppended ? null : _appendNotifications.Handler;
         if (eventsList.Count > 0 && handler is not null)
         {
             var sequenceNumbers = result.SequenceNumbers.ToList();
@@ -1653,6 +1652,8 @@ public partial class EventSequence(
         List<Contracts.Sequences.EventForEventSourceId> eventsToAppend,
         IReadOnlyList<NamedTag>[] effectiveNamedTags)
     {
+        if (_namespaceBinding is not null) return await AppendManyToBoundNamespace(request, eventsToAppend, effectiveNamedTags);
+
         return effectiveNamedTags.All(_ => _.Count == 0)
             ? await _servicesAccessor.Services.Sequences.AppendManyForEventSources(request).EnsureSuccess()
             : await _servicesAccessor.Services.Sequences.AppendManyForEventSourcesWithNamedTags(new Contracts.Sequences.AppendManyForEventSourcesWithNamedTagsRequest
@@ -1690,6 +1691,8 @@ public partial class EventSequence(
         IReadOnlyList<NamedTag>[] effectiveNamedTags,
         IdempotencyKey?[] keys)
     {
+        if (_namespaceBinding is not null) return await AppendManyOnceToBoundNamespace(request, eventsToAppend, effectiveNamedTags, keys);
+
         var response = effectiveNamedTags.All(_ => _.Count == 0)
             ? await _servicesAccessor.Services.Sequences.AppendManyOnce(new Contracts.Sequences.AppendManyOnceRequest
             {
@@ -1817,7 +1820,7 @@ public partial class EventSequence(
         DateTimeOffset? occurred,
         List<IReadOnlyList<NamedTag>> namedTags)
     {
-        var handler = _appendedEventsRaised;
+        var handler = _appendNotifications.Handler;
         if (events.Count == 0 || handler is null) return;
 
         var sequenceNumbers = result.SequenceNumbers.ToList();

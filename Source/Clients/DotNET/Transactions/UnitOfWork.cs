@@ -576,13 +576,13 @@ public partial class UnitOfWork : IUnitOfWork
             return;
         }
 
-        _eventSequence = _eventStore.Value.GetEventSequence(eventSequenceId);
+        _eventSequence = BindNamespaceWriter(_eventStore.Value.GetEventSequence(eventSequenceId));
         _eventSequenceId = eventSequenceId;
     }
 
     void BindLegacyEventSequence(EventSequenceId eventSequenceId)
     {
-        var eventSequence = _eventStore.Value.GetEventSequence(eventSequenceId);
+        var eventSequence = BindNamespaceWriter(_eventStore.Value.GetEventSequence(eventSequenceId));
         _legacyEventSequenceIds.Add(eventSequenceId);
         if (_eventSequence is not null)
         {

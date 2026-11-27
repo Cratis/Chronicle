@@ -20,8 +20,8 @@ namespace Cratis.Chronicle.EventSequences;
 /// </summary>
 [KeyedBy<EventSequenceKey>]
 [BelongsTo(WellKnownServices.EventSequenceQueries)]
-[Version(3)]
-public interface IEventSequence : IGrainWithStringKey
+[Version(4)]
+public partial interface IEventSequence : IGrainWithStringKey
 {
     /// <summary>
     /// Reconciles the projection, capture and pattern-capture subscriptions of the namespace of the event log.

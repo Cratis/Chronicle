@@ -134,6 +134,7 @@ public partial class EventSequence(
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _eventSequenceKey = EventSequenceKey.Parse(this.GetPrimaryKeyString());
+        _activationIncarnation = State.ActivationIncarnation;
         _eventSequenceId = _eventSequenceKey.EventSequenceId;
         if (ReservedEventSequenceRules.MayBeReserved(reservedEventSequenceIds, _eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId))
         {
@@ -201,6 +202,7 @@ public partial class EventSequence(
     /// </remarks>
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        EndNamespaceActivation();
         EndReconciliation();
         if (!_mayWriteSequence) return;
         _constraintIndexRepairTimer?.Dispose();
@@ -760,9 +762,11 @@ public partial class EventSequence(
         async Task<Result<IEnumerable<AppendedEvent>, DuplicateEventSequenceNumber>> AppendToStorage()
         {
             logger.AppendManyCallingStorage(_eventSequenceKey.EventStore, _eventSequenceKey.Namespace, _eventSequenceId, eventsToAppend.Count);
-            return eventsToAppend.Exists(@event => @event.NamedTags.Count > 0)
-                ? await EventSequenceStorage.AppendManyWithNamedTags(eventsToAppend)
-                : await EventSequenceStorage.AppendMany(eventsToAppend);
+            return await AppendBatchWithNamespaceFence(
+                eventsToAppend,
+                () => eventsToAppend.Exists(@event => @event.NamedTags.Count > 0)
+                    ? EventSequenceStorage.AppendManyWithNamedTags(eventsToAppend)
+                    : EventSequenceStorage.AppendMany(eventsToAppend));
         }
         return effectReceipt is null
             ? await AppendWithRetries<IEnumerable<AppendedEvent>, AppendManyResult>(
@@ -822,7 +826,7 @@ public partial class EventSequence(
             {
                 result = await append();
             }
-            catch (Exception error) when (error is not EventsNotCommitted and not EventPublicationConflict)
+            catch (Exception error) when (CanSettleAppendFailure(error))
             {
                 var stored = await settle();
                 return stored is null ? await unknown() : Result<TAppended, TFailure>.Success(stored);
@@ -992,7 +996,7 @@ public partial class EventSequence(
                     GenerationalContent = migratedContent,
                     ContentHashes = contentHashes
                 };
-                return WriteToStorage();
+                return publication is null ? AppendSingleWithNamespaceFence(attempted, namedTags, eventSource, WriteToStorage) : WriteToStorage();
             }
             var appendResult = await AppendWithRetries(
                 AppendToStorage,
@@ -1008,7 +1012,7 @@ public partial class EventSequence(
 
             committed = appendResult.AsT0;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (_namespaceAppendStorage is null)
         {
             return HandleAppendEventException(ex, eventSourceType, eventSourceId, eventType, eventStreamId, correlationId);
         }

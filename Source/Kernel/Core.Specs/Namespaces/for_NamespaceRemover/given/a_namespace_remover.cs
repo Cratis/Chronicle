@@ -32,6 +32,7 @@ public class a_namespace_remover : Specification
     protected IObserver _observer;
     protected NamespaceRemover _remover;
     protected INamespaceCasing _namespaceCasing;
+    protected INamespaceIncarnations _incarnations;
 
     void Establish()
     {
@@ -69,7 +70,8 @@ public class a_namespace_remover : Specification
         _grainFactory.GetGrain<IObserver>(_keyWithoutState).Returns(_observerWithoutState);
 
         _namespaceCasing = NamespaceCasingContext.Create();
-        _remover = new NamespaceRemover(_grainFactory, _storage, _reminderTable, NullLogger<NamespaceRemover>.Instance, _namespaceCasing);
+        _incarnations = Substitute.For<INamespaceIncarnations>();
+        _remover = new NamespaceRemover(_grainFactory, _storage, _reminderTable, NullLogger<NamespaceRemover>.Instance, _namespaceCasing, _incarnations);
     }
 
     static ReminderEntry Reminder(string key) => new()

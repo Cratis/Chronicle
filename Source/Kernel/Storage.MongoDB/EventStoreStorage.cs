@@ -67,7 +67,7 @@ public class EventStoreStorage(
     Cratis.Choreography.Storage.IJobsStorage jobsStorage,
     IOptions<ChronicleOptions> options,
     ILoggerFactory loggerFactory,
-    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage
+    IEventSequenceMutationDigestKeys? mutationDigestKeys = null) : IEventStoreStorage, IHaveNamespaceIncarnations
 {
     readonly ConcurrentDictionary<EventStoreNamespaceName, IEventStoreNamespaceStorage> _namespaces = new();
     readonly Occurrences.OccurrencesStorage _occurrences = new(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.Occurrences).Database);
@@ -101,6 +101,9 @@ public class EventStoreStorage(
 
     /// <inheritdoc/>
     public INamespaceStorage Namespaces { get; } = new NamespaceStorage(eventStoreDatabase, loggerFactory.CreateLogger<NamespaceStorage>());
+
+    /// <inheritdoc/>
+    public INamespaceLifecycleStorage NamespaceLifecycles { get; } = new NamespaceLifecycleStorage(eventStoreDatabase.GetCollection<BsonDocument>(WellKnownCollectionNames.NamespaceLifecycles));
 
     /// <inheritdoc/>
     public IEventTypesStorage EventTypes { get; } = new EventTypeRegistry(new EventTypesStorage(eventStore, eventStoreDatabase, loggerFactory.CreateLogger<EventTypesStorage>()));
@@ -197,6 +200,10 @@ public class EventStoreStorage(
 
         return _namespaces.GetOrAdd(@namespace, created);
     }
+
+    /// <inheritdoc/>
+    public INamespaceMarkerStorage GetNamespaceMarker(EventStoreNamespaceName @namespace) =>
+        new NamespaceMarkerStorage(eventStoreDatabase.GetNamespaceDatabase(@namespace).GetCollection<BsonDocument>(WellKnownCollectionNames.NamespaceMarker));
 
     /// <inheritdoc/>
     public Task<bool> HasOwnNamespaceData(EventStoreNamespaceName @namespace) => eventStoreDatabase.GetNamespaceDatabase(@namespace).HasOwnDatabase();
