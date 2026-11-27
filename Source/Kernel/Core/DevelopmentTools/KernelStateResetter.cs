@@ -32,6 +32,10 @@ namespace Cratis.Chronicle.DevelopmentTools;
 /// when the server is built with the DEVELOPMENT preprocessor symbol - a released kernel cannot be asked to do this.
 /// </remarks>
 #if DEVELOPMENT
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "The reset gate is used only through WaitAsync and Release; no wait handle is allocated.")]
 internal sealed partial class KernelStateResetter(
 #else
 internal sealed class KernelStateResetter(
@@ -83,6 +87,9 @@ internal sealed class KernelStateResetter(
     }
 
 #if DEVELOPMENT
+    [LoggerMessage(LogLevel.Warning, "Kernel grain activations did not settle before the development reset continued.")]
+    static partial void LogDeactivationTimeout(ILogger logger);
+
     async Task ResetCore()
     {
         var observations = provenanceCache as IDevelopmentSinkProvenanceObservations
@@ -112,9 +119,6 @@ internal sealed class KernelStateResetter(
         // and every gRPC call would fail with 401.
         await bootstrapResetHandler.Bootstrap();
     }
-
-    [LoggerMessage(LogLevel.Warning, "Kernel grain activations did not settle before the development reset continued.")]
-    static partial void LogDeactivationTimeout(ILogger logger);
 
     async Task WipeStorage()
     {
