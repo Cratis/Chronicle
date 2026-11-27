@@ -170,7 +170,10 @@ export async function main({ environment = process.env, argv = process.argv.slic
         output(JSON.stringify(result));
         return 0;
     } catch (error) {
-        output(JSON.stringify({ status: 'failed', error: error.message === 'tracker-missing' ? 'tracker-missing' : 'watchdog-reporting-failed' }));
+        // Every throw site in this module and its paginate()/send() dependencies uses a fixed,
+        // bounded code rather than propagating a caught error's own message, so error.message
+        // is always safe to report and never swallows the reason a run actually failed.
+        output(JSON.stringify({ status: 'failed', error: error.message }));
         return 1;
     }
 }
