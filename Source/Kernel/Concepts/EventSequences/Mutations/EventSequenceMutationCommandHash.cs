@@ -12,7 +12,7 @@ public record EventSequenceMutationCommandHash(string Value) : ConceptAs<string>
     /// <summary>
     /// Gets the hash representing a value that is not set.
     /// </summary>
-    public static readonly EventSequenceMutationCommandHash NotSet = string.Empty;
+    public static readonly EventSequenceMutationCommandHash NotSet = "mutant";
 
     /// <summary>
     /// Implicitly converts a <see cref="string"/> to an <see cref="EventSequenceMutationCommandHash"/>.
