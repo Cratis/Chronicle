@@ -19,6 +19,7 @@ public class an_observer_lag_query : Specification
     protected IStorage _storage;
     protected IGrainFactory _grainFactory;
     protected IObserver _grain;
+    protected IManagementGrain _directory;
     protected IDormantObservers _dormant;
     protected ObserverKey _key;
 
@@ -27,13 +28,23 @@ public class an_observer_lag_query : Specification
         _storage = Substitute.For<IStorage>();
         _grainFactory = Substitute.For<IGrainFactory>();
         _grain = Substitute.For<IObserver>();
+        _directory = Substitute.For<IManagementGrain>();
         _dormant = Substitute.For<IDormantObservers>();
         _key = new ObserverKey(Id, Store, Namespace, EventSequenceId.Log);
         _grainFactory.GetGrain<IObserver>(_key).Returns(_grain);
+        _grainFactory.GetGrain<IManagementGrain>(0).Returns(_directory);
+        DirectoryReturns(SiloAddress.Zero);
         _storage.GetEventStore(Store).Observers.Has(Id).Returns(true);
         _storage.GetEventStore(Store).Observers.Get(Id).Returns(Definition);
         _storage.GetEventStore(Store).GetNamespace(Namespace).Observers.Get(Id).Returns(new ObserverState { RunningState = ObserverRunningState.Active });
     }
 
-    protected Task<ObserverLag> Query() => ObserverLag.GetObserverLag(Store, Namespace, string.Empty, Id, _storage, _grainFactory, _dormant);
+    protected void DirectoryReturns(SiloAddress? address)
+    {
+#pragma warning disable CA2012 // NSubstitute consumes the configured call; each invocation returns a fresh value task.
+        _directory.GetActivationAddress(_grain).Returns(_ => ValueTask.FromResult(address));
+#pragma warning restore CA2012
+    }
+
+    protected Task<ObserverLag> Query(string eventSequenceId = "") => ObserverLag.GetObserverLag(Store, Namespace, eventSequenceId, Id, _storage, _grainFactory, _dormant);
 }

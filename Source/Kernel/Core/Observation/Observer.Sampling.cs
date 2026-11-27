@@ -34,6 +34,8 @@ public partial class Observer
          (filters.EventSourceType is not null && filters.EventSourceType != EventSourceType.Unspecified) ||
          filters.EventStreamType is { IsAll: false });
 
+    bool IsCatchingUpForLag => State.CatchingUpPartitions.Count > 0 || HasCatchupOwnershipInFlight() || _isPreparingCatchup;
+
     void ConfigureLagSampling(Observers config) =>
         _stallWindow = config.StallWindow > TimeSpan.Zero ? config.StallWindow : Observers.DefaultStallWindow;
 
@@ -41,7 +43,18 @@ public partial class Observer
     /// Gets the latest sample of this observer's progress as it reads at the given time.
     /// </summary>
     /// <returns>The <see cref="ObserverLagSample"/>; one that is not measurable when there is none or it has expired.</returns>
-    ObserverLagSample CurrentLagSample() => _lagSample.At((timeProvider ?? TimeProvider.System).GetUtcNow());
+    ObserverLagSample CurrentLagSample()
+    {
+        if (FindLagIneligibility() is { } cause)
+        {
+            return ObserverLagSample.Unmeasurable(cause);
+        }
+
+        var sample = _lagSample.At((timeProvider ?? TimeProvider.System).GetUtcNow());
+        return sample.Status == ObserverLagStatus.Stalled && IsCatchingUpForLag
+            ? sample with { Status = ObserverLagStatus.Lagging }
+            : sample;
+    }
 
     /// <summary>
     /// Finds why the observer cannot be measured right now.
@@ -88,7 +101,7 @@ public partial class Observer
             State.LastHandledEventSequenceNumber,
             State.HandledEventCount.Value,
             HasAdditionalFilters ? ObserverLagRelevance.Unknown : relevance,
-            State.CatchingUpPartitions.Count > 0 || HasCatchupOwnershipInFlight() || _isPreparingCatchup);
+            IsCatchingUpForLag);
 
         _lagSample = _lagTracker.Measure(reading, (timeProvider ?? TimeProvider.System).GetUtcNow(), _stallWindow, LagSampleValidity);
     }

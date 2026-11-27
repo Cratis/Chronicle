@@ -6,6 +6,7 @@ using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Grpc;
 using Cratis.Chronicle.Storage;
+using SequenceId = Cratis.Chronicle.Concepts.EventSequences.EventSequenceId;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -51,13 +52,13 @@ public record ObserverLag(
     /// <param name="eventSequenceId">The event sequence the observer observes; empty for the one its definition names.</param>
     /// <param name="observerId">The identifier of the observer.</param>
     /// <param name="storage">The <see cref="IStorage"/> holding the observer's definition and state.</param>
-    /// <param name="grainFactory">The <see cref="IGrainFactory"/> reaching a resident observer.</param>
+    /// <param name="grainFactory">The <see cref="IGrainFactory"/> for the directory lookup and resident observer read.</param>
     /// <param name="dormantObservers">The <see cref="IDormantObservers"/> that tells a dormant observer from a resident one without waking it.</param>
     /// <returns>The <see cref="ObserverLag"/>, which says nothing can be measured rather than guessing.</returns>
     /// <remarks>
-    /// Reading never starts or resets a stall window, and never gives an observer an activation: an observer that is
-    /// unknown, never started or dormant has no measurement to read. The resident observer decides whether its own
-    /// measurement has expired.
+    /// Reading never starts or resets a stall window. The cluster directory is checked before calling the observer, so
+    /// polling does not normally activate idle observers. If the observer deactivates between lookup and call, the call
+    /// can reactivate it, and idle release can reclaim that activation. The resident observer checks sample validity.
     /// </remarks>
     public static async Task<ObserverLag> GetObserverLag(
         EventStoreName eventStore,
@@ -68,26 +69,42 @@ public record ObserverLag(
         IGrainFactory grainFactory,
         IDormantObservers dormantObservers)
     {
-        var sequence = await ObserverEventSequenceResolver.Resolve(storage, eventStore, observerId, eventSequenceId);
+        var eventStoreStorage = storage.GetEventStore(eventStore);
+        var definition = await eventStoreStorage.Observers.Get(observerId);
+        var sequence = ResolveSequence(eventSequenceId, definition?.EventSequenceId);
         var key = new ObserverKey(observerId, eventStore, @namespace, sequence);
 
-        if (!await storage.GetEventStore(eventStore).Observers.Has(observerId))
+        if (definition?.EventSequenceId != sequence || definition.Identifier != observerId)
         {
             return key.ToLag(ObserverLagSample.Unmeasurable(ObserverLagCause.UnknownState));
         }
 
-        if (await dormantObservers.Find(key) is not null)
+        var observer = grainFactory.GetGrain<IObserver>(key);
+        var directory = grainFactory.GetGrain<IManagementGrain>(0);
+        if (await directory.GetActivationAddress(observer) is null || await dormantObservers.Find(key) is not null)
         {
             return key.ToLag(ObserverLagSample.NotSampled);
         }
 
-        var state = await storage.GetEventStore(eventStore).GetNamespace(@namespace).Observers.Get(observerId);
+        var state = await eventStoreStorage.GetNamespace(@namespace).Observers.Get(observerId);
         if (state.RunningState == ObserverRunningState.Unknown)
         {
             return key.ToLag(ObserverLagSample.Unmeasurable(ObserverLagCause.UnknownState));
         }
 
-        var information = await grainFactory.GetGrain<IObserver>(key).GetInformation();
+        var information = await observer.GetInformation();
         return key.ToLag(information.LagSample ?? ObserverLagSample.NotSampled);
+    }
+
+    static SequenceId ResolveSequence(string requested, SequenceId? stored)
+    {
+        if (!string.IsNullOrEmpty(requested))
+        {
+            return requested;
+        }
+
+        return stored is null || stored == SequenceId.Unspecified || string.IsNullOrEmpty(stored.Value)
+            ? SequenceId.Log
+            : stored;
     }
 }

@@ -1,13 +1,19 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Observation;
+
 namespace Cratis.Chronicle.Observation.for_ObserverLag.when_getting;
 
 public class and_the_observer_is_unknown : given.an_observer_lag_query
 {
     ObserverLag _result;
 
-    void Establish() => _storage.GetEventStore(Store).Observers.Has(Id).Returns(false);
+    void Establish()
+    {
+        _storage.GetEventStore(Store).Observers.Has(Id).Returns(false);
+        _storage.GetEventStore(Store).Observers.Get(Id).Returns(ObserverDefinition.Empty);
+    }
 
     async Task Because() => _result = await Query();
 

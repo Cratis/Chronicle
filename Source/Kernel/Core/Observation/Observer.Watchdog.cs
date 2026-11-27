@@ -441,9 +441,15 @@ public partial class Observer
 
     async Task<ObserverLagRelevance> CheckForRelevantEvents(EventSequenceNumber tailSequenceNumber)
     {
-        var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(
-            State.NextEventSequenceNumber,
-            _subscription.EventTypes.ToList());
+        var cursor = State.NextEventSequenceNumber;
+        var subscription = _subscription;
+        var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(cursor, subscription.EventTypes.ToList());
+
+        // An interleaving catch-up can move the cursor or replace the subscription while the probe is in flight.
+        if (ProbeContextChanged(cursor, subscription))
+        {
+            return ObserverLagRelevance.Unknown;
+        }
 
         if (nextEventResult.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
         {
@@ -454,16 +460,20 @@ public partial class Observer
         var relevantPosition = nextEventResult.Match(num => num, _ => EventSequenceNumber.Unavailable);
         if (!relevantPosition.IsActualValue)
         {
-            logger.WatchdogFastForwardingNextEventSequenceNumber(State.NextEventSequenceNumber, tailSequenceNumber);
-            State = State with
-            {
-                NextEventSequenceNumber = tailSequenceNumber.Next(),
-                TailEventSequenceNumber = tailSequenceNumber
-            };
-            await WriteStateAsync();
+            await FastForwardWatchdogCursor(tailSequenceNumber);
             return ObserverLagRelevance.None;
         }
 
         return ObserverLagRelevance.Pending(relevantPosition);
+    }
+
+    bool ProbeContextChanged(EventSequenceNumber cursor, ObserverSubscription subscription) =>
+        State.NextEventSequenceNumber != cursor || !ReferenceEquals(_subscription, subscription);
+
+    Task FastForwardWatchdogCursor(EventSequenceNumber tail)
+    {
+        logger.WatchdogFastForwardingNextEventSequenceNumber(State.NextEventSequenceNumber, tail);
+        State = State with { NextEventSequenceNumber = tail.Next(), TailEventSequenceNumber = tail };
+        return WriteStateAsync();
     }
 }
