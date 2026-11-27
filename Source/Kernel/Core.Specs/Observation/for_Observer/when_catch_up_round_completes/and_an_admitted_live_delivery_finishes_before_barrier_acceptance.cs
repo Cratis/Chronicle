@@ -4,7 +4,6 @@
 using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
-using Cratis.Chronicle.Observation.Jobs;
 
 namespace Cratis.Chronicle.Observation.for_Observer.when_catch_up_round_completes;
 
