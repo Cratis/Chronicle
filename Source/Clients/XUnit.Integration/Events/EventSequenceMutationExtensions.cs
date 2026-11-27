@@ -47,11 +47,14 @@ public static class EventSequenceMutationExtensions
             new KernelEventTypeId(eventType.Id.Value),
             new KernelEventTypeGeneration(eventType.Generation.Value));
 
-        await AppendAndWait(fixture, new KernelEventRevised(
-            KernelEventSequenceId.Log,
-            new KernelEventSequenceNumber(sequenceNumber.Value),
-            kernelEventType,
-            content.ToJsonString()), $"Log/{sequenceNumber.Value}");
+        await AppendAndWait(
+            fixture,
+            new KernelEventRevised(
+                KernelEventSequenceId.Log,
+                new KernelEventSequenceNumber(sequenceNumber.Value),
+                kernelEventType,
+                content.ToJsonString()),
+            $"Log/{sequenceNumber.Value}");
     }
 
     /// <summary>
@@ -62,10 +65,13 @@ public static class EventSequenceMutationExtensions
     /// <param name="reason">Reason for the redaction.</param>
     /// <returns>Awaitable task.</returns>
     public static Task RedactEvent(this IChronicleSetupFixture fixture, EventSequenceNumber sequenceNumber, string reason) =>
-        AppendAndWait(fixture, new KernelEventRedactionRequested(
-            KernelEventSequenceId.Log,
-            new KernelEventSequenceNumber(sequenceNumber.Value),
-            new KernelRedactionReason(reason)), $"Log/{sequenceNumber.Value}");
+        AppendAndWait(
+            fixture,
+            new KernelEventRedactionRequested(
+                KernelEventSequenceId.Log,
+                new KernelEventSequenceNumber(sequenceNumber.Value),
+                new KernelRedactionReason(reason)),
+            $"Log/{sequenceNumber.Value}");
 
     /// <summary>
     /// Redact all events for a specific event source in the event log.
@@ -86,20 +92,25 @@ public static class EventSequenceMutationExtensions
                 new KernelEventTypeGeneration(et.Generation.Value)))
             .ToArray();
 
-        await AppendAndWait(fixture, new KernelEventsRedactedForEventSource(
-            KernelEventSequenceId.Log,
-            new KernelEventSourceId(eventSourceId.Value),
-            kernelEventTypes,
-            redactionReason), $"Log/source {eventSourceId.Value}");
+        await AppendAndWait(
+            fixture,
+            new KernelEventsRedactedForEventSource(
+                KernelEventSequenceId.Log,
+                new KernelEventSourceId(eventSourceId.Value),
+                kernelEventTypes,
+                redactionReason),
+            $"Log/source {eventSourceId.Value}");
     }
 
-    static Task AppendAndWait(IChronicleSetupFixture fixture, object request, string target) =>
-        AppendAndWait(
-            () => fixture.GetEventSequenceGrain(KernelEventSequenceId.System).Append(
-                new KernelEventSourceId(KernelEventSequenceId.Log.Value), request, KernelCorrelationId.New(), [], KernelIdentity.System),
-            fixture.EventStore.Reactors,
-            $"{request.GetType().Name} for {target} in {fixture.EventStore.Name}/{fixture.EventStore.Namespace}");
-
+    /// <summary>
+    /// Append a mutation request to the System event sequence and wait until the event sequences reactor has handled it.
+    /// </summary>
+    /// <param name="append">Callback that performs the append.</param>
+    /// <param name="reactors">The reactors to resolve the event sequences reactor from.</param>
+    /// <param name="operation">Description of the operation, used in failure messages.</param>
+    /// <returns>Awaitable task.</returns>
+    /// <exception cref="InvalidOperationException">The append was rejected, or the reactor reports an unresolved Log partition failure.</exception>
+    /// <exception cref="TimeoutException">The reactor did not acknowledge the appended position within the budget.</exception>
     internal static async Task AppendAndWait(Func<Task<KernelAppendResult>> append, IReactors reactors, string operation)
     {
         const string reactorId = "$system.Cratis.Chronicle.EventSequences.EventSequencesReactor";
@@ -130,4 +141,15 @@ public static class EventSequenceMutationExtensions
             throw new TimeoutException($"Could not confirm {operation}: {reactorId} did not acknowledge System/{position.Value} within the checkpoint budget.", error);
         }
     }
+
+    static Task AppendAndWait(IChronicleSetupFixture fixture, object request, string target) =>
+        AppendAndWait(
+            () => fixture.GetEventSequenceGrain(KernelEventSequenceId.System).Append(
+                new KernelEventSourceId(KernelEventSequenceId.Log.Value),
+                request,
+                KernelCorrelationId.New(),
+                [],
+                KernelIdentity.System),
+            fixture.EventStore.Reactors,
+            $"{request.GetType().Name} for {target} in {fixture.EventStore.Name}/{fixture.EventStore.Namespace}");
 }

@@ -14,7 +14,9 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    // Activation-local intent only. Partition replay requests and their release callbacks are non-interleaving grain calls.
+    /// <summary>
+    /// Activation-local pending partition replays. Partition replay requests and their release callbacks are non-interleaving grain calls.
+    /// </summary>
     readonly Dictionary<Key, List<PendingPartitionReplay>> _pendingPartitionReplays = [];
 
     /// <inheritdoc/>
@@ -342,7 +344,7 @@ public partial class Observer
         }
 
         // Coalesce equivalent work; a bounded or selected-type replay must not absorb a full repair.
-        if (!pending.Any(_ => _.Through == request.Through && _.RetainOtherCounts == request.RetainOtherCounts && _.EventTypes.SequenceEqual(request.EventTypes)))
+        if (!pending.Exists(_ => _.Through == request.Through && _.RetainOtherCounts == request.RetainOtherCounts && _.EventTypes.SequenceEqual(request.EventTypes)))
         {
             pending.Add(request);
         }

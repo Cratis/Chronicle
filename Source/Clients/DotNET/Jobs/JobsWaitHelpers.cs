@@ -127,31 +127,6 @@ public static class JobsWaitHelpers
     public static Task WaitForJobsToDrainSuccessfully(this IJobs jobs, TimeSpan? timeout = default) =>
         WaitForDrain(jobs, timeout, [], failOnTerminalFailure: true);
 
-    static async Task<IEnumerable<Job>> WaitForDrain(IJobs jobs, TimeSpan? timeout, JobStatus[] includeStatuses, bool failOnTerminalFailure)
-    {
-        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-empty");
-        timing?.Failure();
-        timeout ??= TimeSpanFactory.DefaultTimeout();
-        using var cts = new CancellationTokenSource(timeout.Value);
-        while (true)
-        {
-            timing?.Poll();
-            var currentJobs = (await jobs.GetJobs()).ToArray();
-            if (failOnTerminalFailure && Array.Find(currentJobs, _ => _.Status is JobStatus.Failed or JobStatus.CompletedWithFailures) is { } failed)
-            {
-                throw new JobFailedWhileWaiting(failed);
-            }
-
-            if (currentJobs.All(_ => includeStatuses.Contains(_.Status)))
-            {
-                timing?.Success();
-                return currentJobs;
-            }
-
-            await Task.Delay(DefaultDelay, cts.Token);
-        }
-    }
-
     /// <summary>
     /// Waits for a job to be completed.
     /// </summary>
@@ -257,6 +232,31 @@ public static class JobsWaitHelpers
             {
                 timing?.Success();
                 return currentJob;
+            }
+
+            await Task.Delay(DefaultDelay, cts.Token);
+        }
+    }
+
+    static async Task<IEnumerable<Job>> WaitForDrain(IJobs jobs, TimeSpan? timeout, JobStatus[] includeStatuses, bool failOnTerminalFailure)
+    {
+        using var timing = IntegrationTimings.BeginCurrent("sdk-jobs-empty");
+        timing?.Failure();
+        timeout ??= TimeSpanFactory.DefaultTimeout();
+        using var cts = new CancellationTokenSource(timeout.Value);
+        while (true)
+        {
+            timing?.Poll();
+            var currentJobs = (await jobs.GetJobs()).ToArray();
+            if (failOnTerminalFailure && Array.Find(currentJobs, _ => _.Status is JobStatus.Failed or JobStatus.CompletedWithFailures) is { } failed)
+            {
+                throw new JobFailedWhileWaiting(failed);
+            }
+
+            if (currentJobs.All(_ => includeStatuses.Contains(_.Status)))
+            {
+                timing?.Success();
+                return currentJobs;
             }
 
             await Task.Delay(DefaultDelay, cts.Token);

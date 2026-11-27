@@ -67,9 +67,9 @@ internal static class ReplayWaitDiagnostics
         }
     }
 
-    static Task<string> Read(Func<Task<string>> reader, CancellationToken budget) => Read(reader, budget, failure => failure);
+    static Task<string> Read(Func<Task<string>> reader, CancellationToken budget) => Read(reader, failure => failure, budget);
 
-    static async Task<T> Read<T>(Func<Task<T>> reader, CancellationToken budget, Func<string, T> onFailure)
+    static async Task<T> Read<T>(Func<Task<T>> reader, Func<string, T> onFailure, CancellationToken budget)
     {
         try
         {
@@ -103,8 +103,8 @@ internal static class ReplayWaitDiagnostics
         var limit = excluded is null ? MaxJobs : MaxJobs - 1;
         var (shown, error) = await Read(
             async () => (Jobs: (await sources.GetJobs()).Where(_ => _.Id != excluded).OrderByDescending(IsFailed).Take(limit + 1).ToArray(), Error: (string?)null),
-            budget,
-            failure => ([], failure));
+            failure => ([], failure),
+            budget);
         if (error is not null) return $"jobs: {error}";
         if (shown.Length == 0)
         {
@@ -127,9 +127,11 @@ internal static class ReplayWaitDiagnostics
         var row = $"  job {job.Id.Value:D} type={Sanitize(job.Type.Value)} status={job.Status} steps total={progress.TotalSteps} successful={progress.SuccessfulSteps} failed={progress.FailedSteps} stopped={progress.StoppedSteps} isCompleted={progress.IsCompleted} isStopped={progress.IsStopped}";
         if (!IsFailed(job)) return row;
 
-        var scope = Read(async () => sources.GetJobScope is { } lookup && await lookup(job.Id) is { } owner
-            ? $"observer={Sanitize(owner.Observer)} partition={Sanitize(owner.Partition)}"
-            : "unavailable", budget);
+        var scope = Read(
+            async () => sources.GetJobScope is { } lookup && await lookup(job.Id) is { } owner
+                ? $"observer={Sanitize(owner.Observer)} partition={Sanitize(owner.Partition)}"
+                : "unavailable",
+            budget);
         var steps = Read(async () => DescribeSteps(await (sources.GetJobSteps?.Invoke(job) ?? job.GetJobSteps())), budget);
         return $"{row}{Environment.NewLine}    job scope {await scope}{Environment.NewLine}    job steps: {await steps}";
     }
