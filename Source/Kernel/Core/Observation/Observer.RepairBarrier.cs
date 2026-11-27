@@ -14,6 +14,7 @@ public partial class Observer
 {
     int _handoverRepairAcknowledgementsInFlight;
     bool _repairQuarantinePending;
+    EventSequenceNumber? _repairAcceptanceCursorCap;
 
     /// <inheritdoc/>
     public async Task HandoverRepairCaughtUp(Key partition, EventSequenceNumber from, EventSequenceNumber to, EventSequenceNumber lastHandled, bool succeeded, ulong? ownershipEpoch = null)
@@ -62,13 +63,33 @@ public partial class Observer
 
     EventSequenceNumber CursorDuringRepairAcceptance(EventSequenceNumber candidate)
     {
-        if (_catchUpConclusionsInFlight == 0 || candidate <= State.NextEventSequenceNumber) return State.NextEventSequenceNumber;
+        if (_catchUpConclusionsInFlight == 0) return State.NextEventSequenceNumber;
+
+        // The suffix left to the successor has no other owner: the cursor may reach it, never pass it.
+        if (_repairAcceptanceCursorCap is { } cap && cap < candidate) candidate = cap;
+        if (candidate <= State.NextEventSequenceNumber) return State.NextEventSequenceNumber;
 
         // A delivery admitted before acceptance can finish while the acknowledgement waits for its write suspension.
         // Freeze at that final durable watermark, extending the obligations atomically with the live cursor write.
         State = State with { PendingCatchUpRepairs = PendingCatchUpRepairs.Select(_ => _ with { To = candidate }).ToArray() };
         return candidate;
     }
+
+    void CapCursorAtSuffixLeftToSuccessor()
+    {
+        // Accepting the barrier forgets these deliveries because the frozen cursor leaves them to the successor.
+        // A partition with an obligation is excluded: its bounded range is extended together with the cursor.
+        var next = State.NextEventSequenceNumber;
+        var heldBack = _heldBackDeliveries
+            .Where(_ => _.Value.Last >= next && !PendingCatchUpRepairs.Any(repair => repair.Partition == _.Key))
+            .Select(_ => _.Value.First < next ? next : _.Value.First);
+        foreach (var first in heldBack.Concat(_missedDeliveries.Values.Where(_ => _.IsActualValue && _ >= next)))
+        {
+            if (_repairAcceptanceCursorCap is not { } cap || first < cap) _repairAcceptanceCursorCap = first;
+        }
+    }
+
+    void ReleaseRepairAcceptanceCursorCap() => _repairAcceptanceCursorCap = null;
 
     Task ApplyFailureQuarantine(bool deferQuarantine)
     {

@@ -678,7 +678,11 @@ public partial class Observer
 
     void EndCatchUpConclusion()
     {
-        if (--_catchUpConclusionsInFlight == 0 && _catchUpConclusionsApplied is { } applied)
+        if (--_catchUpConclusionsInFlight != 0) return;
+
+        // No acknowledgement is left to extend the cursor, so the next acceptance starts without the previous cap.
+        ReleaseRepairAcceptanceCursorCap();
+        if (_catchUpConclusionsApplied is { } applied)
         {
             _catchUpConclusionsApplied = null;
             applied.SetResult();

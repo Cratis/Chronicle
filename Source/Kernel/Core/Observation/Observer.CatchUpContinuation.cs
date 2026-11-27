@@ -55,6 +55,7 @@ public partial class Observer
         if (HasCatchUpRepairBarrier)
         {
             // The frozen cursor covers the suffix; only the bounded obligations own earlier events.
+            CapCursorAtSuffixLeftToSuccessor();
             _heldBackDeliveries.Clear();
             _missedDeliveries.Clear();
         }

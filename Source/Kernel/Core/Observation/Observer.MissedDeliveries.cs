@@ -104,7 +104,14 @@ public partial class Observer
         }
     }
 
-    bool CanRepairMissedDeliveries() => IsObserverLive() && IsActiveAndNotQuarantined() && _subscription.IsSubscribed && !CannotWriteState();
+    /// <summary>
+    /// Under the repair barrier nothing may rewind the frozen cursor or start an unbounded partition job. What is
+    /// queued stays queued: the continuation turns it into a bounded obligation, or repairs it once the barrier is down.
+    /// </summary>
+    /// <returns>True if missed deliveries may be repaired now.</returns>
+    bool CanRepairMissedDeliveries() => !HasCatchUpRepairBarrier && IsReadyToRepairMissedDeliveries();
+
+    bool IsReadyToRepairMissedDeliveries() => IsObserverLive() && IsActiveAndNotQuarantined() && _subscription.IsSubscribed && !CannotWriteState();
 
     async Task RepairMissedDelivery(Key partition, EventSequenceNumber first)
     {
