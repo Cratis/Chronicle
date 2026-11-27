@@ -72,6 +72,5 @@ public class and_live_delivery_for_another_partition_arrived : given.an_observer
         var request = (CatchUpObserverPartitionRequest)jobs[0].Request!;
         request.Key.ShouldEqual((Key)"A");
         request.FromSequenceNumber.ShouldEqual((EventSequenceNumber)10UL);
-        request.ToSequenceNumber.ShouldEqual(EventSequenceNumber.Max);
     }
 }

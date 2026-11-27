@@ -174,8 +174,14 @@ public partial class Observer
             {
                 RewindCatchUpFloor(claim.ResumePosition);
             }
-            else if (_heldBackDeliveries.TryGetValue(partition, out var held)) RewindCatchUpFloor(held.First);
-            else RewindCatchUpFloor(EventSequenceNumber.First);
+            else if (_heldBackDeliveries.TryGetValue(partition, out var held))
+            {
+                RewindCatchUpFloor(held.First);
+            }
+            else
+            {
+                RewindCatchUpFloor(EventSequenceNumber.First);
+            }
 
             await ConfirmCatchUpAcceptance();
             if (CatchUpAcceptanceInvalidated || IgnoresStaleRelease(ClaimHolderKind.PartitionCatchUp, partition, ownershipEpoch)) return;
@@ -242,9 +248,12 @@ public partial class Observer
         {
             var checkpoint = _continuationLifetime.Capture();
             var claim = _shadowClaims.ObserverWide;
-            JobId? reporting = jobId == JobId.NotSet ? null : jobId;
+            var reporting = jobId == JobId.NotSet ? null : jobId;
             if (CatchUpAcceptanceInvalidated || State.IsReplaying ||
-                IgnoresStaleRelease(ClaimHolderKind.ObserverCatchUp, null, null, reporting)) return;
+                IgnoresStaleRelease(ClaimHolderKind.ObserverCatchUp, null, null, reporting))
+            {
+                return;
+            }
 
             // An unbounded reader maximum proves nothing about a different key. Keep the claim's start
             // as a restart floor; the later ordered, scoped scan is what proves contiguous progress.

@@ -90,6 +90,16 @@ public class Observing(
         return state;
     }
 
+    /// <inheritdoc/>
+    public override async Task<ObserverState> OnLeave(ObserverState state)
+    {
+        if (_subscription is not null)
+        {
+            await appendedEventsQueues.Unsubscribe(_subscription);
+        }
+        return state;
+    }
+
     /// <summary>
     /// Attaches or replaces the live lane before a catch-up reads the committed tail.
     /// </summary>
@@ -102,15 +112,5 @@ public class Observing(
         _subscription = state.SubscribesToAllEvents
             ? await appendedEventsQueues.SubscribeToAllEventTypes(key, subscription.Filters)
             : await appendedEventsQueues.Subscribe(key, EventTypeSet.From(definitionState.State.EventTypes), subscription.Filters);
-    }
-
-    /// <inheritdoc/>
-    public override async Task<ObserverState> OnLeave(ObserverState state)
-    {
-        if (_subscription is not null)
-        {
-            await appendedEventsQueues.Unsubscribe(_subscription);
-        }
-        return state;
     }
 }

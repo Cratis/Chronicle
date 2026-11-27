@@ -435,7 +435,7 @@ public partial class Observer
             // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
             // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
             // on the reloaded observer state and drives partition catch-up on the next activation.
-            DeliveryFenceContext? deliveryFence = submission?.Fence;
+            var deliveryFence = submission?.Fence;
             if (!settling)
             {
                 State = State with { InFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition } };
@@ -485,7 +485,7 @@ public partial class Observer
                         stateChanged = true;
                     }
 
-                    if (result.State == ObserverSubscriberState.Ok && numEventsSuccessfullyHandled < eventsToHandle.Length)
+                    if (result.State == ObserverSubscriberState.Ok && numEventsSuccessfullyHandled.Value < (ulong)eventsToHandle.Length)
                     {
                         failed = true;
                         failureKind = FailureKind.Handling;
@@ -534,7 +534,7 @@ public partial class Observer
             try
             {
                 await RecordHandlingOutcome();
-                if (settling && numEventsSuccessfullyHandled < eventsToHandle.Length && !FailureCovers(partition, tailEventSequenceNumber))
+                if (settling && numEventsSuccessfullyHandled.Value < (ulong)eventsToHandle.Length && !FailureCovers(partition, tailEventSequenceNumber))
                 {
                     QueueMissedDelivery(partition, tailEventSequenceNumber);
                     ScheduleCatchUpContinuation();

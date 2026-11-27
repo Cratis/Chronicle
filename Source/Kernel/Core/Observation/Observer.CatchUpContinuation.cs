@@ -26,17 +26,17 @@ public partial class Observer
     int _catchUpContinuationVersion;
     int _episodeTransfersInFlight;
 
-    bool PartitionIsCatchingUp(Key partition) => State.CatchingUpPartitions.Contains(partition);
-
-    bool CatchUpAdmissionClosed => _catchUpReloadRequired || _catchUpConclusionsInFlight > 0 || _episodeTransfersInFlight > 0 || HasAcceptedCatchUpActivity;
-
     /// <summary>
     /// Gets whether the catch-up continuation owns the check for backlog after subscribing.
     /// </summary>
     internal bool IsJoiningCatchUp => HasAcceptedCatchUpActivity;
 
+    bool CatchUpAdmissionClosed => _catchUpReloadRequired || _catchUpConclusionsInFlight > 0 || _episodeTransfersInFlight > 0 || HasAcceptedCatchUpActivity;
+
     bool HasAcceptedCatchUpActivity => _catchUpContinuationPending || _catchUpContinuationInProgress;
     bool CatchUpAcceptanceInvalidated => _catchUpReloadRequired || _disposed || CatchUpObserverRemoved || !_observerExists || !KeyOwnsDefinition;
+
+    bool PartitionIsCatchingUp(Key partition) => State.CatchingUpPartitions.Contains(partition);
 
     async Task ConfirmCatchUpAcceptance()
     {
@@ -104,9 +104,9 @@ public partial class Observer
 
     async Task ReconcileCatchUpHolds(int version)
     {
-        if (_unboundCatchUpConclusion is { } job)
+        if (_unboundCatchUpConclusion is { } job && await ShadowHandOverCaughtUpObserverWide(job) && JoinStillCurrent(version))
         {
-            if (await ShadowHandOverCaughtUpObserverWide(job) && JoinStillCurrent(version)) _unboundCatchUpConclusion = null;
+            _unboundCatchUpConclusion = null;
         }
 
         var releasable = await PartitionHoldsReleasableAfterCatchUp();
@@ -153,8 +153,10 @@ public partial class Observer
 
     async Task<bool> WalkJoin(EventSequenceNumber floor, EventSequenceNumber tail, int version)
     {
-        var eventTypes = ReaderScope.IsWildcard ? null : ReaderScope.EventTypesToRead(_subscription.EventTypes)!
-            .Append(new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First)).DistinctBy(type => type.Id).ToArray();
+        var eventTypes = ReaderScope.IsWildcard
+            ? null
+            : ReaderScope.EventTypesToRead(_subscription.EventTypes)!
+                .Append(new EventType(GlobalEventTypes.Redaction, EventTypeGeneration.First)).DistinctBy(type => type.Id).ToArray();
         var subscription = new AppendedEventsQueueObserverSubscription(_observerKey, _subscription.EventTypes, _subscription.Filters, ReaderScope.IsWildcard);
         using var cursor = await EventStorageForJoin().GetRange(floor, tail, eventTypes: eventTypes);
         while (await cursor.MoveNext())
@@ -226,7 +228,11 @@ public partial class Observer
         {
             if (!JoinStillCurrent(version)) return false;
             if ((!tail.IsActualValue || number > tail) && State.NextEventSequenceNumber <= number &&
-                !await WalkJoin(State.NextEventSequenceNumber, number, version)) return false;
+                !await WalkJoin(State.NextEventSequenceNumber, number, version))
+            {
+                return false;
+            }
+
             _gatedLiveEvents.Remove(number);
         }
 
@@ -243,7 +249,7 @@ public partial class Observer
     async Task<bool> CheckpointJoin(EventSequenceNumber? next, int version)
     {
         if (!JoinStillCurrent(version)) return false;
-        if (next is null || !next.IsActualValue) return true;
+        if (next?.IsActualValue != true) return true;
         State = State with { NextEventSequenceNumber = next };
         RewindUncoveredHoles();
         RecordedHandlingState();
@@ -290,7 +296,7 @@ public partial class Observer
 
     void RewindCatchUpFloor(EventSequenceNumber first)
     {
-        if (!first.IsActualValue || State.NextEventSequenceNumber.IsActualValue && State.NextEventSequenceNumber <= first) return;
+        if (!first.IsActualValue || (State.NextEventSequenceNumber.IsActualValue && State.NextEventSequenceNumber <= first)) return;
         State = State with { NextEventSequenceNumber = first };
         RecordedHandlingState();
     }

@@ -576,7 +576,10 @@ public partial class Observer
         try
         {
             if (CatchUpAcceptanceInvalidated || !_subscription.IsSubscribed ||
-                !Failures.TryGet(partition, out var failure) || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
+                !Failures.TryGet(partition, out var failure) || !IsCurrentRecovery(partition, episodeId, deferralId))
+            {
+                return false;
+            }
 
             _episodeTransfersInFlight++;
             try
