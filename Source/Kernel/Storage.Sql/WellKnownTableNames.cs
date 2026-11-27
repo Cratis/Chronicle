@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Storage.Sql.EventStores.Namespaces;
+
 namespace Cratis.Chronicle.Storage.Sql;
 
 /// <summary>
@@ -57,6 +59,16 @@ public static class WellKnownTableNames
     /// The table that holds all namespaces.
     /// </summary>
     public const string Namespaces = "Namespaces";
+
+    /// <summary>
+    /// The namespace-local table that fences writes to a namespace incarnation.
+    /// </summary>
+    public const string NamespaceMarker = NamespaceMarkerRow.TableName;
+
+    /// <summary>
+    /// The event-store table that retains namespace lifecycle state across recreation.
+    /// </summary>
+    public const string NamespaceLifecycles = NamespaceLifecycleRow.TableName;
 
     /// <summary>
     /// The table that holds events for the system.

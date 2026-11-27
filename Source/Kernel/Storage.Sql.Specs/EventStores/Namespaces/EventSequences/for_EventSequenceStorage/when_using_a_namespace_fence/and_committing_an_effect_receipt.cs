@@ -23,6 +23,13 @@ public class and_committing_an_effect_receipt : given.a_fenced_storage
     [Fact] void should_write_the_event_and_receipt() => _written.ShouldEqual(EffectReceiptWriteResult.Written);
     [Fact] void should_settle_reexecution() => _replayed.ShouldEqual(EffectReceiptWriteResult.AlreadyRecorded);
     [Fact] void should_preserve_the_first_outcome() => _receipt.Outcome.ShouldEqual(EffectOutcome.Appended);
-    [Fact] void should_find_the_receipt_by_occurrence() => _receipts.ShouldContainOnly(_receipt);
+    [Fact]
+    void should_find_the_receipt_by_occurrence()
+    {
+        var receipt = _receipts.Single();
+        receipt.Reasons.SequenceEqual(_receipt.Reasons).ShouldBeTrue();
+        (receipt with { Reasons = _receipt.Reasons }).ShouldEqual(_receipt);
+    }
+
     [Fact] async Task should_append_only_once() => (await _storage.GetCount()).Value.ShouldEqual(1UL);
 }
