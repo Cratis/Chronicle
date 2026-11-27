@@ -32,6 +32,7 @@ internal class ModelBoundGraphReader(INamingPolicy namingPolicy)
     /// <param name="type">The type marked as a node.</param>
     /// <returns>The <see cref="GraphNodeModel"/>.</returns>
     /// <exception cref="NodeMustHaveExactlyOneKey">Thrown when the node does not have exactly one key.</exception>
+    /// <exception cref="NotSupportedException">Thrown when a graph node removal declares a composite key.</exception>
     public GraphNodeModel ReadNode(Type type)
     {
         var members = GraphMember.Of(type);
@@ -46,10 +47,7 @@ internal class ModelBoundGraphReader(INamingPolicy namingPolicy)
 
         // An event that only a property refers to still projects the node, keyed by the event source id.
         from.AddRange(byEvent.Where(_ => from.TrueForAll(declared => declared.EventType != _.Key)).Select(_ => new GraphNodeFromModel(_.Key, null, _.Value)));
-        var removedWith = type.GetCustomAttributes(false).OfType<IRemovedWithAttribute>().Select(attribute => new GraphNodeRemovedWithModel(
-            attribute.EventType,
-            KeyOf(attribute),
-            attribute is IDetachingRemovedWithAttribute { Detach: true })).ToArray();
+        var removedWith = type.GetCustomAttributes(false).OfType<IRemovedWithAttribute>().Select(ReadNodeRemoval).ToArray();
 
         return new(type, type.Name, ProjectionPropertyPaths.NameOf(keys[0].Name, namingPolicy), from, removedWith);
     }
@@ -94,6 +92,16 @@ internal class ModelBoundGraphReader(INamingPolicy namingPolicy)
             [ProjectionPropertyPaths.NameOf(sources[0].Name, namingPolicy), ProjectionPropertyPaths.NameOf(targets[0].Name, namingPolicy)],
             from,
             removedWith);
+    }
+
+    GraphNodeRemovedWithModel ReadNodeRemoval(IRemovedWithAttribute attribute)
+    {
+        if (attribute is Attribute declaration && ModelBoundCompositeKey.Read(declaration) is not null)
+        {
+            throw new NotSupportedException($"[RemovedWith] for '{attribute.EventType.Name}' cannot use CompositeKey on a graph node.");
+        }
+
+        return new(attribute.EventType, KeyOf(attribute), attribute is IDetachingRemovedWithAttribute { Detach: true });
     }
 
     string Source(string name) => name.StartsWith('$') ? name : (string)ProjectionPropertyPaths.Resolve(name, namingPolicy, ProjectionPathRole.Source);

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -20,6 +21,7 @@ public class AmbiguousChildrenParentKeyAnalyzer : DiagnosticAnalyzer
     const string ChildrenFromAttributeName = "ChildrenFromAttribute";
     const string ModelBoundNamespace = "Cratis.Chronicle.Projections.ModelBound";
     const string KeyParameterName = "key";
+    const string CompositeKeyPropertyName = "CompositeKey";
     const string ParentKeyParameterName = "parentKey";
     const string IdentifierName = "Id";
 
@@ -30,7 +32,7 @@ public class AmbiguousChildrenParentKeyAnalyzer : DiagnosticAnalyzer
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "When a [ChildrenFrom] collection omits parentKey, Chronicle infers it by matching the parent read model's identifier type against the event's properties (excluding the child key). When more than one property still matches, the inference is ambiguous and resolves by declaration order, which is fragile. Specify the parentKey argument to make the relationship explicit.");
+        description: "When a [ChildrenFrom] collection omits parentKey, Chronicle infers it by matching the parent read model's identifier type against the event's properties (excluding the child key properties). When more than one property still matches, the inference is ambiguous and resolves by declaration order, which is fragile. Specify the parentKey argument to make the relationship explicit.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -75,12 +77,13 @@ public class AmbiguousChildrenParentKeyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        var childKeyProperties = GetChildKeyProperties(attribute, childKey);
         var matches = eventType.GetMembers()
             .OfType<IPropertySymbol>()
             .Where(property =>
                 !property.IsStatic &&
                 SymbolEqualityComparer.Default.Equals(property.Type, identifierType) &&
-                !string.Equals(property.Name, childKey, System.StringComparison.OrdinalIgnoreCase))
+                !childKeyProperties.Contains(property.Name, StringComparer.OrdinalIgnoreCase))
             .ToArray();
 
         if (matches.Length < 2)
@@ -104,30 +107,26 @@ public class AmbiguousChildrenParentKeyAnalyzer : DiagnosticAnalyzer
 
     static IEnumerable<(ISymbol Member, AttributeData Attribute)> GetChildrenFromAttributes(INamedTypeSymbol typeSymbol)
     {
-        foreach (var property in typeSymbol.GetMembers().OfType<IPropertySymbol>())
-        {
-            foreach (var attribute in property.GetAttributes().Where(IsChildrenFrom))
-            {
-                yield return (property, attribute);
-            }
-        }
-
-        // For a positional record, [ChildrenFrom] without an explicit target lands on the constructor
-        // parameter rather than the generated property, so the parameters must be inspected too.
+        // For a positional record, [ChildrenFrom] without an explicit target lands on the constructor parameter.
         var primaryConstructor = typeSymbol.InstanceConstructors
             .OrderByDescending(constructor => constructor.Parameters.Length)
             .FirstOrDefault();
+        var properties = typeSymbol.GetMembers().OfType<IPropertySymbol>();
+        var parameters = primaryConstructor?.Parameters ?? [];
 
-        if (primaryConstructor is not null)
+        return properties.Cast<ISymbol>().Concat(parameters).SelectMany(member =>
+            member.GetAttributes().Where(IsChildrenFrom).Select(attribute => (member, attribute)));
+    }
+
+    static string[] GetChildKeyProperties(AttributeData attribute, string? childKey)
+    {
+        var compositeKey = attribute.NamedArguments.FirstOrDefault(argument => argument.Key == CompositeKeyPropertyName).Value;
+        if (compositeKey is { Kind: TypedConstantKind.Array, IsNull: false })
         {
-            foreach (var parameter in primaryConstructor.Parameters)
-            {
-                foreach (var attribute in parameter.GetAttributes().Where(IsChildrenFrom))
-                {
-                    yield return (parameter, attribute);
-                }
-            }
+            return compositeKey.Values.Select(part => part.Value).OfType<string>().Select(path => path.Split('.')[0]).ToArray();
         }
+
+        return childKey is null ? [] : [childKey];
     }
 
     static bool IsChildrenFrom(AttributeData attribute) =>

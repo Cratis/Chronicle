@@ -28,7 +28,7 @@ Set `CompositeKey` instead of `key` when a child is identified by two or more ev
 
 <ChronicleClientTabs snippet="projections/model-bound/children/composite-key" />
 
-Within a parent, an event with the same values for all key parts updates the same child. If any part differs, it identifies a different child. To handle a later event, add another `ChildrenFrom` with the same key parts. Use `RemovedWith` with those parts to remove only the matching child.
+Within a parent, an event with the same values for all key parts updates the same child. If any part differs, it identifies a different child. To update a child from a later event, add another `ChildrenFrom`. To remove it, use `RemovedWith`. List the same paths in the same order in every declaration for the collection. `RemovedWith` supports composite keys for read model projections, not graph nodes.
 
 Parent routing is separate from child identity. `ChildrenFrom` excludes the composite parts when inferring `parentKey`; `RemovedWith` defaults to the event source id unless you pass `parentKey` explicitly.
 

@@ -24,6 +24,7 @@ public class an_ambiguous_children_parent_key_analyzer : Specification
             "    public sealed class ChildrenFromAttribute<TEvent> : Attribute",
             "    {",
             "        public ChildrenFromAttribute(string? key = null, string? identifiedBy = null, string? parentKey = null) { }",
+            "        public string[]? CompositeKey { get; init; }",
             "    }",
             "}",
             "",

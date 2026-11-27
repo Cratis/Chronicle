@@ -40,6 +40,8 @@ public sealed class RemovedWithAttribute<TEvent>(string? key = default, string? 
     /// <summary>
     /// Gets the event property paths that together identify the instance to remove in a read model projection.
     /// When set, at least two distinct paths are required and this replaces <see cref="Key"/>.
+    /// For child removal, use the same paths in the same order as in <see cref="ChildrenFromAttribute{TEvent}.CompositeKey"/>.
+    /// Graph node removals do not support this option.
     /// </summary>
     public string[]? CompositeKey { get; init; }
 
