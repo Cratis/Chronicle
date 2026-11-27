@@ -43,7 +43,6 @@ public abstract class an_observer_retrying_a_failed_handover_partition : an_obse
         await FinishAdmittedRetry();
     }
 
-
     void Establish()
     {
         _definitionStorage.State = _definitionStorage.State with { Type = ObserverType.Reactor, EventTypes = [event_type] };

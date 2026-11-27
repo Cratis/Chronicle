@@ -49,7 +49,6 @@ public abstract class an_observer_catching_up_during_appends : an_observer_with_
         foreach (var step in await after.Prepare(suffix, _observer, _keys)) await Read(step);
     }
 
-
     void Establish()
     {
         _stateStorage.State = _stateStorage.State with { NextEventSequenceNumber = 10UL };
