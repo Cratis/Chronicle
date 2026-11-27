@@ -75,7 +75,19 @@ public static class EventTypesStorageExtensions
 
     static async Task<IEnumerable<EventTypeSchema>> GetRegisteredSchemas(IEventTypesStorage eventTypes, IGrouping<EventTypeId, EventType> missing)
     {
-        var definition = await eventTypes.GetDefinition(missing.Key);
+        // An event stored under a type that is no longer registered (a retired type whose events remain in the log) has no
+        // schema and therefore no compliance metadata. It is released as it was stored; failing here would make every read
+        // of a stream that holds one - including a read of the whole stream - fail with it.
+        EventTypeDefinition definition;
+        try
+        {
+            definition = await eventTypes.GetDefinition(missing.Key);
+        }
+        catch (MissingEventSchemaForEventType)
+        {
+            return [];
+        }
+
         var registrations = _registrations.GetValue(definition, _ => new());
         var registered = missing.Where(type => registrations.GetOrAdd(type.Generation, static (generation, snapshot) => snapshot.Generations.Any(candidate => candidate.Generation == generation), definition)).ToArray();
         if (registered.Length == 0) return [];
