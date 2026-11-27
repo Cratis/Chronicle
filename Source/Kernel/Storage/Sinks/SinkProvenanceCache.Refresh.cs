@@ -9,17 +9,17 @@ public sealed partial class SinkProvenanceCache
     /// Shares monotonic observations, refresh work and revocation for one database.
     /// </summary>
     /// <param name="owner">The silo cache and clock.</param>
-    /// <param name="raw">The durable metadata access.</param>
-    /// <param name="initial">The validated initial observation.</param>
-    internal sealed class Entry(SinkProvenanceCache owner, ISinkProvenanceStorage raw, SinkProvenanceState initial) : IDisposable
+    /// <param name="databaseId">The immutable database identity shared by the routes.</param>
+    internal sealed partial class Entry(SinkProvenanceCache owner, SinkProvenanceDatabaseId databaseId) : IDisposable
     {
         readonly Lock _gate = new();
+        readonly SinkProvenanceDatabaseId _databaseId = databaseId;
         readonly CancellationTokenSource _revoked = new();
         readonly Lock _revocationGate = new();
         bool _revocationDisposed;
         Task? _notification;
         TaskCompletionSource _changed = NewSignal();
-        SinkProvenanceState _state = initial;
+        SinkProvenanceState _state = new(databaseId, 0, false);
         Task? _refresh;
         long _started;
         bool _valid;
@@ -163,42 +163,8 @@ public sealed partial class SinkProvenanceCache
         /// </summary>
         internal void Deny()
         {
-            lock (_gate)
-            {
-                _state = _state with { Restricted = true };
-                Pulse();
-            }
+            lock (_gate) LatchRestriction();
             PublishRevocation();
-        }
-
-        /// <summary>
-        /// Publishes a validated observation without clearing monotonic facts.
-        /// </summary>
-        /// <param name="state">The committed state.</param>
-        /// <param name="started">The monotonic start of its metadata read.</param>
-        /// <exception cref="InvalidOperationException">The observation changed database identity or lost completion.</exception>
-        internal void Observe(SinkProvenanceState state, long started)
-        {
-            state.Validate();
-            bool revoke;
-            lock (_gate)
-            {
-                if (_disposed) return;
-                if (!Accepts(state))
-                {
-                    _valid = false;
-                    Pulse();
-                    throw SinkProvenanceLease.UnavailableError();
-                }
-
-                // Facts are monotonic even when observations or an explicit mark race a refresh.
-                _state = state with { Restricted = _state.Restricted || state.Restricted };
-                _started = started;
-                _valid = true;
-                revoke = _state.Restricted;
-                Pulse();
-            }
-            if (revoke) PublishRevocation();
         }
 
         /// <summary>
@@ -215,8 +181,7 @@ public sealed partial class SinkProvenanceCache
 
         static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        bool Accepts(SinkProvenanceState state) => state.DatabaseId == _state.DatabaseId && (!_state.IsComplete || state.IsComplete);
-        bool CanRefresh() => !_disposed && !_state.Restricted && _refresh is null;
+        bool CanRefresh() => !_disposed && !_state.Restricted && _refresh is null && _stores.Count != 0;
 
         async Task ObserveRefresh()
         {
@@ -232,15 +197,16 @@ public sealed partial class SinkProvenanceCache
 
         Task Refresh()
         {
+            TaskCompletionSource completion;
             lock (_gate)
             {
                 if (_disposed) return Task.FromException(SinkProvenanceLease.UnavailableError());
                 if (_refresh is not null) return _refresh;
-                var completion = NewSignal();
+                completion = NewSignal();
                 _refresh = completion.Task;
-                _ = RefreshCore(completion);
-                return completion.Task;
             }
+            _ = RefreshCore(completion);
+            return completion.Task;
         }
 
         async Task RefreshCore(TaskCompletionSource completion)
@@ -251,17 +217,10 @@ public sealed partial class SinkProvenanceCache
             {
                 await owner._refreshSlots.WaitAsync().ConfigureAwait(false);
                 acquired = true;
-                lock (_gate) ObjectDisposedException.ThrowIf(_disposed, this);
-                var started = owner._time.GetTimestamp();
-                Observe(await raw.ReadState().ConfigureAwait(false), started);
+                await ReadAndPublish().ConfigureAwait(false);
             }
             catch (Exception exception)
             {
-                lock (_gate)
-                {
-                    _valid = false;
-                    Pulse();
-                }
                 failure = exception;
             }
             finally

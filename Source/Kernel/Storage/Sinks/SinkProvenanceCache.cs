@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Cratis.Chronicle.Storage.Sinks;
 
 /// <summary>
-/// Caches revocable observations by durable physical identity, independently of routing aliases.
+/// Shares revocable observations across initialized routes with the same database ID.
 /// </summary>
 /// <param name="timeProvider">The monotonic clock and timer provider.</param>
 /// <param name="logger">The logger for unavailable metadata and shutdown reads.</param>
@@ -101,9 +101,9 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
         lock (_lifetime)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            entry = _entries.GetOrAdd(state.DatabaseId, static (_, context) => new(context.Owner, context.Storage, context.State), (Owner: this, Storage: storage, State: state));
+            entry = _entries.GetOrAdd(state.DatabaseId, static (id, owner) => new(owner, id), this);
         }
-        entry.Observe(state, started);
+        entry.Register(storage, state, started);
         return entry;
     }
 
@@ -147,7 +147,7 @@ public sealed partial class SinkProvenanceCache(TimeProvider? timeProvider = nul
             var entry = await GetEntry();
             var started = owner._time.GetTimestamp();
             var state = (await raw.CompleteInventory(restrictedEvidence)).Validate();
-            entry.Observe(state, started);
+            entry.ObserveCompletion(state, started);
             return state;
         }
 
