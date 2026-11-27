@@ -19,6 +19,17 @@ internal sealed class AsyncGate
     bool _held;
 
     /// <summary>
+    /// Gets whether a caller currently holds the gate.
+    /// </summary>
+    public bool IsHeld
+    {
+        get
+        {
+            lock (_lock) return _held;
+        }
+    }
+
+    /// <summary>
     /// Waits until the gate is free and takes it.
     /// </summary>
     /// <returns>Awaitable task, complete once the caller holds the gate.</returns>

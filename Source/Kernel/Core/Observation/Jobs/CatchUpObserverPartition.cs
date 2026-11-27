@@ -19,15 +19,10 @@ public class CatchUpObserverPartition(
     ILogger<CatchUpObserverPartition> logger) : Job<CatchUpObserverPartitionRequest, JobStateWithLastHandledEvent>, ICatchUpObserverPartition
 {
     /// <inheritdoc/>
-    protected override bool StartStepsInBackground => Request.IsHandoverRepair;
-
-    /// <inheritdoc/>
     protected override Task OnFailedToPrepare()
     {
         JobFailures.FailedToPrepare(ServiceProvider, "catch_up_partition");
-        return Request.IsHandoverRepair
-            ? GrainFactory.GetGrain<IObserver>(Request.ObserverKey).HandoverRepairCaughtUp(Request.Key, Request.FromSequenceNumber, Request.ToSequenceNumber.Next(), EventSequenceNumber.Unavailable, false, Request.OwnershipEpoch)
-            : base.OnFailedToPrepare();
+        return base.OnFailedToPrepare();
     }
 
     /// <inheritdoc/>
@@ -36,11 +31,6 @@ public class CatchUpObserverPartition(
         JobFailures.Completed(ServiceProvider, "catch_up_partition", State.Progress);
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        if (Request.IsHandoverRepair)
-        {
-            await observer.HandoverRepairCaughtUp(Request.Key, Request.FromSequenceNumber, Request.ToSequenceNumber.Next(), State.LastHandledEventSequenceNumber, AllStepsCompletedSuccessfully, Request.OwnershipEpoch);
-            return;
-        }
         if (State is { HandledAllEvents: false, LastHandledEventSequenceNumber.IsActualValue: true })
         {
             logger.NotAllEventsWereHandled(nameof(CatchUpObserverPartition), State.LastHandledEventSequenceNumber);
@@ -75,7 +65,7 @@ public class CatchUpObserverPartition(
                     request.ObserverType,
                     request.Key,
                     request.FromSequenceNumber,
-                    request.ToSequenceNumber,
+                    EventSequenceNumber.Max,
                     EventObservationState.None,
                     request.EventTypes)
                 {

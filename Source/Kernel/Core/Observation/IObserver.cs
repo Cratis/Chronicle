@@ -804,19 +804,6 @@ public interface IObserver : IGrainWithStringKey
     Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber);
 
     /// <summary>
-    /// Durably acknowledges a bounded handover repair without acquiring or routing work.
-    /// </summary>
-    /// <param name="partition">The repaired partition.</param>
-    /// <param name="from">The inclusive repair start.</param>
-    /// <param name="to">The exclusive repair end.</param>
-    /// <param name="lastHandled">The last successfully handled event.</param>
-    /// <param name="succeeded">Whether the bounded read completed successfully.</param>
-    /// <param name="ownershipEpoch">The partition ownership epoch, when present.</param>
-    /// <returns>The durable acknowledgement.</returns>
-    [AlwaysInterleave]
-    Task HandoverRepairCaughtUp(Key partition, EventSequenceNumber from, EventSequenceNumber to, EventSequenceNumber lastHandled, bool succeeded, ulong? ownershipEpoch = null);
-
-    /// <summary>
     /// Notify that the partition was caught.
     /// </summary>
     /// <param name="partition">The partition that has caught up.</param>

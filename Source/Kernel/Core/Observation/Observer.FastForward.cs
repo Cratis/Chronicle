@@ -76,7 +76,7 @@ public partial class Observer
             return true;
         }
 
-        var hasPendingWork = State.CatchingUpPartitions.Count != 0 || PendingCatchUpRepairs.Count != 0 || Failures.HasFailedPartitions;
+        var hasPendingWork = State.CatchingUpPartitions.Count != 0 || HasAcceptedCatchUpActivity || Failures.HasFailedPartitions;
         return previous.IsActualValue && previous > tail && !hasPendingWork;
     }
 
@@ -88,14 +88,15 @@ public partial class Observer
         _catchUpContinuationTimer?.Dispose();
         _catchUpContinuationTimer = null;
         _catchUpContinuationPending = false;
-        _acceptedCatchUpMadeProgress = false;
+        _joinedCatchUp = false;
         _catchUpContinuationVersion++;
+        _unboundCatchUpConclusion = null;
+        _gatedLiveEvents.Clear();
         _heldBackDeliveries.Clear();
         _missedDeliveries.Clear();
         Skips.Reset();
         State = State with
         {
-            PendingCatchUpRepairs = [],
             NextEventSequenceNumber = next,
             TailEventSequenceNumber = tail
         };

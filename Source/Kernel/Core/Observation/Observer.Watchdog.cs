@@ -389,7 +389,7 @@ public partial class Observer
 
     async Task<bool> CheckNextSequenceNumber()
     {
-        if (HasCatchUpRepairBarrier || IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
+        if (CatchUpAdmissionClosed || IsQuarantined || !_subscription.IsSubscribed || State.RunningState != ObserverRunningState.Active)
         {
             return false;
         }
@@ -435,10 +435,13 @@ public partial class Observer
 
     async Task<bool> CheckForRelevantEvents(EventSequenceNumber tailSequenceNumber)
     {
+        var next = State.NextEventSequenceNumber;
+        var version = _catchUpContinuationVersion;
         var nextEventResult = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(
-            State.NextEventSequenceNumber,
+            next,
             _subscription.EventTypes.ToList());
 
+        if (CatchUpAdmissionClosed || version != _catchUpContinuationVersion || next != State.NextEventSequenceNumber) return false;
         if (nextEventResult.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
         {
             logger.WatchdogNextEventLookupFailed(State.NextEventSequenceNumber, error);

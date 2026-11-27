@@ -37,7 +37,7 @@ public partial class Observer
     bool IsCurrentRecovery(Key partition, FailedPartitionId? episodeId, Guid? deferralId)
     {
         if (!Failures.TryGet(partition, out var failure)) return episodeId is null && deferralId is null;
-        return (episodeId is null || episodeId == failure.Id) && failure.Deferral?.Id == deferralId;
+        return episodeId == failure.Id && failure.Deferral?.Id == deferralId;
     }
 
     async Task<bool> IsDeferralDue(FailedPartition failure)

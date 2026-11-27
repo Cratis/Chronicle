@@ -13,13 +13,18 @@ namespace Cratis.Chronicle.Observation;
 /// </content>
 public partial class Observer
 {
-    readonly Dictionary<Key, PrefetchedDelivery> _prefetchedPartitions = [];
     EventSequenceNumber? _pageFloor;
+    EventSequenceNumber? _pageNext;
 
     /// <inheritdoc/>
     public async Task HandlePage(IReadOnlyList<ObserverPartitionBatch> batches)
     {
-        if (HoldLiveDeliveryForRepair() || _walkingEveryPartition) return;
+        if (CatchUpAdmissionClosed)
+        {
+            foreach (var batch in batches) HoldGatedLiveRun(batch.Partition, batch.Events);
+            return;
+        }
+        if (_walkingEveryPartition) return;
         var merged = MergeByPartition(batches);
         if (merged.Count <= 1 || !_subscription.DeliversPartitionPages)
         {
@@ -37,16 +42,32 @@ public partial class Observer
         _pageFloor = State.NextEventSequenceNumber;
         try
         {
-            await DeliverPage(merged);
+            var submitted = new Dictionary<Key, PrefetchedDelivery>();
+            await DeliverPage(merged, submitted);
             foreach (var batch in merged.OrderBy(_ => _.Events[0].Context.SequenceNumber))
             {
-                await Handle(batch.Partition, batch.Events);
+                if (submitted.Remove(batch.Partition, out var submission))
+                {
+                    await HandleEventsForPartition(batch.Partition, submission.Events, null, submission);
+                }
+                else
+                {
+                    await Handle(batch.Partition, batch.Events);
+                }
             }
         }
         finally
         {
             _pageFloor = null;
-            _prefetchedPartitions.Clear();
+            var next = _pageNext;
+            _pageNext = null;
+            if (!CatchUpAdmissionClosed && next is not null && next > State.NextEventSequenceNumber)
+            {
+                State = State with { NextEventSequenceNumber = next };
+                RewindUncoveredHoles();
+                RecordedHandlingState();
+                await WriteStateAsync();
+            }
         }
     }
 
@@ -96,14 +117,16 @@ public partial class Observer
 
     EventSequenceNumber CursorAfter(EventSequenceNumber candidate)
     {
-        if (HasCatchUpRepairBarrier) return CursorDuringRepairAcceptance(candidate);
-        return _pageFloor is null || candidate > State.NextEventSequenceNumber ? candidate : State.NextEventSequenceNumber;
+        if (CatchUpAdmissionClosed || _isPreparingCatchup) return State.NextEventSequenceNumber;
+        if (_pageFloor is null) return candidate;
+        if (_pageNext is null || candidate > _pageNext) _pageNext = candidate;
+        return State.NextEventSequenceNumber;
     }
 
     EventSequenceNumber TailAfter(EventSequenceNumber candidate) =>
         _pageFloor is null || State.TailEventSequenceNumber == EventSequenceNumber.Unavailable || candidate > State.TailEventSequenceNumber ? candidate : State.TailEventSequenceNumber;
 
-    async Task DeliverPage(IReadOnlyList<ObserverPartitionBatch> batches)
+    async Task DeliverPage(IReadOnlyList<ObserverPartitionBatch> batches, Dictionary<Key, PrefetchedDelivery> submitted)
     {
         var candidates = FindPageCandidates(batches);
         if (candidates.Count < 2)
@@ -121,7 +144,8 @@ public partial class Observer
         });
         foreach (var page in byTarget.SelectMany(_ => WithinLiveBudget(configuration, [.. _])))
         {
-            await DeliverPageWithinBudget(page, configuration);
+            if (CatchUpAdmissionClosed) return;
+            await DeliverPageWithinBudget(page, configuration, submitted);
             if (!_observerExists)
             {
                 return;
@@ -129,7 +153,7 @@ public partial class Observer
         }
     }
 
-    async Task DeliverPageWithinBudget(List<ObserverPartitionBatch> candidates, Observers configuration)
+    async Task DeliverPageWithinBudget(List<ObserverPartitionBatch> candidates, Observers configuration, Dictionary<Key, PrefetchedDelivery> submitted)
     {
         logger.DeliveringPage(candidates.Sum(_ => _.Events.Count), candidates.Count);
 
@@ -143,7 +167,10 @@ public partial class Observer
             return;
         }
 
+        if (CatchUpAdmissionClosed) return;
+
         DeliveryFenceContext? fence = null;
+        List<ObserverPartitionBatch>? sent = null;
         using (new WriteSuspension(this))
         {
             try
@@ -156,24 +183,26 @@ public partial class Observer
 
                 var subscriberTimeout = GetLiveSubscriberTimeout(configuration.GetSubscriberTimeout());
                 var hold = await GetClientDeliveryHold();
+                if (CatchUpAdmissionClosed) return;
                 var target = subscriberSelector.Select(_subscription, candidates[0].Partition);
                 var subscriber = (IObserverPartitionPageSubscriber)GrainFactory.GetGrain(_subscription.SubscriberType, _subscription.GetSubscriberKeyFor(ObserverSubscriberKey.AllPartitions, target.SiloAddress));
                 var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }
                     .WithDeadlines(subscriberTimeout, hold, _clock);
                 fence = AbandonedDeliveryDrain.Capture(_subscription, ObserverSubscriberKey.AllPartitions, target, context);
+                sent = decrypted;
                 var pageResult = await subscriber.OnNextPartitionsWithin(subscriberTimeout, decrypted, context);
-                foreach (var candidate in candidates)
+                foreach (var candidate in decrypted)
                 {
-                    _prefetchedPartitions[candidate.Partition] = pageResult.Results.TryGetValue(candidate.Partition, out var result)
-                        ? new(result, null, fence)
-                        : new(ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "The subscriber did not answer for the partition"), null, fence);
+                    submitted[candidate.Partition] = pageResult.Results.TryGetValue(candidate.Partition, out var result)
+                        ? new(candidate.Events, result, null, fence)
+                        : new(candidate.Events, ObserverSubscriberResult.Failed(EventSequenceNumber.Unavailable, "The subscriber did not answer for the partition"), null, fence);
                 }
             }
             catch (Exception ex)
             {
-                foreach (var candidate in candidates)
+                foreach (var candidate in sent ?? [])
                 {
-                    _prefetchedPartitions[candidate.Partition] = new(null, ex, fence);
+                    submitted[candidate.Partition] = new(candidate.Events, null, ex, fence);
                 }
             }
         }
@@ -220,5 +249,5 @@ public partial class Observer
             (filters.Tags.Any() && !events.Any(_ => _.Context.Tags.Any(t => filters.Tags.Contains(t.Value))));
     }
 
-    sealed record PrefetchedDelivery(ObserverSubscriberResult? Result, Exception? Failure, DeliveryFenceContext? Fence);
+    sealed record PrefetchedDelivery(IReadOnlyList<AppendedEvent> Events, ObserverSubscriberResult? Result, Exception? Failure, DeliveryFenceContext? Fence);
 }

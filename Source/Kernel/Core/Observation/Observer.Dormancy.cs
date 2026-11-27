@@ -73,13 +73,12 @@ public partial class Observer
         _liveDeliveriesInFlight == 0 &&
         _catchUpHandoversInFlight == 0 &&
         _catchUpBackoffUntil == default &&
-        _shortCatchUpRetries == 0 &&
         !_isPreparingCatchup &&
         !_walkingEveryPartition &&
         !_recoverSubscriptionAfterQuarantine &&
         !_retryRecoveryAfterQuarantine &&
         _pageFloor is null &&
-        _prefetchedPartitions.Count == 0 &&
+        !CatchUpAdmissionClosed &&
         !_deliveryFences.Active(_clock.GetUtcNow()).Any() &&
         HasNoClaims;
 

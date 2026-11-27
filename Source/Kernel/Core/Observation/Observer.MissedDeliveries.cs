@@ -3,6 +3,7 @@
 
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Keys;
+using Cratis.Chronicle.Storage.Observation;
 
 namespace Cratis.Chronicle.Observation;
 
@@ -14,6 +15,7 @@ public partial class Observer
     EventSequenceNumber CursorBeforePending(Key partition, EventSequenceNumber candidate, EventSequenceNumber? previous = null)
     {
         var before = previous ?? State.NextEventSequenceNumber;
+        if (CatchUpAdmissionClosed || _shadowClaims.ObserverWide?.Holder == ClaimHolderKind.ObserverCatchUp) return before;
         if (candidate <= before) return candidate;
         var outstanding = _heldBackDeliveries.Where(_ => _.Key != partition).Select(_ => _.Value.First);
         foreach (var pending in outstanding.Where(_ => _.IsActualValue && _ >= before))
@@ -104,12 +106,7 @@ public partial class Observer
         }
     }
 
-    /// <summary>
-    /// Under the repair barrier nothing may rewind the frozen cursor or start an unbounded partition job. What is
-    /// queued stays queued: the continuation turns it into a bounded obligation, or repairs it once the barrier is down.
-    /// </summary>
-    /// <returns>True if missed deliveries may be repaired now.</returns>
-    bool CanRepairMissedDeliveries() => !HasCatchUpRepairBarrier && IsReadyToRepairMissedDeliveries();
+    bool CanRepairMissedDeliveries() => !CatchUpAdmissionClosed && _pageFloor is null && IsReadyToRepairMissedDeliveries();
 
     bool IsReadyToRepairMissedDeliveries() => IsObserverLive() && IsActiveAndNotQuarantined() && _subscription.IsSubscribed && !CannotWriteState();
 

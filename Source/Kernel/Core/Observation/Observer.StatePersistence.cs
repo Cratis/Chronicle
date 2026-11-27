@@ -12,22 +12,22 @@ public partial class Observer
     /// <inheritdoc/>
     protected override async Task WriteStateAsync() => await WriteStateAndConfirm();
 
-    async Task<bool> WriteStateAndConfirm()
+    async Task<bool> WriteStateAndConfirm(bool allowDuringDelivery = false)
     {
         var checkpoint = _continuationLifetime.Capture();
-        if (!checkpoint.IsCurrent || CannotWriteState()) return false;
+        if (!checkpoint.IsCurrent || CannotWriteState(allowDuringDelivery)) return false;
         await _stateWriteLock.WaitAsync();
         try
         {
             // Acquisition must establish release ownership before checking the captured lifetime.
             checkpoint.ThrowIfInvalidated();
-            if (!CanContinueStateWrite()) return false;
+            if (!CanContinueStateWrite(allowDuringDelivery)) return false;
             PrepareStateWrite();
             var revision = _alertRevision;
-            if (!await PersistStateWithOwnershipRecovery(checkpoint)) return false;
+            if (!await PersistStateWithOwnershipRecovery(checkpoint, allowDuringDelivery)) return false;
             if (_runningStateChangedAtPending) await PersistRunningStateChangedAt(checkpoint);
             checkpoint.ThrowIfInvalidated();
-            if (!CanContinueStateWrite()) return false;
+            if (!CanContinueStateWrite(allowDuringDelivery)) return false;
             RecordPersistedState(revision);
             ShareBindingWithSupervisor();
             return true;
@@ -43,7 +43,7 @@ public partial class Observer
         }
     }
 
-    bool CanContinueStateWrite() => !_removed && !CannotWriteState();
+    bool CanContinueStateWrite(bool allowDuringDelivery = false) => !_removed && !CannotWriteState(allowDuringDelivery);
 
     void PrepareStateWrite()
     {
@@ -71,7 +71,7 @@ public partial class Observer
         };
     }
 
-    async Task<bool> PersistStateWithOwnershipRecovery(ObserverContinuationCheckpoint checkpoint)
+    async Task<bool> PersistStateWithOwnershipRecovery(ObserverContinuationCheckpoint checkpoint, bool allowDuringDelivery)
     {
         try
         {
@@ -80,15 +80,15 @@ public partial class Observer
         catch (ObserverKeyDoesNotMatchDefinition) when (checkpoint.IsCurrent)
         {
             if (await checkpoint.Await(RelinquishOwnershipIfMoved)) return false;
-            if (!CanContinueStateWrite()) return false;
+            if (!CanContinueStateWrite(allowDuringDelivery)) return false;
             await checkpoint.Await(() => ObserverStateStorage.ClaimOwnership(_observerId, _observerKey.EventSequenceId));
-            if (!CanContinueStateWrite()) return false;
-            return await RetryStateWrite(checkpoint);
+            if (!CanContinueStateWrite(allowDuringDelivery)) return false;
+            return await RetryStateWrite(checkpoint, allowDuringDelivery);
         }
-        return CanContinueStateWrite();
+        return CanContinueStateWrite(allowDuringDelivery);
     }
 
-    async Task<bool> RetryStateWrite(ObserverContinuationCheckpoint checkpoint)
+    async Task<bool> RetryStateWrite(ObserverContinuationCheckpoint checkpoint, bool allowDuringDelivery)
     {
         try
         {
@@ -99,7 +99,7 @@ public partial class Observer
             if (await checkpoint.Await(RelinquishOwnershipIfMoved)) return false;
             throw;
         }
-        return CanContinueStateWrite();
+        return CanContinueStateWrite(allowDuringDelivery);
     }
 
     void RecordPersistedState(long revision)

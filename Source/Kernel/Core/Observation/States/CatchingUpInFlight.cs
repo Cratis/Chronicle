@@ -71,9 +71,7 @@ public class CatchingUpInFlight(
         logger.RecoveringInFlightPartitions(state.InFlightPartitions.Count);
 
         var claims = StateMachine as IObserverOwnershipClaims;
-        var startFrom = state.LastHandledEventSequenceNumber.IsActualValue
-            ? state.LastHandledEventSequenceNumber.Next()
-            : EventSequenceNumber.First;
+        var startFrom = state.NextEventSequenceNumber.IsActualValue ? state.NextEventSequenceNumber : EventSequenceNumber.First;
 
         // A catch-up hold is granted and persisted before its job starts, so a crash in between leaves a hold no job owns.
         // Only a durable job relieves the marker; without one, recovery restarts from the saved position.

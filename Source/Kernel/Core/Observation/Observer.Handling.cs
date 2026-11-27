@@ -90,7 +90,12 @@ public partial class Observer
             return;
         }
 
-        if (HoldLiveDeliveryForRepair() || _walkingEveryPartition) return;
+        if (CatchUpAdmissionClosed)
+        {
+            HoldGatedLiveRun(partition, events);
+            return;
+        }
+
         if (!ShouldHandleEvent(partition))
         {
             RememberHeldBackDeliveries(partition, events);
@@ -384,10 +389,12 @@ public partial class Observer
         RecordedHandlingState();
     }
 
-    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity)
+    async Task HandleEventsForPartition(Key partition, IEnumerable<AppendedEvent> events, Activity? activity, PrefetchedDelivery? submission = null, bool joining = false)
     {
         var preparationContext = ContextForRunPreparation();
-        var prepared = ObserverRunPreparation.Prepare(events, preparationContext);
+        var prepared = submission is null
+            ? ObserverRunPreparation.Prepare(events, preparationContext)
+            : new PreparedObserverRun(submission.Events[^1].Context.SequenceNumber, true, [.. submission.Events]);
         var observedTailEventSequenceNumber = prepared.ObservedTail;
 
         // An observer subscribed to all events has no fixed event type list to match against - every event is
@@ -409,9 +416,10 @@ public partial class Observer
         var tailEventSequenceNumber = preparationContext.NextEventSequenceNumber;
 
         var eventsToHandle = prepared.EventsToHandle;
-        if (await RepairDiscardedDeliveries(partition, events, tailEventSequenceNumber)) return;
-        var configuration = await configurationProvider.GetFor(_observerKeyText);
-        if (ExceedsLiveBudget(configuration, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
+        var settling = submission is not null;
+        if (!settling && !joining && await RepairDiscardedDeliveries(partition, events, tailEventSequenceNumber)) return;
+        var configuration = settling ? null : await configurationProvider.GetFor(_observerKeyText);
+        if (!settling && !joining && ExceedsLiveBudget(configuration!, eventsToHandle.Length) && await HandOverLargeLiveBatchToCatchUp(partition, eventsToHandle))
         {
             return;
         }
@@ -419,7 +427,7 @@ public partial class Observer
         var numEventsSuccessfullyHandled = EventCount.Zero;
         var stateChanged = false;
         IReadOnlyDictionary<EventTypeId, EventCount> handledCountsPerEventType = ImmutableDictionary<EventTypeId, EventCount>.Empty;
-        if (await CanDispatchDelivery(partition, eventsToHandle))
+        if (settling || await CanDispatchDelivery(partition, eventsToHandle))
         {
             // Only a delivery that reaches the subscriber can race a catch-up; a hand-over holds its partition instead.
             using var delivery = BeginLiveDelivery();
@@ -427,12 +435,19 @@ public partial class Observer
             // Record this partition as in-flight on the observer state and make it durable *before* the subscriber
             // is invoked. If the silo dies between this point and the post-handling state write, the marker survives
             // on the reloaded observer state and drives partition catch-up on the next activation.
-            DeliveryFenceContext? deliveryFence = null;
-            var inFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition };
-            State = State with { InFlightPartitions = inFlightPartitions };
-            RecordedHandlingState();
-            await WriteStateAsync();
+            DeliveryFenceContext? deliveryFence = submission?.Fence;
+            if (!settling)
+            {
+                State = State with { InFlightPartitions = new HashSet<Key>(State.InFlightPartitions) { partition } };
+                RecordedHandlingState();
+                await WriteStateAsync();
+            }
             if (!_observerExists) return;
+            if (!settling && !joining && CatchUpAdmissionClosed)
+            {
+                HoldGatedLiveRun(partition, eventsToHandle);
+                return;
+            }
 
             using (var writeSuspension = new WriteSuspension(this))
             {
@@ -440,56 +455,9 @@ public partial class Observer
                 {
                     var firstEvent = eventsToHandle[0];
                     tailEventSequenceNumber = firstEvent.Context.SequenceNumber;
-                    var decryptedEvents = await DecryptEvents(eventsToHandle);
-
-                    var subscriberTimeout = GetLiveSubscriberTimeout(configuration.GetSubscriberTimeout());
-                    var hold = await GetClientDeliveryHold();
-
-                    ObserverSubscriberResult result;
-                    while (true)
-                    {
-                        var target = subscriberSelector.Select(_subscription, partition);
-
-                        // A webhook partition has one non-interleavable activation across live delivery and jobs,
-                        // independent of which silo owns the observer or executes the job.
-                        var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
-                            ? SiloAddress.Zero
-                            : target.SiloAddress;
-                        var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
-
-                        if (_prefetchedPartitions.Remove(partition, out var prefetched) &&
-                            !(prefetched.Failure is null && prefetched.Result!.State == ObserverSubscriberState.Disconnected && target.ConnectedClient is not null && _subscription.Targets.Count > 1))
-                        {
-                            // The page this partition belongs to has already been delivered; this is its settlement.
-                            deliveryFence = prefetched.Fence;
-                            if (prefetched.Failure is not null)
-                            {
-                                throw prefetched.Failure;
-                            }
-
-                            result = prefetched.Result!;
-                            break;
-                        }
-
-                        var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
-                        var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }.WithDeadlines(subscriberTimeout, hold, _clock);
-                        deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, context);
-                        result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, context);
-
-                        // A disconnected result from one client instance only removes that instance —
-                        // the batch is retried against the remaining instances. Only when the last
-                        // instance is gone does the observer unsubscribe (below).
-                        if (result.State == ObserverSubscriberState.Disconnected &&
-                            target.ConnectedClient is not null &&
-                            _subscription.Targets.Count > 1)
-                        {
-                            logger.ClientInstanceDisconnectedRetryingWithRemaining(target.ConnectedClient.ConnectionId, partition);
-                            RemoveSubscriberTarget(target);
-                            continue;
-                        }
-
-                        break;
-                    }
+                    if (submission?.Failure is { } submissionFailure) throw submissionFailure;
+                    var deliveredEvents = settling ? eventsToHandle : await DecryptEvents(eventsToHandle);
+                    var result = submission?.Result ?? await DeliverRun(deliveredEvents);
 
                     numEventsSuccessfullyHandled = result.HandledAnyEvents
                         ? eventsToHandle.Count(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation)
@@ -507,16 +475,24 @@ public partial class Observer
                         failurePolicy = result.FailurePolicy;
                         exceptionMessages = result.ExceptionMessages;
                         exceptionStackTrace = result.ExceptionStackTrace;
-                        tailEventSequenceNumber = result.HandledAnyEvents
-                            ? result.LastSuccessfulObservation
-                            : firstEvent.Context.SequenceNumber;
+                        tailEventSequenceNumber = eventsToHandle.FirstOrDefault(@event => !result.HandledAnyEvents ||
+                            @event.Context.SequenceNumber > result.LastSuccessfulObservation)?.Context.SequenceNumber ?? result.LastSuccessfulObservation;
                     }
                     else if (result.State == ObserverSubscriberState.Disconnected)
                     {
                         // The batch is not advanced, so whatever subscription takes over catches up from the same position.
-                        await PromoteSupersededRegistrationOrUnsubscribe(writeSuspension.Dispose);
+                        if (!settling) await PromoteSupersededRegistrationOrUnsubscribe(writeSuspension.Dispose);
                         stateChanged = true;
                     }
+
+                    if (result.State == ObserverSubscriberState.Ok && numEventsSuccessfullyHandled < eventsToHandle.Length)
+                    {
+                        failed = true;
+                        failureKind = FailureKind.Handling;
+                        tailEventSequenceNumber = eventsToHandle.First(@event => !result.HandledAnyEvents ||
+                            @event.Context.SequenceNumber > result.LastSuccessfulObservation).Context.SequenceNumber;
+                    }
+                    if (joining && !failed && result.State == ObserverSubscriberState.Ok) _joinRunSettled = true;
 
                     if (numEventsSuccessfullyHandled > 0)
                     {
@@ -539,7 +515,7 @@ public partial class Observer
                         };
 
                         CompleteHeldBackDelivery(partition, result.LastSuccessfulObservation);
-                        var handledEvents = decryptedEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
+                        var handledEvents = deliveredEvents.Where(_ => _.Context.SequenceNumber <= result.LastSuccessfulObservation);
                         handledCountsPerEventType = handledEvents.CountByEventType();
                         State = WithIncrementedRunningTotals(State, handledCountsPerEventType);
                         RecordedHandlingState();
@@ -557,6 +533,13 @@ public partial class Observer
 
             try
             {
+                await RecordHandlingOutcome();
+                if (settling && numEventsSuccessfullyHandled < eventsToHandle.Length && !FailureCovers(partition, tailEventSequenceNumber))
+                {
+                    QueueMissedDelivery(partition, tailEventSequenceNumber);
+                    ScheduleCatchUpContinuation();
+                }
+
                 // The in-flight marker has served its purpose now that the outcome is known, so clear it before the
                 // outcome is persisted — whichever state write happens below carries the removal. A partition that
                 // failed is recovered through FailedPartitions storage, so keeping its marker would only force a
@@ -566,9 +549,7 @@ public partial class Observer
                 State = State with { InFlightPartitions = remainingInFlight };
                 RecordedHandlingState();
 
-                await RecordHandlingOutcome();
-
-                if (stateChanged)
+                if (stateChanged || settling || failed || joining)
                 {
                     await WriteStateAsync();
                 }
@@ -582,6 +563,44 @@ public partial class Observer
             {
                 activity?.RecordFailure(ex);
                 logger.ObserverFailedForUnknownReasonsAfterHandlingEvents(ex);
+                RequireCatchUpReload();
+            }
+
+            async Task<ObserverSubscriberResult> DeliverRun(AppendedEvent[] decryptedEvents)
+            {
+                var subscriberTimeout = GetLiveSubscriberTimeout(configuration!.GetSubscriberTimeout());
+                var hold = await GetClientDeliveryHold();
+                ObserverSubscriberResult result;
+                while (true)
+                {
+                    var target = subscriberSelector.Select(_subscription, partition);
+
+                    // A webhook partition has one non-interleavable activation across live delivery and jobs,
+                    // independent of which silo owns the observer or executes the job.
+                    var siloAddress = typeof(IWebhookObserverSubscriber).IsAssignableFrom(_subscription.SubscriberType)
+                        ? SiloAddress.Zero
+                        : target.SiloAddress;
+                    var key = _subscription.GetSubscriberKeyFor(partition, siloAddress);
+
+                    var subscriber = (GrainFactory.GetGrain(_subscription.SubscriberType, key) as IObserverSubscriber)!;
+                    var context = new ObserverSubscriberContext(target.ConnectedClient ?? _subscription.Arguments) { Origin = ObservationOrigin.Live }.WithDeadlines(subscriberTimeout, hold, _clock);
+                    deliveryFence = AbandonedDeliveryDrain.Capture(_subscription, partition, target, context);
+                    result = await subscriber.OnNextWithin(subscriberTimeout, partition, decryptedEvents, context);
+
+                    // A disconnected result from one client instance only removes that instance —
+                    // the batch is retried against the remaining instances. Only when the last
+                    // instance is gone does the observer unsubscribe (below).
+                    if (result.State == ObserverSubscriberState.Disconnected &&
+                        target.ConnectedClient is not null &&
+                        _subscription.Targets.Count > 1)
+                    {
+                        logger.ClientInstanceDisconnectedRetryingWithRemaining(target.ConnectedClient.ConnectionId, partition);
+                        RemoveSubscriberTarget(target);
+                        continue;
+                    }
+
+                    return result;
+                }
             }
 
             Task RecordHandlingOutcome()
@@ -617,7 +636,7 @@ public partial class Observer
         return await eventCompliance.Release(eventsToDecrypt, _eventTypeSchemas);
     }
 
-    bool ShouldHandleEvent(Key partition)
+    bool ShouldHandleEvent(Key partition, bool joining = false)
     {
         if (IsRetired || _removed || !_observerExists) return false;
         if (!_subscription.IsSubscribed)
@@ -638,7 +657,7 @@ public partial class Observer
             return false;
         }
 
-        if (_isPreparingCatchup)
+        if (!joining && _isPreparingCatchup)
         {
             logger.ObserverIsPreparingCatchup();
             return false;
@@ -658,7 +677,7 @@ public partial class Observer
 
         // The walk reads every partition to the end of the log, including one whose first event arrives after it registered
         // its partitions; delivering that event live as well would hand it to the subscriber twice.
-        if (_walkingEveryPartition)
+        if (!joining && _walkingEveryPartition)
         {
             logger.CatchUpWalkCoversNewEvents(partition);
             return false;
@@ -667,7 +686,7 @@ public partial class Observer
         return true;
     }
 
-    void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent)
+    void HandleNewLastHandledEvent(EventSequenceNumber lastHandledEvent, bool advanceCursor = true)
     {
         if (!lastHandledEvent.IsActualValue)
         {
@@ -678,7 +697,7 @@ public partial class Observer
         var advancesLastHandled = State.LastHandledEventSequenceNumber == EventSequenceNumber.Unavailable ||
                                   State.LastHandledEventSequenceNumber < lastHandledEvent;
         var newLastHandledEvent = advancesLastHandled ? lastHandledEvent : State.LastHandledEventSequenceNumber;
-        var nextEventSequenceNumber = !HasCatchUpRepairBarrier && State.NextEventSequenceNumber <= lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
+        var nextEventSequenceNumber = advanceCursor && !CatchUpAdmissionClosed && State.NextEventSequenceNumber <= lastHandledEvent ? lastHandledEvent.Next() : State.NextEventSequenceNumber;
         State = State with
         {
             LastHandledEventSequenceNumber = newLastHandledEvent,

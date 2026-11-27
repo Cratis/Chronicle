@@ -51,11 +51,7 @@ public partial class Observer
         State.RunningState == ObserverRunningState.Active &&
         !State.IsReplaying &&
         State.ReplayingPartitions.Count == 0 &&
-        State.CatchingUpPartitions.Count == 0 &&
-        State.InFlightPartitions.Count == 0 &&
-        !Failures.HasFailedPartitions &&
-        State.NextEventSequenceNumber.IsActualValue &&
-        !_deliveryFences.Active(_clock.GetUtcNow()).Any();
+        State.NextEventSequenceNumber.IsActualValue;
 
     /// <summary>
     /// Restores the subscription the observer recorded before it was released, when the activation has none.
@@ -220,7 +216,8 @@ public partial class Observer
         var resumed = false;
         try
         {
-            resumed = await ResumeFromCursor();
+            if (_catchUpContinuationPending) await ContinueAcceptedCatchUp();
+            resumed = _catchUpContinuationPending || _joinedCatchUp || await ResumeFromCursor();
         }
         catch (Exception ex) when (ObservationOnlyFailures.CanBeContained(ex))
         {
@@ -265,7 +262,7 @@ public partial class Observer
     /// </remarks>
     async Task<bool> ResumeFromCursor()
     {
-        if (State.RunningState != ObserverRunningState.Active || !_subscription.IsSubscribed || !State.NextEventSequenceNumber.IsActualValue)
+        if (CatchUpAdmissionClosed || State.RunningState != ObserverRunningState.Active || !_subscription.IsSubscribed || !State.NextEventSequenceNumber.IsActualValue)
         {
             return true;
         }

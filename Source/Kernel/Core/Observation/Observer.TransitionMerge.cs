@@ -93,5 +93,9 @@ public partial class Observer
         }
 
         State = ObserverTransitionStateMerge.Merge(handed, recorded, State);
+        if (CatchUpAdmissionClosed && !State.IsReplaying)
+        {
+            State = State with { NextEventSequenceNumber = recorded.NextEventSequenceNumber };
+        }
     }
 }

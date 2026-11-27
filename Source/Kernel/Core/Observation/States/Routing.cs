@@ -73,12 +73,6 @@ public class Routing(
     public override async Task<ObserverState> OnEnter(ObserverState state)
     {
         using var logScope = logger.BeginRoutingScope(state.Identifier, observerKey);
-        var repairsPending = StateMachine is Cratis.Chronicle.Observation.Observer owner ? owner.HasCatchUpRepairBarrier : state.PendingCatchUpRepairs is { Count: > 0 };
-        if (repairsPending)
-        {
-            await Observer.CatchUp();
-            return state;
-        }
 
         // An in-flight routing pass owns its lookup; only a completed failure owes a watchdog retry.
         NextEventLookupFailed = false;
@@ -224,7 +218,7 @@ public class Routing(
         // pass the events appended while it was dormant, and it must not start a catch-up job for them: it takes the queue
         // subscription by entering Observing and then reads from its cursor to the tail itself, falling back to this routing
         // (without the flag) when that is not clean.
-        if (StateMachine is Observer { IsResumingFromDormancy: true })
+        if (StateMachine is Observer { IsResumingFromDormancy: true } or Observer { IsJoiningCatchUp: true })
         {
             await StateMachine.TransitionTo<Observing>();
             return state;

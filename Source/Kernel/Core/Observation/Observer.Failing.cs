@@ -69,10 +69,9 @@ public partial class Observer
     {
         if (IsRetired || _removed) return;
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
-        if (!await ResolveFailedPartition(partition, lastHandledEventSequenceNumber, episodeId, deferralId)) return;
+        if (!await TransferFailedPartitionToFloor(partition, episodeId, deferralId)) return;
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.FailingPartitionRecovered(partition);
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         EvaluateSuspectedSkips();
     }
 
@@ -99,7 +98,8 @@ public partial class Observer
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             logger.FailingPartitionPartiallyRecovered(partition, lastHandledEventSequenceNumber);
             Skips.Delivered(partition, lastHandledEventSequenceNumber);
-            HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
+            if (!lastHandledEventSequenceNumber.IsActualValue) return;
+            HandleNewLastHandledEvent(lastHandledEventSequenceNumber, advanceCursor: false);
             await WriteStateAsync();
         }
         finally
@@ -303,8 +303,7 @@ public partial class Observer
         FailureKind kind,
         FailedPartitionId? episodeId,
         Guid? deferralId,
-        PartitionFailureContext context,
-        bool deferQuarantine = false)
+        PartitionFailureContext context)
     {
         // An activation that does not own the definition is not the observer that failed; it records nothing.
         if (IsRetired || _removed || !KeyOwnsDefinition)
@@ -317,9 +316,9 @@ public partial class Observer
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (!IsCurrentRecovery(partition, episodeId, deferralId)) return;
+            if (!CanRecordPartitionFailure(partition, episodeId, deferralId)) return;
             var config = await GetRetryConfiguration();
-            if (deferQuarantine && (CatchUpAcceptanceInvalidated || !PendingCatchUpRepairs.Any(_ => _.Partition == partition))) return;
+            if (!CanRecordPartitionFailure(partition, episodeId, deferralId)) return;
             using var scope = logger.BeginObserverScope(_observerId, _observerKey);
             _metrics?.PartitionFailed();
             var partitionWasAlreadyFailed = Failures.IsFailed(partition);
@@ -420,7 +419,8 @@ public partial class Observer
         // source mutation lock over those calls. The separate reporting turn runs after this transition commits.
         if (quarantineObserver)
         {
-            await ApplyFailureQuarantine(deferQuarantine);
+            ArmWebhookProbeAfterFailure();
+            await TransitionTo<QuarantinedObserver>();
         }
     }
 
@@ -567,16 +567,111 @@ public partial class Observer
         }
     }
 
-    async Task<bool> ResolveFailedPartition(Key partition, EventSequenceNumber? lastHandled = null, FailedPartitionId? episodeId = null, Guid? deferralId = null)
+    bool CanRecordPartitionFailure(Key partition, FailedPartitionId? episodeId, Guid? deferralId) =>
+        IsCurrentRecovery(partition, episodeId, deferralId) && !CatchUpAcceptanceInvalidated;
+
+    async Task<bool> TransferFailedPartitionToFloor(Key partition, FailedPartitionId? episodeId, Guid? deferralId)
     {
         await _alertMutationLock.WaitAsync();
         try
         {
-            if (IsRetired || _removed || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
-            if (lastHandled is not null)
+            if (CatchUpAcceptanceInvalidated || !_subscription.IsSubscribed ||
+                !Failures.TryGet(partition, out var failure) || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
+
+            _episodeTransfersInFlight++;
+            try
             {
-                HandleNewLastHandledEventForPartition(partition, lastHandled);
+                // The retry's exhausted reader does not cover appends after its last read. Transfer this
+                // episode back to the common floor before making the durable owner disappear.
+                RewindCatchUpFloor(failure.EffectiveRecoveryCursor.Position);
+                await ConfirmCatchUpAcceptance();
+                if (CatchUpAcceptanceInvalidated || !IsCurrentRecovery(partition, episodeId, deferralId)) return false;
+
+                failures.State.Remove(partition);
+                await failures.WriteStateAsync();
+                if (CatchUpAcceptanceInvalidated) return false;
+                _alertEndings[failure.Id] = AlertClearedReason.Recovered;
+                ForgetRecoveryStart(partition);
+                State = State with { FailedPartitionCount = Failures.Partitions.Count() };
+                PublishFailedPartitionsGauge();
+                ChangeAlertState();
+                ScheduleCatchUpContinuation();
+                return true;
             }
+            catch
+            {
+                // Neither an unknown rewind nor an unknown delete authorizes live progress. Let the
+                // next activation reload both records before deciding who owns the work.
+                RequireCatchUpReload();
+                throw;
+            }
+            finally
+            {
+                _episodeTransfersInFlight--;
+            }
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    async Task<bool> ExtendFailureCoverage(FailedPartition failure, EventSequenceNumber first)
+    {
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (CatchUpAcceptanceInvalidated || !Failures.TryGet(failure.Partition, out var current) || current.Id != failure.Id) return false;
+            if (current.EffectiveRecoveryCursor.Position <= first) return true;
+
+            // An uncertain global restart can overlap the already-failed key before its recovery
+            // position. Only widen that key's obligation, and invalidate work started at its old cursor.
+            if (current.EffectiveRecoveryCursor.Mode != FailedPartitionRecoveryMode.Live) return false;
+            var oldEpisode = current.Id;
+            RewindCatchUpFloor(first);
+            await ConfirmCatchUpAcceptance();
+            if (CatchUpAcceptanceInvalidated) return false;
+
+            var cursor = current.EffectiveRecoveryCursor;
+            var replacement = new FailedPartition
+            {
+                Partition = current.Partition,
+                ObserverId = current.ObserverId,
+                Attempts = current.Attempts,
+                RecoveryCursor = new(first, cursor.Mode, cursor.ReplayBoundary),
+                IsQuarantined = current.IsQuarantined,
+                AttemptsBeforeBudgetReset = current.AttemptsBeforeBudgetReset,
+                WebhookDisposition = current.WebhookDisposition,
+                WebhookRecoveryId = current.WebhookRecoveryId,
+                Hold = current.Hold,
+                Deferral = current.Deferral is { } deferral ? deferral with { ResumeFrom = first } : null
+            };
+            Failures.Remove(current.Partition);
+            Failures.Partitions = [.. Failures.Partitions, replacement];
+            await failures.WriteStateAsync();
+            _alertEndings[oldEpisode] = AlertClearedReason.Recovered;
+            ForgetRecoveryStart(current.Partition);
+            ChangeAlertState();
+            if (!replacement.IsQuarantined) await RegisterRetryReminder(replacement);
+            return !CatchUpAcceptanceInvalidated;
+        }
+        catch
+        {
+            RequireCatchUpReload();
+            throw;
+        }
+        finally
+        {
+            _alertMutationLock.Release();
+        }
+    }
+
+    async Task<bool> ResolveFailedPartition(Key partition)
+    {
+        await _alertMutationLock.WaitAsync();
+        try
+        {
+            if (IsRetired || _removed) return false;
 
             if (Failures.TryGet(partition, out var failure))
             {
@@ -628,7 +723,7 @@ public partial class Observer
         }
 
         logger.TryingToRecoverFailedPartition(failedPartition.Partition);
-        var request = CreateRetryFailedPartitionRequest(failedPartition, usesDeferrals);
+        var request = CreateRetryFailedPartitionRequest(failedPartition);
         if (usesDeferrals)
         {
             return await StartTrackedRecoveryJob(failedPartition, request, onStartAttempted);
@@ -637,11 +732,11 @@ public partial class Observer
         return await StartRecoveryJob(failedPartition, request, onStartAttempted);
     }
 
-    RetryFailedPartitionRequest CreateRetryFailedPartitionRequest(FailedPartition failedPartition, bool usesDeferrals) =>
-        new(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? (usesDeferrals ? failedPartition.RecoveryCursor?.Position : null) ?? failedPartition.LastAttempt.SequenceNumber, Definition.EventTypes)
+    RetryFailedPartitionRequest CreateRetryFailedPartitionRequest(FailedPartition failedPartition) =>
+        new(_observerKey, Definition.Type, failedPartition.Partition, failedPartition.Deferral?.ResumeFrom ?? failedPartition.EffectiveRecoveryCursor.Position, Definition.EventTypes)
         {
             ReaderScope = ReaderScope,
-            EpisodeId = usesDeferrals ? failedPartition.Id : null,
+            EpisodeId = failedPartition.Id,
             DeferralId = failedPartition.Deferral?.Id,
             ReplayEpoch = failedPartition.ReplayEpoch
         };

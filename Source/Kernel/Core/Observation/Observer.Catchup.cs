@@ -15,11 +15,6 @@ namespace Cratis.Chronicle.Observation;
 
 public partial class Observer
 {
-    const int MinimumZeroWorkLapsBeforeBackingOff = 2;
-    static readonly TimeSpan _catchUpBackoffBase = TimeSpan.FromSeconds(5);
-    static readonly TimeSpan _catchUpBackoffCap = TimeSpan.FromMinutes(5);
-    static readonly TimeSpan[] _shortCatchUpRetryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5)];
-
     int _partitionHoldsVersion;
     int _catchUpConclusionsInFlight;
 
@@ -126,10 +121,8 @@ public partial class Observer
     /// on the next tick, five times over, until the observer is quarantined for a strand that was never its
     /// own fault.
     /// <para>
-    /// Events the observer's filters exclude are read but never handled, so the last handled event cannot say how
-    /// far catch-up got. The next event sequence number moves past the last event read as well; otherwise the
-    /// excluded events after the last handled one look unhandled to routing, which would start another catch-up
-    /// that reads them again and concludes the same way, without end.
+    /// A maximum reported by an unbounded reader does not establish a common prefix across keys. The
+    /// conclusion acknowledges the durable restart floor, and an ordinary turn reconciles it against the log.
     /// </para>
     /// </remarks>
     public async Task CaughtUp(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
@@ -162,9 +155,7 @@ public partial class Observer
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Events the observer's filters exclude are read but never handled. Whether the partition needs another
-    /// catch-up is therefore decided from the furthest event read, so trailing excluded events do not start a
-    /// catch-up that reads them again, while only the handled events count as handled.
+    /// A partition reader cannot prove an observer-wide prefix. Transfer its restart position before releasing it.
     /// </remarks>
     public Task PartitionCaughtUp(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber) =>
         PartitionCaughtUp(partition, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber, null);
@@ -176,15 +167,28 @@ public partial class Observer
         using var scope = logger.BeginObserverScope(_observerId, _observerKey);
         Skips.Completing(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
         logger.PartitionCaughtUp(partition, lastHandledEventSequenceNumber);
-        ShadowHandOverPartition(partition, ClaimHolderKind.PartitionCatchUp);
-        State.CatchingUpPartitions.Remove(partition);
-        _partitionHoldsVersion++;
-        HandleNewLastHandledEventForPartition(partition, lastHandledEventSequenceNumber);
-        CompleteHeldBackDelivery(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
+        BeginCatchUpConclusion();
+        try
+        {
+            if (State.PartitionClaims?.FirstOrDefault(claim => claim.Partition == partition && claim.Holder == ClaimHolderKind.PartitionCatchUp) is { } claim)
+            {
+                RewindCatchUpFloor(claim.ResumePosition);
+            }
+            else if (_heldBackDeliveries.TryGetValue(partition, out var held)) RewindCatchUpFloor(held.First);
+            else RewindCatchUpFloor(EventSequenceNumber.First);
 
-        await WriteStateAsync();
-        await StartCatchupJobIfNeeded(partition, FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
-        EvaluateSuspectedSkips();
+            await ConfirmCatchUpAcceptance();
+            if (CatchUpAcceptanceInvalidated || IgnoresStaleRelease(ClaimHolderKind.PartitionCatchUp, partition, ownershipEpoch)) return;
+            ShadowHandOverPartition(partition, ClaimHolderKind.PartitionCatchUp);
+            State.CatchingUpPartitions.Remove(partition);
+            _partitionHoldsVersion++;
+            await ConfirmCatchUpAcceptance();
+            ScheduleCatchUpContinuation();
+        }
+        finally
+        {
+            EndCatchUpConclusion();
+        }
     }
 
     static EventSequenceNumber FurthestOf(EventSequenceNumber lastHandled, EventSequenceNumber lastScanned)
@@ -236,195 +240,43 @@ public partial class Observer
         BeginCatchUpConclusion();
         try
         {
-            var concluded = await ApplyCatchUpConclusion(jobId, lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
-            if (concluded is not bool madeProgress) return;
+            var checkpoint = _continuationLifetime.Capture();
+            var claim = _shadowClaims.ObserverWide;
+            JobId? reporting = jobId == JobId.NotSet ? null : jobId;
+            if (CatchUpAcceptanceInvalidated || State.IsReplaying ||
+                IgnoresStaleRelease(ClaimHolderKind.ObserverCatchUp, null, null, reporting)) return;
 
+            // An unbounded reader maximum proves nothing about a different key. Keep the claim's start
+            // as a restart floor; the later ordered, scoped scan is what proves contiguous progress.
+            if (claim is { Holder: ClaimHolderKind.ObserverCatchUp }) RewindCatchUpFloor(claim.ResumePosition);
+            RewindUncoveredHoles();
+            if (claim?.Job is not null || reporting is null)
+            {
+                GuardShadowClaims(() => _shadowClaims.HandOverObserverWide(ClaimHolderKind.ObserverCatchUp, jobId));
+            }
+            else
+            {
+                _unboundCatchUpConclusion = reporting;
+            }
             Skips.RoundConcluded(FurthestOf(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber));
             Skips.PreparationEnded();
-            QueueUnownedHeldBackDeliveries();
-            AcceptPendingCatchUpRepairs();
             Skips.ClearJobReported();
             await ConfirmCatchUpAcceptance();
+            if (!checkpoint.IsCurrent || CatchUpAcceptanceInvalidated || State.IsReplaying) return;
 
             _isPreparingCatchup = false;
-            ScheduleCatchUpContinuation(madeProgress);
+            ScheduleCatchUpContinuation();
         }
         finally
         {
-            // Applying a cursor is not a handover until storage accepted its repair obligations as well.
             EndCatchUpConclusion();
         }
-    }
-
-    /// <summary>
-    /// Applies the position a concluded catch-up job reached.
-    /// </summary>
-    /// <param name="jobId">The <see cref="JobId"/> of the job that concluded.</param>
-    /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number the concluded job reports.</param>
-    /// <param name="lastScannedEventSequenceNumber">The last scanned event sequence number the concluded job reports.</param>
-    /// <returns>Whether the lap made progress; null if a newer catch-up owns what the job concluded.</returns>
-    async Task<bool?> ApplyCatchUpConclusion(JobId jobId, EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber)
-    {
-        // The observer-wide job only owned the partitions it registered. A partition's own catch-up
-        // keeps its hold until it reports PartitionCaughtUp (#5379).
-        var releasable = await PartitionHoldsReleasableAfterCatchUp();
-
-        // A job whose claim has passed to a newer catch-up concluded nothing the newer one owns: its holds, cursor,
-        // preparation and routing all belong to the newer job, which reports back on its own.
-        if (!await ShadowHandOverCaughtUpObserverWide(jobId)) return null;
-
-        var madeProgress = CatchUpMadeProgress(lastHandledEventSequenceNumber, lastScannedEventSequenceNumber);
-        HandleNewLastHandledEvent(lastHandledEventSequenceNumber);
-        State.CatchingUpPartitions.ExceptWith(releasable);
-        if (!HasCatchUpRepairBarrier && HasScannedUpToNext(lastScannedEventSequenceNumber))
-        {
-            State = State with { NextEventSequenceNumber = lastScannedEventSequenceNumber.Next() };
-        }
-
-        return madeProgress;
-    }
-
-    async Task ContinueAfterCatchUpLap(bool settleInObserving)
-    {
-        if (IsCatchUpEnded()) return;
-
-        if (settleInObserving)
-        {
-            await SettleCatchUpInObserving();
-        }
-        else
-        {
-            await TransitionTo<Routing>();
-        }
-    }
-
-    /// <summary>
-    /// Gets whether the observer moved past anything it had not already handled or read.
-    /// </summary>
-    /// <param name="lastHandledEventSequenceNumber">The last handled event sequence number the concluded job reports.</param>
-    /// <param name="lastScannedEventSequenceNumber">The last scanned event sequence number the concluded job reports.</param>
-    /// <returns>True if the lap made progress.</returns>
-    bool CatchUpMadeProgress(EventSequenceNumber lastHandledEventSequenceNumber, EventSequenceNumber lastScannedEventSequenceNumber) =>
-        (lastHandledEventSequenceNumber.IsActualValue &&
-            (!State.LastHandledEventSequenceNumber.IsActualValue || lastHandledEventSequenceNumber > State.LastHandledEventSequenceNumber)) ||
-        HasScannedUpToNext(lastScannedEventSequenceNumber);
-
-    bool HasScannedUpToNext(EventSequenceNumber lastScannedEventSequenceNumber) =>
-        lastScannedEventSequenceNumber.IsActualValue &&
-            (!State.NextEventSequenceNumber.IsActualValue || State.NextEventSequenceNumber <= lastScannedEventSequenceNumber);
-
-    /// <summary>
-    /// Records the outcome of a concluded catch-up lap.
-    /// </summary>
-    /// <param name="madeProgress">Whether the lap moved the observer forward.</param>
-    /// <returns>True if the observer should settle into observing rather than route again immediately.</returns>
-    /// <remarks>
-    /// A lap that moved nothing reaches the same verdict when routed again, so it neither resets the consecutive
-    /// recovery count nor gets to start the next lap right away: from the second consecutive one the observer settles
-    /// into observing and the watchdog retries once an exponentially growing backoff has elapsed. When that lap would
-    /// settle while events of the observer's types still exist from where it is, a few short retries come first (#5351):
-    /// they hold the observer in observing for the length of the retry delay and are not counted towards the backoff.
-    /// </remarks>
-    async Task<bool> NoteCatchUpLap(bool madeProgress)
-    {
-        CancelShortCatchUpRetry();
-        if (madeProgress)
-        {
-            _catchupRecoveryAttempts = 0;
-            _zeroWorkCatchUps = 0;
-            _shortCatchUpRetries = 0;
-            _catchUpBackoffUntil = default;
-            return false;
-        }
-
-        _metrics?.ZeroWorkCatchUp();
-        if (_zeroWorkCatchUps + 1 >= MinimumZeroWorkLapsBeforeBackingOff && await ScheduleShortCatchUpRetry())
-        {
-            return true;
-        }
-
-        _zeroWorkCatchUps++;
-        logger.CatchUpProducedNoWork(_zeroWorkCatchUps);
-        if (_zeroWorkCatchUps < MinimumZeroWorkLapsBeforeBackingOff)
-        {
-            return false;
-        }
-
-        var exponent = Math.Min(_zeroWorkCatchUps - MinimumZeroWorkLapsBeforeBackingOff, 10);
-        var backoff = TimeSpan.FromTicks(Math.Min(_catchUpBackoffBase.Ticks << exponent, _catchUpBackoffCap.Ticks));
-        _catchUpBackoffUntil = DateTimeOffset.UtcNow + backoff;
-        return true;
     }
 
     void CancelShortCatchUpRetry()
     {
         _shortCatchUpRetryTimer?.Dispose();
         _shortCatchUpRetryTimer = null;
-    }
-
-    /// <summary>
-    /// Schedules a short retry of a catch-up that moved nothing, when events of the observer's types exist from where it is.
-    /// </summary>
-    /// <returns>True if a retry was scheduled; false to use the zero-work backoff.</returns>
-    /// <remarks>
-    /// The decision is read from the event sequence storage, the same lookup the watchdog uses, with the types the
-    /// observer is subscribed with. A failed lookup is not an answer: the zero-work backoff applies as before.
-    /// The observer settles in observing for the delay, so the pending retry keeps the backoff mechanics - and the
-    /// watchdog - as the fallback if the timer never fires.
-    /// </remarks>
-    async Task<bool> ScheduleShortCatchUpRetry()
-    {
-        var next = State.NextEventSequenceNumber;
-        var epoch = _catchUpOwnershipEpoch;
-        try
-        {
-            var lookup = await _eventSequence.GetNextSequenceNumberGreaterOrEqualTo(next, _subscription.EventTypes.ToList());
-            if (lookup.TryGetError(out var error) && error != GetSequenceNumberError.NotFound)
-            {
-                logger.CatchUpEventLookupErrored(next, error);
-                return false;
-            }
-
-            if (!lookup.Match(number => number.IsActualValue, _ => false))
-            {
-                _shortCatchUpRetries = 0;
-                return false;
-            }
-        }
-        catch (Exception exception)
-        {
-            logger.CatchUpEventLookupFailed(next, exception);
-            return false;
-        }
-
-        // CaughtUp interleaves, so catch-up may have changed hands while the lookup was awaited. This lap is obsolete then.
-        if (epoch != _catchUpOwnershipEpoch) return false;
-
-        if (_shortCatchUpRetries >= _shortCatchUpRetryDelays.Length)
-        {
-            logger.StaleCatchUpRetriesExhausted(_shortCatchUpRetries, next);
-            return false;
-        }
-
-        var delay = _shortCatchUpRetryDelays[_shortCatchUpRetries++];
-        logger.RetryingStaleCatchUp(next, _shortCatchUpRetries, delay);
-        _catchUpBackoffUntil = DateTimeOffset.UtcNow + delay;
-        CancelShortCatchUpRetry();
-        _shortCatchUpRetryTimer = this.RegisterGrainTimer(
-            cancellationToken => RetryCatchUpAfterDelay(epoch, cancellationToken),
-            new GrainTimerCreationOptions { DueTime = delay, Period = Timeout.InfiniteTimeSpan });
-        return true;
-    }
-
-    async Task RetryCatchUpAfterDelay(int ownershipEpoch, CancellationToken cancellationToken)
-    {
-        if (cancellationToken.IsCancellationRequested) return;
-
-        CancelShortCatchUpRetry();
-        if (!CanRetryCatchUp(ownershipEpoch)) return;
-
-        _catchUpBackoffUntil = default;
-        await TransitionTo<Routing>();
     }
 
     void ScheduleDeferredCatchUpRetry(TimeSpan delay)
@@ -553,14 +405,14 @@ public partial class Observer
             {
                 // A job that concluded during the lookup was excluded before its position was applied (#6145).
                 await CatchUpConclusionsApplied();
-                if (HasCatchUpRepairBarrier) return request;
+                if (CatchUpAdmissionClosed) return request;
                 request = request with { FromEventSequenceNumber = State.NextEventSequenceNumber };
                 var epoch = await GrantObserverWideBeforeStart(ClaimHolderKind.ObserverCatchUp, request.FromEventSequenceNumber);
                 onStamped(epoch);
                 return request with { OwnershipEpoch = epoch };
             },
             IsObsolete,
-            () => !HasCatchUpRepairBarrier && !CatchUpObserverRemoved);
+            () => !CatchUpAdmissionClosed && !CatchUpObserverRemoved);
     }
 
     async Task StartCatchupJobIfNeeded(Key partition, EventSequenceNumber lastHandledEventSequenceNumber, bool fromStartWhenNothingRead = false)
@@ -597,14 +449,14 @@ public partial class Observer
     {
         await CatchUpConclusionsApplied();
         if (CatchUpObserverRemoved) return false;
-        if (!HasCatchUpRepairBarrier) return true;
-        ScheduleCatchUpContinuation(madeProgress: false);
+        if (!CatchUpAdmissionClosed && !_joinedCatchUp) return true;
+        ScheduleCatchUpContinuation();
         return false;
     }
 
     async Task ProbeAndStartCatchupJobFrom(Key partition, EventSequenceNumber fromSequenceNumber)
     {
-        if (HasCatchUpRepairBarrier || !fromSequenceNumber.IsActualValue) return;
+        if (CatchUpAdmissionClosed || !fromSequenceNumber.IsActualValue) return;
 
         if (State.RunningState == ObserverRunningState.Replaying)
         {
@@ -680,8 +532,6 @@ public partial class Observer
     {
         if (--_catchUpConclusionsInFlight != 0) return;
 
-        // No acknowledgement is left to extend the cursor, so the next acceptance starts without the previous cap.
-        ReleaseRepairAcceptanceCursorCap();
         if (_catchUpConclusionsApplied is { } applied)
         {
             _catchUpConclusionsApplied = null;

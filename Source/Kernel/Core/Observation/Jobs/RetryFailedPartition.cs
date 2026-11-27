@@ -7,7 +7,6 @@ using Cratis.Choreography.Jobs;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Observation;
 using Cratis.Chronicle.Jobs;
-using Cratis.Chronicle.Observation.Webhooks;
 using Cratis.Chronicle.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -46,7 +45,7 @@ public class RetryFailedPartition(
         JobFailures.Completed(ServiceProvider, "retry_failed_partition", State.Progress);
         using var scope = logger.BeginJobScope(JobId, JobKey);
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
-        if (Request.EpisodeId is not null && !await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId)) return;
+        if (!await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId)) return;
 
         if (!State.LastHandledEventSequenceNumber.IsActualValue)
         {
@@ -110,9 +109,7 @@ public class RetryFailedPartition(
 
         var observer = GrainFactory.GetGrain<IObserver>(Request.ObserverKey);
         if (!await observer.IsSubscribed()) return false;
-        var subscription = await observer.GetSubscription();
-        return !typeof(IWebhookObserverSubscriber).IsAssignableFrom(subscription.SubscriberType) ||
-            await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId);
+        return await observer.CanResumeFailedPartition(Request.Key, Request.EpisodeId, Request.DeferralId);
     }
 
     /// <inheritdoc/>

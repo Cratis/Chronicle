@@ -102,7 +102,6 @@ public partial class Observer(
     IJobsManager _jobsManager = null!;
     bool _stateWritingSuspended;
     int _stateWriteSuspensions;
-    TaskCompletionSource? _stateWritesResumed;
     bool _resumingQuarantine;
 
     /// <summary>
@@ -158,18 +157,6 @@ public partial class Observer(
     int _catchUpOwnershipEpoch;
     int _catchupRecoveryAttempts;
 
-    /// <summary>
-    /// Counts consecutive catch-up laps that concluded without moving the observer forward.
-    /// </summary>
-    int _zeroWorkCatchUps;
-
-    /// <summary>
-    /// Counts the short retries scheduled in a row for catch-up laps that moved nothing while events of the observer's types wait.
-    /// </summary>
-    /// <remarks>
-    /// Kept apart from <see cref="_zeroWorkCatchUps"/> so the backoff arithmetic is unaffected by the short retries.
-    /// </remarks>
-    int _shortCatchUpRetries;
     IGrainTimer? _shortCatchUpRetryTimer;
 
     /// <summary>
@@ -221,6 +208,10 @@ public partial class Observer(
             ActivationCheckpoint("finish waking from dormancy", cancellationToken);
             await ReconcilePartitionDeferrals();
             ActivationCheckpoint("reconcile partition deferrals", cancellationToken);
+            if (Failures.HasFailedPartitions && _subscription.IsSubscribed && KeyOwnsDefinition)
+            {
+                await TryRecoverAllFailedPartitions();
+            }
             RememberHandledEventsReportsForTheResponseTimeout();
             ScheduleActivationAlertReportIfNeeded();
         }
@@ -272,6 +263,12 @@ public partial class Observer(
         _unseenRemovalAfter = config.UnseenRemovalAfter > TimeSpan.Zero ? config.UnseenRemovalAfter : Observers.DefaultUnseenRemovalAfter;
         _webhookProbe = State.WebhookProbe;
         RestoreShadowClaims();
+        State = State with { FailedPartitionCount = Failures.Partitions.Count() };
+        if (State.NextEventSequenceNumber.IsActualValue && !State.IsReplaying && !IsRetired)
+        {
+            RewindUncoveredHoles();
+            ScheduleCatchUpContinuation();
+        }
         await InitializeAlertState();
         ActivationCheckpoint("initialize alert state", cancellationToken);
         if (!KeyOwnsDefinition)
@@ -928,7 +925,7 @@ public partial class Observer(
         }
     }
 
-    bool CannotWriteState() => _disposed || _stateWritingSuspended || !_observerExists || !KeyOwnsDefinition;
+    bool CannotWriteState(bool allowDuringDelivery = false) => _disposed || (!allowDuringDelivery && _stateWritingSuspended) || !_observerExists || !KeyOwnsDefinition;
 
     bool CannotRecoverFromReminder() => IsRetired || _removed || IsQuarantined || !_subscription.IsSubscribed;
 
@@ -1517,7 +1514,6 @@ public partial class Observer(
             _observer = observer;
             _observer._stateWritingSuspended = true;
             _observer._stateWriteSuspensions++;
-            _observer._stateWritesResumed ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         public void Dispose()
@@ -1526,9 +1522,6 @@ public partial class Observer(
             _disposed = true;
             if (--_observer._stateWriteSuspensions != 0) return;
             _observer._stateWritingSuspended = false;
-            var resumed = _observer._stateWritesResumed;
-            _observer._stateWritesResumed = null;
-            resumed?.TrySetResult();
         }
     }
 }
