@@ -65,6 +65,7 @@ public partial class Neo4jGraphSink(
 
         foreach (var edge in definition.Edges)
         {
+            GraphCypher.ValidateIdentifier(edge.Type);
             EnsureNotReserved(edge.IdentifyingProperty, edge.Schema);
         }
 

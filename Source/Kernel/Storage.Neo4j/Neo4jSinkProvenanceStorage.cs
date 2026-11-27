@@ -35,7 +35,9 @@ internal sealed class Neo4jSinkProvenanceStorage(Neo4jGraphTarget target) : ISin
         await GetOrSeed(transaction);
         await Run(transaction, Lock);
         await Run(transaction, Mark);
-        return await RequireState(transaction);
+        await Run(transaction, LatchRestriction);
+        var state = await RequireState(transaction);
+        return state.Restricted ? state : throw Neo4jGraphTarget.Unavailable();
     });
 
     public async Task<bool> IsQuarantined() => (await ReadState()).Restricted;

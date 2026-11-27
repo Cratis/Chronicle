@@ -22,6 +22,7 @@ internal static class Neo4jSinkProvenanceStatements
     internal const string Lock = "MATCH " + Inventory + " SET n._lock = true REMOVE n._lock";
     internal const string Complete = "MATCH " + Inventory + " SET n._version = $version, n._restricted = $restricted";
     internal const string Mark = "MERGE " + Protection + " ON CREATE SET n._format = 1";
+    internal const string LatchRestriction = "MATCH " + Inventory + " SET n._restricted = true";
 
     internal static IReadOnlyDictionary<string, object> Fields(IRecord record) =>
         record["state"] is IReadOnlyDictionary<string, object> fields && Get<long>(fields, "_format") == 1

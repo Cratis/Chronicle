@@ -35,7 +35,18 @@ public class GraphCypher(GraphDefinition definition, string? @namespace)
     /// </summary>
     /// <param name="identifier">The identifier.</param>
     /// <returns>The identifier in backticks, with backticks inside doubled.</returns>
-    public static string Escape(string identifier) => $"`{identifier.Replace("`", "``", StringComparison.Ordinal)}`";
+    /// <exception cref="ArgumentException">Thrown when the identifier contains a backslash.</exception>
+    public static string Escape(string identifier)
+    {
+        ValidateIdentifier(identifier);
+        return $"`{identifier.Replace("`", "``", StringComparison.Ordinal)}`";
+    }
+
+    internal static void ValidateIdentifier(string identifier)
+    {
+        // Cypher can expand Unicode escapes before interpreting backtick quoting.
+        if (identifier.Contains('\\')) throw new ArgumentException("Cypher identifiers cannot contain backslashes.", nameof(identifier));
+    }
 
     /// <summary>
     /// Create the statement that creates the uniqueness constraint of a node label.

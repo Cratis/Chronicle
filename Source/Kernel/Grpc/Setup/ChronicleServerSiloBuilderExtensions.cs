@@ -58,75 +58,7 @@ public static class ChronicleServerSiloBuilderExtensions
     /// <returns><see cref="ISiloBuilder"/> for continuation.</returns>
     public static ISiloBuilder AddChronicleToSilo(this ISiloBuilder builder, Action<IChronicleBuilder>? configure = default)
     {
-        builder.AddActivityPropagation();
-
-        // Silos of two releases share the cluster during a rolling upgrade. A grain interface that gained methods
-        // raises its [Version], and these strategies make Orleans route a call needing the newer version to a silo
-        // that has it - deactivating an older activation instead of letting it fail to decode the call - while
-        // older callers keep being served by newer activations, which still have every method they know.
-        // They are the Orleans defaults, set here because rolling upgrades depend on them: see
-        // Documentation/contributing/kernel/grain-interfaces.mdx.
-        builder.Configure<GrainVersioningOptions>(options =>
-        {
-            options.DefaultCompatibilityStrategy = nameof(BackwardCompatible);
-            options.DefaultVersionSelectorStrategy = nameof(AllCompatibleVersions);
-        });
-
-        // Off by default; enabling requires a whole-cluster restart because silos
-        // with different directory implementations cannot share a cluster.
-        builder.AddConfiguredGrainDirectory().AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
-        builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
-        builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
-        builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
-        builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
-        builder.AddOutgoingGrainCallFilter<MixedReleaseCallDiagnostics>();
-        builder.Services.TryAddSingleton<Cratis.Chronicle.Diagnostics.Load.IKernelLoad, Cratis.Chronicle.Diagnostics.Load.KernelLoad>();
-        builder.AddIncomingGrainCallFilter<Cratis.Chronicle.Diagnostics.Load.GrainCallLoadIncomingFilter>();
-        builder.AddOutgoingGrainCallFilter<Cratis.Chronicle.Diagnostics.Load.GrainCallLoadOutgoingFilter>();
-        builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
-        builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
-
-        builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
-        builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
-        builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
-        builder.Services.TryAddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();
-        builder.Services.TryAddSingleton<ISiloDepartures, SiloDepartures>();
-        AddObserverJobAdmission(builder);
-
-        // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Choreography.Jobs.JobsOptions,
-        // not ChronicleOptions - this host never calls AddCratisChoreography (it wires the pieces individually), so
-        // nothing maps one to the other unless it happens here. MaxParallelSteps preserves the pre-rip-out cap:
-        // the old JobStepThrottle capped at min(Jobs.GetEffectiveMaxParallelSteps(), Observers.MaxConcurrentPartitions);
-        // the package's throttle only applies GetEffectiveMaxParallelSteps() to whatever MaxParallelSteps carries,
-        // so the cap has to be folded in here to keep the effective limit unchanged.
-        builder.Services.TryAddSingleton(sp =>
-        {
-            var chronicleOptions = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
-            return Options.Create(new OrleansJobsOptions
-            {
-                MaxParallelSteps = Math.Min(chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(), chronicleOptions.Observers.MaxConcurrentPartitions),
-                MaxActiveStepsPerJob = chronicleOptions.Jobs.GetEffectiveMaxActiveStepsPerJob(),
-                DeadJobThreshold = chronicleOptions.Jobs.DeadJobThreshold,
-                CleanupCadence = chronicleOptions.Jobs.CleanupCadence,
-                StepCheckpointBatchInterval = chronicleOptions.Jobs.StepCheckpointBatchInterval,
-                StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
-            });
-        });
-        builder.AddChroniclePatching();
-        AddClusterReleaseSupport(builder.Services);
-        builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
-        builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
-        builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
-        builder.Services.TryAddSingleton<Cratis.Chronicle.Memory.IMemoryBudget>(sp =>
-        {
-            var memory = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.Memory;
-            var meter = sp.GetRequiredKeyedService<Cratis.Metrics.IMeter<Cratis.Chronicle.Memory.MemoryBudget>>(Cratis.Chronicle.Concepts.WellKnown.MeterName).ActualMeter;
-            Cratis.Chronicle.Memory.ProcessMemoryMetrics.Register(meter);
-            return new Cratis.Chronicle.Memory.MemoryBudget(
-                Cratis.Chronicle.Memory.MemoryBudgetCapacity.OfAvailableMemory(memory.BudgetPercentOfAvailableMemory, memory.BudgetPercentUnderPressure),
-                memory.MaximumWaitSeconds > 0 ? TimeSpan.FromSeconds(memory.MaximumWaitSeconds) : null,
-                meter);
-        });
+        ConfigureKernelInfrastructure(builder);
         builder.Services.TryAddSingleton<IEventCompliance, EventCompliance>();
         builder.Services.TryAddSingleton<IReadModelsCompliance, ReadModelsCompliance>();
 #if DEVELOPMENT
@@ -297,6 +229,79 @@ public static class ChronicleServerSiloBuilderExtensions
         });
 
         return builder;
+    }
+
+    static void ConfigureKernelInfrastructure(ISiloBuilder builder)
+    {
+        builder.AddActivityPropagation();
+
+        // Silos of two releases share the cluster during a rolling upgrade. A grain interface that gained methods
+        // raises its [Version], and these strategies make Orleans route a call needing the newer version to a silo
+        // that has it - deactivating an older activation instead of letting it fail to decode the call - while
+        // older callers keep being served by newer activations, which still have every method they know.
+        // They are the Orleans defaults, set here because rolling upgrades depend on them: see
+        // Documentation/contributing/kernel/grain-interfaces.mdx.
+        builder.Configure<GrainVersioningOptions>(options =>
+        {
+            options.DefaultCompatibilityStrategy = nameof(BackwardCompatible);
+            options.DefaultVersionSelectorStrategy = nameof(AllCompatibleVersions);
+        });
+
+        // Off by default; enabling requires a whole-cluster restart because silos
+        // with different directory implementations cannot share a cluster.
+        builder.AddConfiguredGrainDirectory().AddIncomingGrainCallFilter<CorrelationIdIncomingCallFilter>();
+        builder.AddIncomingGrainCallFilter<SerializableFailureIncomingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<CorrelationIdOutgoingCallFilter>();
+        builder.AddIncomingGrainCallFilter<UserIdentityIncomingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<UserIdentityOutgoingCallFilter>();
+        builder.AddOutgoingGrainCallFilter<MixedReleaseCallDiagnostics>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Diagnostics.Load.IKernelLoad, Cratis.Chronicle.Diagnostics.Load.KernelLoad>();
+        builder.AddIncomingGrainCallFilter<Cratis.Chronicle.Diagnostics.Load.GrainCallLoadIncomingFilter>();
+        builder.AddOutgoingGrainCallFilter<Cratis.Chronicle.Diagnostics.Load.GrainCallLoadOutgoingFilter>();
+        builder.Services.TryAddSingleton<Cratis.Execution.CorrelationIdAccessor>();
+        builder.Services.TryAddSingleton<ICorrelationIdAccessor, Cratis.Chronicle.Setup.Execution.CorrelationIdAccessor>();
+
+        builder.Services.TryAddSingleton<IEventTypes, EventTypes>();
+        builder.Services.TryAddSingleton<IJobTypes, JobTypes>();
+        builder.Services.TryAddSingleton<IJobStepThrottle, JobStepThrottle>();
+        builder.Services.TryAddSingleton<IObserverRegistrationGate, ObserverRegistrationGate>();
+        builder.Services.TryAddSingleton<ISiloDepartures, SiloDepartures>();
+        AddObserverJobAdmission(builder);
+
+        // The package's JobsManager/Job/JobStep grains and JobStepThrottle resolve Cratis.Choreography.Jobs.JobsOptions,
+        // not ChronicleOptions - this host never calls AddCratisChoreography (it wires the pieces individually), so
+        // nothing maps one to the other unless it happens here. MaxParallelSteps preserves the pre-rip-out cap:
+        // the old JobStepThrottle capped at min(Jobs.GetEffectiveMaxParallelSteps(), Observers.MaxConcurrentPartitions);
+        // the package's throttle only applies GetEffectiveMaxParallelSteps() to whatever MaxParallelSteps carries,
+        // so the cap has to be folded in here to keep the effective limit unchanged.
+        builder.Services.TryAddSingleton(sp =>
+        {
+            var chronicleOptions = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value;
+            return Options.Create(new OrleansJobsOptions
+            {
+                MaxParallelSteps = Math.Min(chronicleOptions.Jobs.GetEffectiveMaxParallelSteps(), chronicleOptions.Observers.MaxConcurrentPartitions),
+                MaxActiveStepsPerJob = chronicleOptions.Jobs.GetEffectiveMaxActiveStepsPerJob(),
+                DeadJobThreshold = chronicleOptions.Jobs.DeadJobThreshold,
+                CleanupCadence = chronicleOptions.Jobs.CleanupCadence,
+                StepCheckpointBatchInterval = chronicleOptions.Jobs.StepCheckpointBatchInterval,
+                StepCheckpointFlushInterval = chronicleOptions.Jobs.StepCheckpointFlushInterval
+            });
+        });
+        builder.AddChroniclePatching();
+        AddClusterReleaseSupport(builder.Services);
+        builder.Services.TryAddSingleton<ITypeFormats, TypeFormats>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Services.Clients.OpenConnections>();
+        builder.Services.TryAddSingleton<IExpandoObjectConverter, ExpandoObjectConverter>();
+        builder.Services.TryAddSingleton<Cratis.Chronicle.Memory.IMemoryBudget>(sp =>
+        {
+            var memory = sp.GetRequiredService<IOptions<ChronicleOptions>>().Value.Memory;
+            var meter = sp.GetRequiredKeyedService<Cratis.Metrics.IMeter<Cratis.Chronicle.Memory.MemoryBudget>>(Cratis.Chronicle.Concepts.WellKnown.MeterName).ActualMeter;
+            Cratis.Chronicle.Memory.ProcessMemoryMetrics.Register(meter);
+            return new Cratis.Chronicle.Memory.MemoryBudget(
+                Cratis.Chronicle.Memory.MemoryBudgetCapacity.OfAvailableMemory(memory.BudgetPercentOfAvailableMemory, memory.BudgetPercentUnderPressure),
+                memory.MaximumWaitSeconds > 0 ? TimeSpan.FromSeconds(memory.MaximumWaitSeconds) : null,
+                meter);
+        });
     }
 
     static void AddClusterReleaseSupport(IServiceCollection services)

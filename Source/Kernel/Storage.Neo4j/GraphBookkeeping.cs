@@ -49,6 +49,7 @@ public static class GraphBookkeeping
 
     internal static void EnsureApplicationLabel(string label)
     {
+        GraphCypher.ValidateIdentifier(label);
         if (label == ProvenanceLabel) throw new ReservedGraphPropertyName(label);
     }
 
@@ -57,8 +58,10 @@ public static class GraphBookkeeping
     /// </summary>
     /// <param name="name">The property name.</param>
     /// <exception cref="ReservedGraphPropertyName">Thrown when the name starts with <see cref="Prefix"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the name contains a backslash.</exception>
     public static void EnsureNotReserved(string name)
     {
+        GraphCypher.ValidateIdentifier(name);
         if (name.StartsWith('_'))
         {
             throw new ReservedGraphPropertyName(name);
