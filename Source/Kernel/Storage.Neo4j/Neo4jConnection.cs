@@ -13,6 +13,8 @@ namespace Cratis.Chronicle.Storage.Neo4j;
 /// <param name="CanCreateDatabase">Whether Chronicle owns the placement of the database, and so may create it when it is missing.</param>
 public record Neo4jConnection(IDriver Driver, string Database, bool CanCreateDatabase)
 {
+    internal Uri? Endpoint { get; init; }
+
     /// <summary>
     /// The database every Neo4j server has, which administration commands run against.
     /// </summary>

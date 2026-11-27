@@ -243,7 +243,10 @@ public partial class ProjectionsManager(
         if (SkipDefinition(eventStore, definition)) return null;
         var fingerprint = ProjectionFactory.DefinitionFingerprintFor(definition);
         var readModel = await grainFactory.GetGrain<IReadModel>(new ReadModelGrainKey(definition.ReadModel, eventStore)).GetDefinition();
-        await provenance.EnsureReadable(eventStore, definition.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace, readModel);
+        var sinkNamespace = definition.Graph is null && definition.Scope == ProjectionScope.Global
+            ? EventStoreNamespaceName.NotSet
+            : @namespace;
+        await provenance.EnsureReadable(eventStore, sinkNamespace, readModel);
         if (TryGet(eventStore, @namespace, id, out var current) && current.DefinitionFingerprint == fingerprint) return current;
         var projection = await projectionFactory.Create(eventStore, @namespace, definition, readModel);
         lock (_publication)

@@ -78,14 +78,14 @@ public record GraphSnapshot(IReadOnlyList<GraphNode> Nodes, IReadOnlyList<GraphE
         await using var session = driver.AsyncSession(_ => _.WithDatabase(database));
         var nodes = await session.ExecuteReadAsync(async transaction =>
         {
-            var cursor = await transaction.RunAsync("MATCH (n) WHERE NOT '_Owner' IN labels(n) RETURN labels(n) AS labels, properties(n) AS properties");
+            var cursor = await transaction.RunAsync("MATCH (n) WHERE NOT '_Owner' IN labels(n) AND NOT '__cratis_sink_inventory' IN labels(n) RETURN labels(n) AS labels, properties(n) AS properties");
             return await cursor.ToListAsync(_ => ToNode(_["labels"].As<IList<string>>()[0], _["properties"].As<IReadOnlyDictionary<string, object>>()));
         });
 
         var edges = await session.ExecuteReadAsync(async transaction =>
         {
             var cursor = await transaction.RunAsync(
-                "MATCH (s)-[r]->(t) WHERE NOT '_Owner' IN labels(s) RETURN type(r) AS type, labels(s) AS sourceLabels, properties(s) AS source, labels(t) AS targetLabels, properties(t) AS target, properties(r) AS properties");
+                "MATCH (s)-[r]->(t) WHERE NOT '_Owner' IN labels(s) AND NOT '__cratis_sink_inventory' IN labels(s) AND NOT '__cratis_sink_inventory' IN labels(t) RETURN type(r) AS type, labels(s) AS sourceLabels, properties(s) AS source, labels(t) AS targetLabels, properties(t) AS target, properties(r) AS properties");
             return await cursor.ToListAsync(_ => ToEdge(
                 _["type"].As<string>(),
                 ToNode(_["sourceLabels"].As<IList<string>>()[0], _["source"].As<IReadOnlyDictionary<string, object>>()),

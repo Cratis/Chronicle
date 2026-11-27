@@ -9,8 +9,15 @@ namespace Cratis.Chronicle.XUnit.Integration;
 /// Gives each destructive fixture reset its own provenance observation lifetime.
 /// </summary>
 internal sealed class FixtureSinkProvenanceCache : ISinkProvenanceCache, IAsyncDisposable
+#if DEVELOPMENT
+    , IDevelopmentSinkProvenanceObservations
+#endif
 {
+#if DEVELOPMENT
+    readonly DevelopmentSinkProvenanceCache _cache = new();
+#else
     SinkProvenanceCache _cache = new();
+#endif
 
     /// <inheritdoc/>
     public ISinkProvenanceStorage Bind(object route, Func<ISinkProvenanceStorage> create) => _cache.Bind(route, create);
@@ -22,9 +29,15 @@ internal sealed class FixtureSinkProvenanceCache : ISinkProvenanceCache, IAsyncD
     /// Drains old observations after fixture storage is wiped, before kernel bootstrap.
     /// </summary>
     /// <returns>The reset task.</returns>
+#if DEVELOPMENT
+    internal Task Reset() => _cache.RotateAfterWipe();
+
+    Task IDevelopmentSinkProvenanceObservations.RotateAfterWipe() => Reset();
+#else
     internal async Task Reset()
     {
         var previous = Interlocked.Exchange(ref _cache, new SinkProvenanceCache());
         await previous.DisposeAsync();
     }
+#endif
 }

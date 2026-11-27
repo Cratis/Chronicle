@@ -43,6 +43,16 @@ public static class GraphBookkeeping
     public const string OwnerLabel = Prefix + "Owner";
 
     /// <summary>
+    /// The reserved label of database-local sink provenance metadata.
+    /// </summary>
+    public const string ProvenanceLabel = "__cratis_sink_inventory";
+
+    internal static void EnsureApplicationLabel(string label)
+    {
+        if (label == ProvenanceLabel) throw new ReservedGraphPropertyName(label);
+    }
+
+    /// <summary>
     /// Ensure a property name does not collide with the bookkeeping.
     /// </summary>
     /// <param name="name">The property name.</param>

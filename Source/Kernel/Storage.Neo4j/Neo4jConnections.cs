@@ -98,9 +98,14 @@ public class Neo4jConnections : INeo4jConnections
             throw new MissingNeo4jServer(eventStore, @namespace);
         }
 
-        var driver = _driverFactory.Create(new Uri(server), (IAuthTokenManager?)hooks ?? configured);
+        var endpoint = new Uri(server);
+        var driver = _driverFactory.Create(endpoint, (IAuthTokenManager?)hooks ?? configured);
         var database = DatabaseFor(options, resolved.Database, eventStore, @namespace);
-        return new(driver, database, resolved.Database is null && options.DatabaseMode == Neo4jDatabaseMode.PerNamespace && options.CreateIfMissing);
+        var ownsPlacement = string.IsNullOrEmpty(resolved.ConnectionString) && resolved.Database is null;
+        return new(driver, database, ownsPlacement && options.DatabaseMode == Neo4jDatabaseMode.PerNamespace && options.CreateIfMissing)
+        {
+            Endpoint = endpoint
+        };
     }
 
     static string DatabaseFor(Neo4jOptions options, string? resolved, EventStoreName eventStore, EventStoreNamespaceName @namespace)

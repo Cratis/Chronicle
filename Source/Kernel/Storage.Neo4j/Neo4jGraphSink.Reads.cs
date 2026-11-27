@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.Connections;
 using Cratis.Chronicle.Concepts.Events;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.Graphs;
@@ -80,10 +79,11 @@ public partial class Neo4jGraphSink
 
     async Task<IReadOnlyList<IRecord>> Query(CypherStatement statement)
     {
-        var connection = await connections.Resolve(eventStore, @namespace, ConnectionPurpose.Runtime);
+        var connection = await _target.Runtime();
         await using var session = connection.OpenSession(AccessMode.Read);
         return await session.ExecuteReadAsync(async transaction =>
         {
+            await _target.EnsureDatabase(transaction);
             var cursor = await transaction.RunAsync(statement.Text, statement.ToDriverParameters());
             return await cursor.ToListAsync();
         });

@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Cratis.Chronicle.Concepts;
 using Cratis.Chronicle.Concepts.ReadModels;
@@ -29,7 +28,6 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
 
     readonly Lazy<NamedSinkDatabases> _namedDatabases = new(() => new(serviceProvider));
     readonly Lazy<ISinkProvenanceCache> _cache = new(() => serviceProvider.GetService<ISinkProvenanceCache>() ?? new SinkProvenanceCache());
-    readonly ConcurrentDictionary<(EventStoreName, EventStoreNamespaceName, SinkName, ReadModelContainerName?), (SinkProvenanceStorage Raw, ISinkProvenanceStorage Cached)> _provenance = new();
 
     /// <inheritdoc/>
     public SinkTypeId TypeId => WellKnownSinkTypes.SQL;
@@ -62,7 +60,7 @@ public class SinkFactory(IServiceProvider serviceProvider, IExpandoObjectConvert
     }
 
     (SinkProvenanceStorage Raw, ISinkProvenanceStorage Cached) Provenance(EventStoreName eventStore, EventStoreNamespaceName @namespace, SinkName sink, ReadModelContainerName? container) =>
-        _provenance.GetOrAdd((eventStore, @namespace, sink, container), static (key, factory) => factory.CreateProvenance(key), this);
+        CreateProvenance((eventStore, @namespace, sink, container));
 
     (SinkProvenanceStorage Raw, ISinkProvenanceStorage Cached) CreateProvenance((EventStoreName Store, EventStoreNamespaceName Namespace, SinkName Sink, ReadModelContainerName? Container) key)
     {

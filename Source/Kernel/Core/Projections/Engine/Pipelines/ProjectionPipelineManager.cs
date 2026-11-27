@@ -134,7 +134,8 @@ public partial class ProjectionPipelineManager(
         EventStoreNamespaceName @namespace,
         EngineProjection projection)
     {
-        var sinkNamespace = projection.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace;
+        // Graph payload stays in the observing namespace, even for a Global projection.
+        var sinkNamespace = projection.Graph is null && projection.Scope == ProjectionScope.Global ? EventStoreNamespaceName.NotSet : @namespace;
         await EnsureProvenance(eventStore, sinkNamespace, projection);
         var key = KeyHelper.Combine(eventStore, @namespace, projection.Identifier);
         if (_pipelines.TryGetValue(key, out var pipeline) && pipeline.Fingerprint == projection.DefinitionFingerprint)
@@ -154,7 +155,10 @@ public partial class ProjectionPipelineManager(
                 graphSink,
                 _handleLocks.GetFor(key),
                 objectComparer,
-                loggerFactory.CreateLogger<GraphProjectionPipeline>());
+                loggerFactory.CreateLogger<GraphProjectionPipeline>())
+            {
+                VerifyProvenance = () => EnsureProvenance(eventStore, sinkNamespace, projection)
+            };
             Bind(key, projection, graphPipeline);
             return graphPipeline;
         }

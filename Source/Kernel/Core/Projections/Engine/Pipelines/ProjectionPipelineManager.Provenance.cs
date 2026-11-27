@@ -13,7 +13,6 @@ public partial class ProjectionPipelineManager
 {
     async Task EnsureProvenance(EventStoreName eventStore, EventStoreNamespaceName sinkNamespace, EngineProjection projection)
     {
-        if (projection.Graph is not null) return;
         await provenance.EnsureReadable(eventStore, sinkNamespace, projection.ReadModel);
         if (!projection.EventSequenceId.IsSystemSequence()) return;
 

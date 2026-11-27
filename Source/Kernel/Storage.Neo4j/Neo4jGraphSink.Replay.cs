@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Arc.Connections;
 using Cratis.Chronicle.Concepts.Projections;
 using Cratis.Chronicle.Storage.ReadModels;
 using Cratis.Chronicle.Storage.Sinks;
@@ -14,9 +13,13 @@ public partial class Neo4jGraphSink
     /// <inheritdoc/>
     public async Task BeginReplay(ProjectionId owner, ReplayContext context)
     {
-        var connection = await connections.Resolve(eventStore, @namespace, ConnectionPurpose.Runtime);
+        var connection = await _target.Runtime();
         await using var session = connection.OpenSession(AccessMode.Read);
-        var current = await session.ExecuteReadAsync(transaction => ReadGeneration(transaction, owner.Value));
+        var current = await session.ExecuteReadAsync(async transaction =>
+        {
+            await _target.EnsureDatabase(transaction);
+            return await ReadGeneration(transaction, owner.Value);
+        });
 
         // The generation follows from the persisted replay context and the current generation, so a replay that is resumed
         // after a restart gets the generation it started with.
@@ -35,10 +38,11 @@ public partial class Neo4jGraphSink
             return [];
         }
 
-        var connection = await connections.Resolve(eventStore, @namespace, ConnectionPurpose.Runtime);
+        var connection = await _target.Runtime();
         await using var session = connection.OpenSession();
         await session.ExecuteWriteAsync(async transaction =>
         {
+            await _target.EnsureDatabase(transaction);
             // Edges go first. A stale node that edges of other owners still point at is kept as the bare node an edge
             // would have created, because an edge cannot exist without its end nodes. The rest is deleted.
             foreach (var statement in _cypher.SweepEdges(owner.Value, generation)) await Run(transaction, statement);
@@ -61,10 +65,11 @@ public partial class Neo4jGraphSink
     /// <inheritdoc/>
     public async Task PrepareInitialRun(ProjectionId owner)
     {
-        var connection = await connections.Resolve(eventStore, @namespace, ConnectionPurpose.Runtime);
+        var connection = await _target.Runtime();
         await using var session = connection.OpenSession();
         await session.ExecuteWriteAsync(async transaction =>
         {
+            await _target.EnsureDatabase(transaction);
             foreach (var statement in _cypher.RemoveOwned(owner.Value)) await Run(transaction, statement);
         });
     }

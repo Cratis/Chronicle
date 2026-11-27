@@ -76,7 +76,7 @@ public class Sinks(
     /// <inheritdoc/>
     public ISinkProvenanceStorage GetProvenance(ReadModelDefinition readModel)
     {
-        var resolved = _configurations.ResolveFor(readModel, graph: false);
+        var resolved = _configurations.ResolveFor(readModel, graph: SinkConfigurationRules.IsGraph(readModel.Sink.Type));
         ThrowIfUnknownSink(resolved.Type);
         SinkProvenanceNames.EnsureNotReserved(readModel.ContainerName);
         return _factories[resolved.Type].GetProvenance(eventStoreName, eventStoreNamespaceName, resolved.Name, readModel.ContainerName);
