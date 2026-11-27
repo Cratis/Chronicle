@@ -105,6 +105,7 @@ public static class administrator_surface_policy
         ["Namespaces.NamespaceNames"] = "read-only namespace discovery",
         ["Observation.ObserverInformationForEventType"] = "read-only observer diagnostics",
         ["Observation.ObserverInformation"] = "read-only observer diagnostics",
+        ["Observation.ObserverLag"] = "read-only observer diagnostics",
         ["Observation.FailedPartitionDetails"] = "read-only observer diagnostics",
         ["Observation.FailedPartitionGroup"] = "read-only observer diagnostics",
         ["Observation.Webhooks.WebhookSigningPublicKey"] = "public verification metadata only; no private keys or HMAC secrets",
