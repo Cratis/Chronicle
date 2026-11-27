@@ -119,5 +119,5 @@ public class an_observer_with_a_handover_log : an_observer_with_skip_detection
 
     AppendedEvent[] Read(EventSequenceNumber from, EventSequenceNumber to, EventSourceId? partition, IEnumerable<EventType>? types) =>
         _log.Where(_ => _.Context.SequenceNumber >= from && _.Context.SequenceNumber <= to &&
-            (partition is null || _.Context.EventSourceId == partition) && (types is null || types.Contains(_.Context.EventType))).ToArray();
+            (partition is null || _.Context.EventSourceId == partition) && (types?.Contains(_.Context.EventType) != false)).ToArray();
 }
