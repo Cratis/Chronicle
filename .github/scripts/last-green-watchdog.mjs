@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { restTransport, paginate } from './nightly-build-health.mjs';
+import { restTransport, paginate, ReportingError } from './nightly-build-health.mjs';
 import { trackerTitle, workflowPath } from './nightly-build-health-policy.mjs';
 
 export const marker = '<!-- last-green-watchdog:v1 -->';
@@ -18,8 +18,8 @@ export async function findTracker(transport, root) {
     const matches = issues.filter(issue => !issue.pull_request && issue.title === trackerTitle && isBot(issue));
     // The scheduled reporter owns issue creation and its strict managed cursor.
     // A cursorless staleness check cannot safely invent that managed block.
-    if (!matches.length) throw new Error('tracker-missing');
-    if (matches.length > 1) throw new Error('tracker-ambiguous');
+    if (!matches.length) throw new ReportingError('tracker-missing');
+    if (matches.length > 1) throw new ReportingError('tracker-ambiguous');
     return matches[0];
 }
 
@@ -121,12 +121,12 @@ function plannedActions(root, issue, comment, state) {
 async function ownedComment(transport, root, issue) {
     const comments = await paginate(transport, `${root}/issues/${issue.number}/comments?per_page=100&page=1`);
     const owned = comments.filter(comment => isBot(comment) && comment.body?.startsWith(marker));
-    if (owned.length > 1) throw new Error('ambiguous-watchdog-comments');
+    if (owned.length > 1) throw new ReportingError('ambiguous-watchdog-comments');
     return owned[0];
 }
 
 export async function watchdog({ repo, transport, now = Date.now(), dryRun = false }) {
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('invalid-repository');
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new ReportingError('invalid-repository');
     const root = `/repos/${repo}`;
     const runs = await fullRuns(transport, root, repo);
     const state = await verdictBody({ transport, root, repo, runs, now });
@@ -147,7 +147,7 @@ function parseGhResponse(response) {
 
 function ghReadTransport(dryRun) {
     return async (method, endpoint) => {
-        if (!dryRun || method !== 'GET') throw new Error('token-required');
+        if (!dryRun || method !== 'GET') throw new ReportingError('token-required');
         const response = execFileSync('gh', ['api', '--method', 'GET', '--include', endpoint], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
         return parseGhResponse(response);
     };
@@ -161,7 +161,7 @@ async function saveSummary(environment, result) {
 
 export async function main({ environment = process.env, argv = process.argv.slice(2), fetchImpl = globalThis.fetch, now = Date.now(), output = console.log } = {}) {
     try {
-        if (argv.some(arg => arg !== '--dry-run')) throw new Error('unknown-argument');
+        if (argv.some(arg => arg !== '--dry-run')) throw new ReportingError('unknown-argument');
         // Local dry-runs may use gh's configured credentials without exposing the token.
         const dryRun = argv.includes('--dry-run');
         const transport = environment.GITHUB_TOKEN ? restTransport({ token: environment.GITHUB_TOKEN, fetchImpl }) : ghReadTransport(dryRun);
@@ -170,7 +170,7 @@ export async function main({ environment = process.env, argv = process.argv.slic
         output(JSON.stringify(result));
         return 0;
     } catch (error) {
-        output(JSON.stringify({ status: 'failed', error: error.message === 'tracker-missing' ? 'tracker-missing' : 'watchdog-reporting-failed' }));
+        output(JSON.stringify({ status: 'failed', error: error instanceof ReportingError ? error.message : 'watchdog-reporting-failed' }));
         return 1;
     }
 }

@@ -104,3 +104,21 @@ test('--dry-run entry point issues zero non-GET calls through injectable fetch',
     assert.ok(methods.every(method => method === 'GET'));
     assert.equal(JSON.parse(output[0]).verdict, 'stale');
 });
+
+test('a failed read surfaces its real status code instead of a generic failure', async () => {
+    const fetchImpl = async () => ({ ok: false, status: 403, headers: new Headers() });
+    const output = [];
+    const code = await main({ environment: { GITHUB_REPOSITORY: repo, GITHUB_TOKEN: 'fixture' }, argv: [], fetchImpl, now, output: line => output.push(line) });
+    assert.equal(code, 1);
+    assert.match(JSON.parse(output[0]).error, /403/);
+});
+
+test('an unexpected shape failure is sanitized to the generic bucket, never echoing raw data', async () => {
+    const fetchImpl = async url => (url.includes('/runs?')
+        ? { ok: true, json: async () => ({ total_count: 0 }), headers: new Headers() }
+        : assert.fail(`Unexpected URL ${url}`));
+    const output = [];
+    const code = await main({ environment: { GITHUB_REPOSITORY: repo, GITHUB_TOKEN: 'fixture' }, argv: [], fetchImpl, now, output: line => output.push(line) });
+    assert.equal(code, 1);
+    assert.equal(JSON.parse(output[0]).error, 'watchdog-reporting-failed');
+});
