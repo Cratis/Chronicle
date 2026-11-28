@@ -22,6 +22,16 @@ The child's `[Key]` member stores that identity. The .NET client discovers it, s
 
 When several event properties match the parent's `Id` type, the first in declaration order is used. Supply `parentKey` to remove that ambiguity, or when the parent identifier is not named `Id`. For example, use `parentKey: nameof(LineItemAdded.OrderId)` when `OrderId` in the event identifies the parent. An explicit value always takes precedence.
 
+### Composite child keys (.NET)
+
+Set `CompositeKey` instead of `key` when a child is identified by two or more event properties. Each event property path maps to the same path within the child's key object. Use `[Key]`, an `Id` property, or `identifiedBy` to select that object on the child.
+
+<ChronicleClientTabs snippet="projections/model-bound/children/composite-key" />
+
+Within a parent, an event with the same values for all key parts updates the same child. If any part differs, it identifies a different child. To update a child from a later event, add another `ChildrenFrom`. To remove it, use `RemovedWith`. List the same paths in the same order in every declaration for the collection. `RemovedWith` supports composite keys for read model projections, not graph nodes.
+
+Parent routing is separate from child identity. `ChildrenFrom` excludes the composite parts when inferring `parentKey`; `RemovedWith` defaults to the event source id unless you pass `parentKey` explicitly.
+
 ### Auto-Mapping
 
 By default, matching event properties map to child properties without explicit set mappings, as they do with `FromEvent`:
