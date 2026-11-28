@@ -5,6 +5,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  workflow_dispatch:
   pull_request:
     # Draft PRs wait until they are marked ready for review.
     types: [opened, synchronize, reopened, ready_for_review]
@@ -12,43 +13,32 @@ on:
       - "**"
     paths:
       - "Source/Workbench/**"
+      - ".github/workflows/workbench-build.yml"
+
+permissions:
+  contents: read
 
 jobs:
-  node-build:
+  # The common affected-frontend workflow (Cratis/Workflows) decides whether the change reaches the Workbench at all: a change
+  # to documentation or to files the build cannot read starts no job beyond the check itself.
+  affected-frontend:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Setup node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24.x
-          package-manager-cache: false
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Restore Yarn packages
-        uses: Cratis/Workflows/.github/actions/yarn-cache@main
-        id: yarn-cache
-        with:
-          working-directory: Source/Workbench
-          path: Source/Workbench/.yarn/cache
-          mode: restore
-
-      - name: Yarn install
-        working-directory: ./Source/Workbench
-        run: yarn install
-
-      - name: Build JS/TS
-        working-directory: ./Source/Workbench
-        run: |
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          yarn ci
-        env:
-          # PrimeReact 11 is commercially licensed and verifies a key at runtime. Absent on a fork's pull
-          # request, where secrets are not exposed - the build still succeeds, the bundle just carries no
-          # key. See https://primeui.dev/licenses/community
-          PRIMEUI_LICENSE: ${{ secrets.PRIMEUI_LICENSE }}
+    permissions:
+      contents: read
+    uses: Cratis/Workflows/.github/workflows/affected-frontend.yml@main
+    with:
+      working-directory: Source/Workbench
+      node-version: 24.x
+      node-options: --max-old-space-size=4096
+      # The Workbench is built with the Yarn the runner provides, and its cache is saved from main by workbench-yarn-cache.yml.
+      corepack: false
+      cache-path: Source/Workbench/.yarn/cache
+      install-command: yarn install
+      legs: ci
+      global-paths: |
+        .github/workflows/workbench-build.yml
+    secrets:
+      # PrimeReact 11 is commercially licensed and verifies a key at runtime. Absent on a fork's pull
+      # request, where secrets are not exposed - the build still succeeds, the bundle just carries no
+      # key. See https://primeui.dev/licenses/community
+      primeui-license: ${{ secrets.PRIMEUI_LICENSE }}

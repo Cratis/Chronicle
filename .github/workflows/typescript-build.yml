@@ -5,9 +5,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  DOTNET_VERSION: "11.0.x"
-
 "on":
   workflow_dispatch:
   pull_request:
@@ -20,64 +17,42 @@ env:
       - "Source/Kernel/Contracts/**"
       - "Source/Kernel/Protobuf/**"
       - "Source/Tools/ProtoGenerator/**"
+      - ".github/workflows/typescript-build.yml"
+
+permissions:
+  contents: read
 
 jobs:
-  typescript-build:
+  # The common affected-frontend workflow (Cratis/Workflows) decides whether the change reaches the client. The TypeScript client
+  # is generated from the wire contract, so a change to the contracts, the generated protos or the generator reaches it.
+  affected-frontend:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24.x'
-          package-manager-cache: false
-
-      - name: Install protoc
-        run: |
-          PROTOC_VERSION="28.3"
-          PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}
-          sudo unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
-          sudo unzip -o $PROTOC_ZIP -d /usr/local 'include/*'
-          rm -f $PROTOC_ZIP
-          protoc --version
-
-      - name: Build Contracts
-        working-directory: ./Source/Kernel/Contracts
-        run: dotnet build -c Release
-
-      - name: Generate Proto Files
-        run: |
-          CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll"
-          dotnet run \
-            --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- \
-            $CONTRACTS_DLL \
-            Source/Kernel/Protobuf
-
-      - name: Install TypeScript dependencies
-        working-directory: ./Source/Clients/TypeScript
-        run: yarn install --ignore-scripts
-
-      - name: Generate TypeScript from Proto
-        working-directory: ./Source/Clients/TypeScript
-        run: |
-          mkdir -p generated
-          yarn generate
-
-      - name: Build TypeScript package
-        working-directory: ./Source/Clients/TypeScript
-        run: yarn build
-
-      - name: Check packed TypeScript consumers
-        working-directory: ./Source/Clients/TypeScript
-        run: yarn check:consumers
+    permissions:
+      contents: read
+    uses: Cratis/Workflows/.github/workflows/affected-frontend.yml@main
+    with:
+      working-directory: Source/Clients/TypeScript
+      node-version: 24.x
+      dotnet-version: 11.0.x
+      # No lockfile to key a cache on.
+      corepack: false
+      yarn-cache: false
+      install-command: yarn install --ignore-scripts
+      legs: build,check:consumers
+      global-paths: |
+        Source/Kernel/Contracts/**
+        Source/Kernel/Protobuf/**
+        Source/Tools/ProtoGenerator/**
+        .github/workflows/typescript-build.yml
+      # Regenerates the protos from the contracts, which `yarn build` then turns into TypeScript.
+      prepare-command: |
+        PROTOC_VERSION="28.3"
+        PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+        curl -OL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
+        sudo unzip -o "$PROTOC_ZIP" -d /usr/local bin/protoc
+        sudo unzip -o "$PROTOC_ZIP" -d /usr/local 'include/*'
+        rm -f "$PROTOC_ZIP"
+        protoc --version
+        (cd Source/Kernel/Contracts && dotnet build -c Release)
+        CONTRACTS_DLL="Source/Kernel/Contracts/bin/Release/net11.0/Cratis.Chronicle.Contracts.dll"
+        dotnet run --project Source/Tools/ProtoGenerator/ProtoGenerator.csproj -- "$CONTRACTS_DLL" Source/Kernel/Protobuf
